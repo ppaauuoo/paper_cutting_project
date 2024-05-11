@@ -16,10 +16,15 @@ class LP:
             f"order_{i}": solver.IntVar(0, int(orders['จำนวนสั่งขาย'].median()/100 + PAPER_SIZE/100), f"order_{i}")
             for i, row in orders.iterrows()
         }
+        for i, row in orders.iterrows():
+            solver.Add(variables[f"order_{i}"] >= 2)
 
         solver.Add(sum(variables[f"order_{i}"] * row['ตัดกว้าง'] for i, row in orders.iterrows()) <= PAPER_SIZE)
-
-
+        solver.Add(1.2 >=  PAPER_SIZE-sum(variables[f"order_{i}"] * row['ตัดกว้าง'] for i, row in orders.iterrows()) <= 3 )
+        solver.Add(sum(variables[f"order_{i}"] for i, row in orders.iterrows())  <= 6)
+        
+        
+        
         solver.Maximize(sum(variables[f"order_{i}"] * row['ตัดกว้าง'] for i, row in orders.iterrows()))
 
         status = solver.Solve()
@@ -27,8 +32,8 @@ class LP:
         if status != pywraplp.Solver.OPTIMAL: output["message"]=["No optimal solution found."]   
 
         paper_used = solver.Objective().Value()
-        output["PaperUsed"] = f"{paper_used:0.1f}"
-        output["PaperLeftOver"] = f"{PAPER_SIZE - paper_used:0.1f}"
+        output["PaperUsed"] = f"{paper_used:0.4f}"
+        output["PaperLeftOver"] = f"{PAPER_SIZE - paper_used:0.4f}"
         
         output["OrderUsed"] = [
         variables[f"order_{i}"].solution_value() 
@@ -41,7 +46,12 @@ class LP:
         output = self.output
         print("Solution :")
         solution = output["OrderUsed"]
-        print(pd.DataFrame({"cut_width": self.orders['ตัดกว้าง'], "solution": solution}))   
+        res = pd.DataFrame({"cut_width": self.orders['ตัดกว้าง'], "out": solution})
+        
+        res = res[res["out"] >= 1]
+        res = res.reset_index(drop=True)
+        print(res)
+        print("Roll :", self.PAPER_SIZE)
         print("Used :", output["PaperUsed"])
         print("Waste :", output["PaperLeftOver"])
         print("\n")

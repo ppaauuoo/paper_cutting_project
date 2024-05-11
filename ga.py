@@ -51,7 +51,7 @@ class GA:
                             if ORD.calculate_roll_and_width(PAPER_SIZE,5*orders.loc[i,'ตัดกว้าง']): #ถ้า width *5 แล้วผ่าน False
                                 if ORD.calculate_roll_and_width(PAPER_SIZE,6*orders.loc[i,'ตัดกว้าง']): #ถ้า width *6 แล้วผ่าน False ex. 4*6 = 24 > 22-24 = -2
                                     return abs(PAPER_SIZE*2)
-        return abs(PAPER_SIZE*2)
+        return 0
     
     def fitness_function(self,ga_instance, solution, solution_idx):
         penalty = 0
@@ -59,9 +59,10 @@ class GA:
         PAPER_SIZE = self.PAPER_SIZE
         for i,var in enumerate(solution):
             if var < 0: penalty+=abs(PAPER_SIZE*2)
-            if var % 2 and var!= 1: penalty+=abs(PAPER_SIZE*2)
+            # if var % 2 and var!= 1: penalty+=abs(PAPER_SIZE*2)
             #penalty += check_roll_compat(var,i)
 
+        if sum(solution) % 2: penalty+=abs(PAPER_SIZE*2)
             
         output = numpy.sum(solution*orders['ตัดกว้าง'])
         filter_solution = solution[solution >= 1]
@@ -80,9 +81,9 @@ class GA:
         solution = ga_instance.best_solution()[0]
 
 
-        output = pd.DataFrame({"cut_width": orders['ตัดกว้าง'], "solution": solution})
+        output = pd.DataFrame({"cut_width": orders['ตัดกว้าง'], "out": solution})
         
-        output = output[output["solution"] >= 1]
+        output = output[output["out"] >= 1]
         output = output.reset_index(drop=True)
         print(output)
         
