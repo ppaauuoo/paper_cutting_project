@@ -4,6 +4,14 @@ class ORD:
         def __init__(self,path,deadline_scope):
                 self.deadline_scope = deadline_scope
                 self.ordplan = pd.read_csv(path, header=None)
+                
+        def prep(orders,selected_values,tuning_values):
+                selected_values = selected_values/tuning_values
+                for i, row in orders.iterrows():
+                        diff = abs(selected_values - row['ตัดกว้าง'])
+                        orders.loc[i, 'diff'] = diff
+                return orders[orders['diff']<=4].sort_values(by='ตัดกว้าง').reset_index(drop=True)
+                
                         
         def get(self,deadline):
                 ordplan = self.ordplan
@@ -59,7 +67,7 @@ class ORD:
                         trim_min = 1
                         trim_max = 3
                         roll = None
-                        for i in range(1, 7):
+                        for i in range(1, 4):
                                 trim = [paper - width*i for paper in roll_paper]
                                 valid_trim_values = [t for t in trim if trim_min <= t <= trim_max]
         
@@ -67,10 +75,32 @@ class ORD:
                                         roll = roll_paper[trim.index(valid_trim_values[0])]
 
                         return roll
+
+        def calculate_roll_tuning(width,tuning_values):
+                        roll_paper = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
+                        trim_min = 1
+                        trim_max = 3
+                        roll = None
+                        trim = [paper - width*tuning_values for paper in roll_paper]
+                        valid_trim_values = [t for t in trim if trim_min <= t <= trim_max]
+        
+                        if valid_trim_values:
+                                roll = roll_paper[trim.index(valid_trim_values[0])]
+                        return roll
                         
         def calculate_roll_and_width(paper,width):
                         trim_min = 1
                         trim_max = 3                        
                         if trim_min <= paper-width <= trim_max: return False
                         return True
+                
+        def check_roll_compat(self,var,i,orders,PAPER_SIZE):
+                if(var): #ถ้า var = 0 False
+                        if ORD.calculate_roll_and_width(PAPER_SIZE,2*orders.loc[i,'ตัดกว้าง']): #ถ้า width *2 แล้วผ่าน False
+                                if ORD.calculate_roll_and_width(PAPER_SIZE,3*orders.loc[i,'ตัดกว้าง']): #ถ้า width *3 แล้วผ่าน False
+                                        if ORD.calculate_roll_and_width(PAPER_SIZE,4*orders.loc[i,'ตัดกว้าง']): #ถ้า width *4 แล้วผ่าน False
+                                                if ORD.calculate_roll_and_width(PAPER_SIZE,5*orders.loc[i,'ตัดกว้าง']): #ถ้า width *5 แล้วผ่าน False
+                                                        if ORD.calculate_roll_and_width(PAPER_SIZE,6*orders.loc[i,'ตัดกว้าง']): #ถ้า width *6 แล้วผ่าน False ex. 4*6 = 24 > 22-24 = -2
+                                                                return abs(PAPER_SIZE*2)
+                return 0
                                 
