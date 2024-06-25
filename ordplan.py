@@ -10,7 +10,21 @@ class ORD:
                 for i, row in orders.iterrows():
                         diff = abs(selected_values - row['ตัดกว้าง'])
                         orders.loc[i, 'diff'] = diff
-                return orders[orders['diff']<=4].sort_values(by='ตัดกว้าง').reset_index(drop=True)
+                        
+                new_orders = orders[orders['diff']<=4].sort_values(by='ตัดกว้าง').reset_index(drop=True)
+                # print(new_orders)
+                
+                init_order = new_orders.iloc[0]
+                
+                temp = []
+                for i, order in new_orders.iterrows():
+                        if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):
+                        # if init_order[11] == order[11]:
+                                temp.append(order)
+                
+                temp = pd.DataFrame(temp)
+                
+                return temp
                 
                         
         def get(self,deadline):

@@ -22,6 +22,7 @@ class LP:
         solver.Add(PAPER_SIZE-sum(variables[f"order_{i}"] * row['ตัดกว้าง'] for i, row in orders.iterrows()) >= 1.2 )
         solver.Add(sum(variables[f"order_{i}"] for i, row in orders.iterrows())  <= 6)
         
+        
         solver.Maximize(sum(variables[f"order_{i}"] * row['ตัดกว้าง'] for i, row in orders.iterrows()))
 
         status = solver.Solve()
@@ -50,5 +51,5 @@ class LP:
         print(res)
         print("Roll :", self.PAPER_SIZE)
         print("Used :", output["PaperUsed"])
-        print("Waste :", output["PaperLeftOver"])
+        print("Trim :", output["PaperLeftOver"])
         print("\n")
