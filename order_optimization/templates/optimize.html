@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Optimization</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Order Optimization</h1>
+    <form method="post">
+        {% csrf_token %}
+        <label for="tuning_value">Tuning Value:</label>
+        <input type="number" id="tuning_value" name="tuning_value" value="2" required>
+        <br>
+        <label for="size_value">Size Value:</label>
+        <select id="size_value" name="size_value" required>
+            {% for size in roll_paper %}
+                <option value="{{ size }}" {% if size == 73 %}selected{% endif %}>{{ size }}</option>
+            {% endfor %}
+        </select>
+        <br>
+        <button type="submit">Optimize</button>
+    </form>
+
+    {% if results %}
+    <h2>Results:</h2>
+    <h3>Output:</h3>
+    <table>
+        <tr>
+            <th>เลขที่ใบสั่งขาย</th>
+            <th>จำนวนชั้น</th>
+            <th>ตัดกว้าง</th>
+            <th>out</th>
+        </tr>
+        {% for item in results.output %}
+        <tr>
+            <td>{{ item.order_number }}</td>
+            <td>{{ item.num_layers }}</td>
+            <td>{{ item.cut_width }}</td>
+            <td>{{ item.out }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <p>Roll Size: {{ results.roll }}</p>
+    <p>Used: {{ results.fitness }}</p>
+    <p>Trim: {{ results.trim }}</p>
+    {% endif %}
+</body>
+</html>

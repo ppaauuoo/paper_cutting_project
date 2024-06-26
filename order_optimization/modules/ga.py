@@ -1,13 +1,14 @@
 import pygad
 import numpy
 import pandas as pd
-from ordplan import ORD
+from .ordplan import ORD
 
 
 class GA:
-    def __init__(self, orders, size, tuning_values, num_generations):
+    def __init__(self, orders, size, tuning_values, num_generations, showOutput=None):
         self.orders = ORD.prep(orders, size, tuning_values)
         self.PAPER_SIZE = size
+        self.showOutput = False if showOutput is None else showOutput
         # the bigger the lesser
 
         self.num_generations = num_generations
@@ -45,45 +46,54 @@ class GA:
         PAPER_SIZE = self.PAPER_SIZE
 
         for i, var in enumerate(solution):
-            if var < 0: #ถ้ามีค่าน้อยกว่า 0 penalty > กันติดลบ
+            if var < 0:  # ถ้ามีค่าน้อยกว่า 0 penalty > กันติดลบ
                 penalty += abs(PAPER_SIZE * 2)
 
-        if sum(solution) > 6: #ถ้าผลรวมมีค่ามากกว่า 6 penalty > outได้สูงสุด 6 out ต่อรอบ
+        if sum(solution) > 6:  # ถ้าผลรวมมีค่ามากกว่า 6 penalty > outได้สูงสุด 6 out ต่อรอบ
             penalty += abs(PAPER_SIZE * 2)
 
-        if solution[solution >= 1].size > 2: #out สูงสุด 2 ครั้ง ต่อออร์เดอร์
+        if solution[solution >= 1].size > 2:  # out สูงสุด 2 ครั้ง ต่อออร์เดอร์
             penalty += abs(PAPER_SIZE * 2)
 
-        output = numpy.sum(solution * orders["ตัดกว้าง"]) #ผลรวมของตัดกว้างทั้งหมด
+        output = numpy.sum(solution * orders["ตัดกว้าง"])  # ผลรวมของตัดกว้างทั้งหมด
 
-        if output > PAPER_SIZE: #ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น penalty
+        if output > PAPER_SIZE:  # ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น penalty
             penalty += abs(output * 2)
 
-        fitness_values = -PAPER_SIZE + output #ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
+        fitness_values = -PAPER_SIZE + output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
 
-        if abs(fitness_values) <= 1.22: #ถ้าผลรวมมีค่าน้อยกว่า 1.22 penalty > เงื่อนไขบริษัท
+        if abs(fitness_values) <= 1.22:  # ถ้าผลรวมมีค่าน้อยกว่า 1.22 penalty > เงื่อนไขบริษัท
             penalty += abs(output * 2)
 
-        return fitness_values - penalty #ลบด้วย penalty
+        return fitness_values - penalty  # ลบด้วย penalty
 
     def on_gen(self, ga_instance):
         orders = self.orders
-        PAPER_SIZE = self.PAPER_SIZE
-        print("Generation : ", ga_instance.generations_completed)
-        print("Solution :")
+
         solution = ga_instance.best_solution()[0]
 
         output = pd.DataFrame(
             {
-                "เลขที่ใบสั่งขาย": orders["เลขที่ใบสั่งขาย"],
-                "จำนวนชั้น": orders["จำนวนชั้น"],
-                "ตัดกว้าง": orders["ตัดกว้าง"],
+                "order_number": orders["เลขที่ใบสั่งขาย"],
+                "num_layers": orders["จำนวนชั้น"],
+                "cut_width": orders["ตัดกว้าง"],
                 "out": solution,
             }
         )
 
         output = output[output["out"] >= 1]
         output = output.reset_index(drop=True)
+
+        self.fitness_values = ga_instance.best_solution()[1]
+        self.output = output
+
+        if self.showOutput:
+            self.show(ga_instance, output)
+
+    def show(self, ga_instance, output):
+        PAPER_SIZE = self.PAPER_SIZE
+        print("Generation : ", ga_instance.generations_completed)
+        print("Solution :")
 
         with pd.option_context(
             "display.max_columns",
@@ -95,10 +105,9 @@ class GA:
         ):
             print(output.to_string(index=False))
 
-        fitness_values = ga_instance.best_solution()[1]
         print("Roll :", PAPER_SIZE)
-        print("Used :", PAPER_SIZE + fitness_values)
-        print("Trim :", abs(fitness_values))
+        print("Used :", PAPER_SIZE + self.fitness_values)
+        print("Trim :", abs(self.fitness_values))
         print("\n")
 
     def get(self):
