@@ -2,7 +2,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import CSVFile
 from .forms import CSVFileForm
-from .project import ORD, GA, LP
+from .modules.ordplan import ORD
+from .modules.ga import GA
+from .modules.lp import LP
 import pandas as pd
 
 roll_paper = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
