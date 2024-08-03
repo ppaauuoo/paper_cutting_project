@@ -29,7 +29,7 @@ class ORD:
 
         return temp
 
-    def get(self, deadline):
+    def get(self):
         ordplan = self.ordplan
 
         col_to_drop = (
@@ -77,7 +77,7 @@ class ORD:
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
         ordplan["จำนวนสั่งขาย"] = ordplan["จำนวนสั่งขาย"].astype(int)  # turns str -> int
 
-        if deadline:
+        if self.deadline_scope >= 0:
             deadline = ordplan["กำหนดส่ง"].iloc[self.deadline_scope]
             ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline]
         ordplan = ordplan.reset_index(drop=True)
