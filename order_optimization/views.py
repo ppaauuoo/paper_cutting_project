@@ -5,10 +5,15 @@ from .models import CSVFile
 from .forms import CSVFileForm
 from .modules.ordplan import ORD
 from .modules.ga import GA
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login, authenticate
+from django.shortcuts import redirect
+from .forms import LoginForm
 
 ROLL_PAPER = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
 CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
 
+@login_required
 def optimize_order(request):
     results = cache.get('optimization_results')
     csv_files = CSVFile.objects.all()
@@ -75,3 +80,17 @@ def handle_file_deletion(request):
     csv_file = get_object_or_404(CSVFile, id=file_id)
     csv_file.delete()
     messages.success(request, 'File deleted successfully.')
+
+def login_view(request):
+    if request.method == 'POST':
+        form = LoginForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('optimize_order')
+    else:
+        form = LoginForm()
+    return render(request, 'login.html', {'form': form})
