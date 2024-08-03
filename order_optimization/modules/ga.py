@@ -77,6 +77,7 @@ class GA:
                 "order_number": orders["เลขที่ใบสั่งขาย"],
                 "num_layers": orders["จำนวนชั้น"],
                 "cut_width": orders["ตัดกว้าง"],
+                "type": orders["ประเภททับเส้น"],
                 "out": solution,
             }
         )
