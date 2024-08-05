@@ -22,7 +22,7 @@ def optimize_order(request):
 
     if request.method == 'POST':
         if 'optimize' in request.POST:
-            results = handle_optimization(request)
+            results = manual_configuration(request)
             cache.set('optimization_results', results, CACHE_TIMEOUT)
         elif 'upload' in request.POST:
             handle_file_upload(request)
@@ -40,7 +40,7 @@ def optimize_order(request):
     }
     return render(request, 'optimize.html', context)
 
-def handle_optimization(request):
+def manual_configuration(request):
     tuning_value = int(request.POST.get('tuning_value'))
     size_value = int(request.POST.get('size_value'))
     filter_value = int(request.POST.get('filter_value'))
@@ -59,6 +59,31 @@ def handle_optimization(request):
         messages.error(request, 'Eror 404: No orders were found. Please try again.')
         return
     
+    return handle_optimization(request, orders, num_generations,size_value)
+
+def auto_configuration(request):
+
+    file_id = request.POST.get('file_id')
+    csv_file = get_object_or_404(CSVFile, id=file_id)
+    file_path = csv_file.file.path
+
+    filter_value = 8
+    num_generations = 50
+    deadline_toggle = 0
+    size_value = 0
+    tuning_value = 0
+
+    orders = ORD(auto=True, path=file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
+
+    if len(orders) <=0:
+        filter_value = 16
+        orders = ORD(auto=True, path=file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
+
+    return handle_optimization(request, orders, num_generations,size_value)
+    
+
+
+def handle_optimization(request, orders, num_generations,size_value):
     ga_instance = GA(orders, size=size_value, num_generations=num_generations,showOutput=False,save_solutions=False,showZero=False)
     ga_instance.get().run()
     
@@ -94,45 +119,6 @@ def handle_file_deletion(request):
     csv_file.delete()
     messages.success(request, 'File deleted successfully.')
 
-def auto_configuration(request):
-
-    file_id = request.POST.get('file_id')
-    csv_file = get_object_or_404(CSVFile, id=file_id)
-    file_path = csv_file.file.path
-
-    filter_value = 8
-    num_generations = 50
-    deadline_toggle = 0
-    size_value = 0
-    tuning_value = 0
-
-    orders = ORD(auto=True, path=file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
-
-    if len(orders) <=0:
-        filter_value = 16
-        orders = ORD(auto=True, path=file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
-
-    
-    ga_instance = GA(orders, size=size_value, num_generations=num_generations,showOutput=False,save_solutions=False,showZero=False)
-    ga_instance.get().run()
-    
-    fitness_values = ga_instance.fitness_values
-
-    output_data = ga_instance.output.to_dict('records')
-
-    results = {
-        'output': output_data,
-        'roll': ga_instance.PAPER_SIZE,
-        'fitness': size_value + fitness_values,
-        'trim': abs(fitness_values)
-    }
-
-    if abs(fitness_values) > 3.10:
-        messages.error(request, 'Optimizing finished with unsatisfied result, please try again.')
-        return results
-    
-    messages.success(request, 'Optimizing finished.')
-    return results
 
 
 def login_view(request):

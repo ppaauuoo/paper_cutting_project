@@ -34,16 +34,13 @@ class ORD:
         # print(new_orders)
 
 
-        temp = []
-
+        temp = new_orders
         #filter โดยยึดจากอันแรก
         # init_order = new_orders.iloc[0]
         # for i, order in new_orders.iterrows():
         #     if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):
         #         # if init_order[11] == order[11]:
         #         temp.append(order)
-
-        temp = new_orders
 
         temp = pd.DataFrame(temp)
 
