@@ -1,10 +1,11 @@
 import pandas as pd
 
 class ORD:
-    def __init__(self, path, deadline_scope, size, tuning_values, filter_value, filter=None):
+    def __init__(self, path, deadline_scope, size, tuning_values, filter_value, filter=None, auto=None):
         self.deadline_scope = deadline_scope
         self.ordplan = pd.read_csv(path, header=None)
         self.filter = True if filter is None else filter
+        self.auto = False if auto is None else auto
         self.size = size
         self.tuning_values = tuning_values
         self.filter_value = filter_value
@@ -13,7 +14,13 @@ class ORD:
         orders = self.ordplan
 
         #เอาไซส์กระดาษมาหารกับปริมาณการตัด เช่น กระดาษ 63 ถ้าตัดสองครั้งจได้ ~31 แล้วบันทึกเก็บไว้
-        selected_values = self.size / self.tuning_values
+        if self.auto:
+            selected_values = self.ordplan["ตัดกว้าง"].loc[0] / (3 if self.ordplan["ตัดกว้าง"].loc[0] > 80 else 2)
+        else:
+            selected_values = self.size / self.tuning_values
+
+
+
         for i, row in orders.iterrows():
             diff = abs(selected_values - row["ตัดกว้าง"])
             orders.loc[i, "diff"] = diff
@@ -29,7 +36,7 @@ class ORD:
 
         temp = []
 
-        #filter โดนยึดจากอันแรก
+        #filter โดยยึดจากอันแรก
         # init_order = new_orders.iloc[0]
         # for i, order in new_orders.iterrows():
         #     if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):

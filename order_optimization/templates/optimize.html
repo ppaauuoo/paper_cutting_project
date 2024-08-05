@@ -56,6 +56,10 @@
         </div>
 
         <div class="d-flex flex-wrap justify-content-start mt-3 gap-2">
+            <button type="submit" name="auto" class="btn btn-danger" id="autoBrn">
+                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                <span class="btn-text">Auto</span>
+            </button>
             <button type="submit" name="optimize" class="btn btn-primary" id="optimizeBtn">
                 <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                 <span class="btn-text">Optimize</span>
@@ -169,6 +173,13 @@
     document.querySelector('form').addEventListener('submit', function(e) {
         if (e.submitter && e.submitter.name === 'optimize') {
             var btn = document.getElementById('optimizeBtn');
+            btn.classList.add('disabled');
+            btn.setAttribute('aria-disabled', 'true');
+            btn.querySelector('.spinner-border').classList.remove('d-none');
+            btn.querySelector('.btn-text').textContent = 'Optimizing...';
+        }
+        if (e.submitter && e.submitter.name === 'auto') {
+            var btn = document.getElementById('autoBtm');
             btn.classList.add('disabled');
             btn.setAttribute('aria-disabled', 'true');
             btn.querySelector('.spinner-border').classList.remove('d-none');
