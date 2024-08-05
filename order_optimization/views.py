@@ -53,6 +53,10 @@ def handle_optimization(request):
 
     orders = ORD(file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
     
+    if len(orders) <=0:
+        messages.error(request, 'Eror 404: No orders were found. Please try again.')
+        return
+    
     ga_instance = GA(orders, size=size_value, num_generations=num_generations,showOutput=False,save_solutions=False,showZero=False)
     ga_instance.get().run()
     

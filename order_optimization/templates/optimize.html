@@ -52,7 +52,7 @@
         </div>
         <div class="form-group mb-3">
             <label for="deadline_toggle" class="form-label">Closest Deadline First:</label>
-            <input type="checkbox" id="deadline_toggle" name="deadline_toggle" class="form-check-input" value="true">
+            <input type="checkbox" id="deadline_toggle" name="deadline_toggle" class="form-check-input" value="true" {% if request.POST.deadline_toggle == "true" %}checked{% endif %}>
         </div>
 
         <div class="d-flex flex-wrap justify-content-start mt-3 gap-2">
