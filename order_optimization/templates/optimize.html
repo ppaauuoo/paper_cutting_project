@@ -9,6 +9,8 @@
             <a href="{% url 'logout' %}">Logout</a>
         </div>
     </div>
+
+    <!-- Parameters Section -->
     <h1 class="mb-4">Order Optimization</h1>
     <form method="post">
         {% csrf_token %}
@@ -21,18 +23,18 @@
             </select>
         </div>
         <div class="form-group mb-3">
-            <label for="tuning_value" class="form-label">Tuning Value:</label>
-            <select id="tuning_value" name="tuning_value" class="form-select" required>
-                <option value="2" {% if request.POST.tuning_value == "2" %}selected{% endif %}>2</option>
-                <option value="3" {% if request.POST.tuning_value == "3" %}selected{% endif %}>3</option>
-            </select>
-        </div>
-        <div class="form-group mb-3">
             <label for="size_value" class="form-label">Size Value:</label>
             <select id="size_value" name="size_value" class="form-select" required>
                 {% for size in roll_paper %}
                     <option value="{{ size }}" {% if size|stringformat:"s" == request.POST.size_value %}selected{% endif %}>{{ size }}</option>
                 {% endfor %}
+            </select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="tuning_value" class="form-label">Tuning Value:</label>
+            <select id="tuning_value" name="tuning_value" class="form-select" required>
+                <option value="2" {% if request.POST.tuning_value == "2" %}selected{% endif %}>2</option>
+                <option value="3" {% if request.POST.tuning_value == "3" %}selected{% endif %}>3</option>
             </select>
         </div>
         <div class="form-group mb-3">
@@ -43,9 +45,13 @@
                 <option value="16" {% if request.POST.filter_value == "16" %}selected{% endif %}>16</option>
             </select>
         </div>
-
         <div class="form-group mb-3">
-            <label for="deadline_toggle" class="form-label">Toggle Closest Deadline:</label>
+            <label for="num_generations" class="form-label">Number of Generations:</label>
+            <output for="num_generations" id="slider_output"></output>
+            <input type="range" id="num_generations" name="num_generations" min="20" max="100" value="50" class="form-range" required>
+        </div>
+        <div class="form-group mb-3">
+            <label for="deadline_toggle" class="form-label">Closest Deadline First:</label>
             <input type="checkbox" id="deadline_toggle" name="deadline_toggle" class="form-check-input" value="true">
         </div>
 
@@ -169,5 +175,13 @@
             btn.querySelector('.btn-text').textContent = 'Optimizing...';
         }
     });
+
+    const slider = document.getElementById('num_generations');
+    const output = document.getElementById('slider_output');
+    output.textContent = slider.value;
+
+    slider.oninput = function() {
+        output.textContent = this.value;
+    };
 </script>
 {% endblock %}

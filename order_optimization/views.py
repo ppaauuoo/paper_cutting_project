@@ -42,6 +42,7 @@ def handle_optimization(request):
     size_value = int(request.POST.get('size_value'))
     filter_value = int(request.POST.get('filter_value'))
     file_id = request.POST.get('file_id')
+    num_generations = int(request.POST.get('num_generations'))
 
     deadline_toggle = 0 if request.POST.get('deadline_toggle') == 'true' else -1
     print(deadline_toggle)
@@ -52,7 +53,7 @@ def handle_optimization(request):
 
     orders = ORD(file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
     
-    ga_instance = GA(orders, size=size_value, num_generations=50,showOutput=False,save_solutions=False,showZero=False)
+    ga_instance = GA(orders, size=size_value, num_generations=num_generations,showOutput=False,save_solutions=False,showZero=False)
     ga_instance.get().run()
     
     fitness_values = ga_instance.fitness_values
