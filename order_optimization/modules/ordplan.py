@@ -26,11 +26,11 @@ class ORD:
             )
         # print(new_orders)
 
-        init_order = new_orders.iloc[0]
 
         temp = []
 
         #filter โดนยึดจากอันแรก
+        # init_order = new_orders.iloc[0]
         # for i, order in new_orders.iterrows():
         #     if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):
         #         # if init_order[11] == order[11]:
@@ -90,6 +90,7 @@ class ORD:
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
         ordplan["จำนวนสั่งขาย"] = ordplan["จำนวนสั่งขาย"].astype(int)  # turns str -> int
 
+        #filter deadline_scope
         if self.deadline_scope >= 0:
             deadline = ordplan["กำหนดส่ง"].iloc[self.deadline_scope]
             ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline]

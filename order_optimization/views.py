@@ -1,6 +1,7 @@
 from django.core.cache import cache
 from django.shortcuts import render, get_object_or_404
 from django.contrib import messages
+import pandas as pd
 from .models import CSVFile
 from .forms import CSVFileForm
 from .modules.ordplan import ORD
@@ -42,10 +43,14 @@ def handle_optimization(request):
     filter_value = int(request.POST.get('filter_value'))
     file_id = request.POST.get('file_id')
 
+    deadline_toggle = 0 if request.POST.get('deadline_toggle') == 'true' else -1
+    print(deadline_toggle)
+
     csv_file = get_object_or_404(CSVFile, id=file_id)
     file_path = csv_file.file.path
 
-    orders = ORD(file_path, deadline_scope=-1, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
+
+    orders = ORD(file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
     
     ga_instance = GA(orders, size=size_value, num_generations=50,showOutput=False,save_solutions=False,showZero=False)
     ga_instance.get().run()

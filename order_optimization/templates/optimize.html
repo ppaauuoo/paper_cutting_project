@@ -43,6 +43,12 @@
                 <option value="16" {% if request.POST.filter_value == "16" %}selected{% endif %}>16</option>
             </select>
         </div>
+
+        <div class="form-group mb-3">
+            <label for="deadline_toggle" class="form-label">Toggle Closest Deadline:</label>
+            <input type="checkbox" id="deadline_toggle" name="deadline_toggle" class="form-check-input" value="true">
+        </div>
+
         <div class="d-flex flex-wrap justify-content-start mt-3 gap-2">
             <button type="submit" name="optimize" class="btn btn-primary" id="optimizeBtn">
                 <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
@@ -112,6 +118,7 @@
         <table class="table table-striped table-hover">
             <thead class="text-center">
                 <tr>
+                    <th class="text-center">กำหนดส่ง</th>
                     <th class="text-center">เลขที่ใบสั่งขาย</th>
                     <th class="text-center">จำนวนชั้น</th>
                     <th class="text-center">ตัดกว้าง</th>
@@ -122,6 +129,7 @@
             <tbody>
                 {% for item in results.output %}
                 <tr>
+                    <td class="text-center">{{ item.deadline }}</td>
                     <td class="text-center">{{ item.order_number }}</td>
                     <td class="text-center">{{ item.num_layers }}</td>
                     <td class="text-center">{{ item.cut_width }}</td>

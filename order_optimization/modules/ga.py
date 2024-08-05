@@ -97,6 +97,7 @@ class GA:
                 "num_layers": orders["จำนวนชั้น"],
                 "cut_width": orders["ตัดกว้าง"],
                 "type": orders["ประเภททับเส้น"],
+                "deadline": orders["กำหนดส่ง"],
                 "diff": orders["diff"],
                 "out": solution,
             }
