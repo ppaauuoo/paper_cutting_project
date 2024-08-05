@@ -3,13 +3,13 @@ import numpy
 import pandas as pd
 from .ordplan import ORD
 
-
 class GA:
-    def __init__(self, orders, size, tuning_values, num_generations, showOutput=None):
-        self.orders = ORD.prep(orders, size, tuning_values)
+    def __init__(self, orders, size, num_generations, showOutput=None, save_solutions=None, showZero=None):
+        self.orders = orders
         self.PAPER_SIZE = size
         self.showOutput = False if showOutput is None else showOutput
-        # the bigger the lesser
+        self.save_solutions = False if save_solutions is None else save_solutions
+        self.showZero = False if showZero is None else showZero
 
         self.num_generations = num_generations
         # num_parents_mating = len(orders)
@@ -21,14 +21,15 @@ class GA:
         self.sol_per_pop = 120
         self.num_genes = len(self.orders)
 
-        # self.init_range_low = 1
-        # self.init_range_high = 2
+        self.init_range_low = 0
+        self.init_range_high = 2
         # self.init_range_high = abs(int(orders['จำนวนสั่งขาย'].median()/100 + size/100 - len(orders)*tuning_parameters))
 
         self.parent_selection_type = "tournament"
         # rws (for roulette wheel selection)
         # rank (for rank selection)
         # tournament (for tournament selection) - the best
+        # sus (chat suggestion, stochastic_universal_selection)
 
         # crossover_type = "two_points"
         self.crossover_type = "uniform"  # - the best
@@ -40,30 +41,48 @@ class GA:
         # mutation_percent_genes = (10,20)
         self.gene_type = int
 
+        self.model = pygad.GA(
+            num_generations=self.num_generations,
+            num_parents_mating=self.num_parents_mating,
+            fitness_func=self.fitness_function,
+            sol_per_pop=self.sol_per_pop,
+            num_genes=self.num_genes,
+            parent_selection_type=self.parent_selection_type,
+            gene_type=self.gene_type,
+            init_range_low=self.init_range_low,
+            init_range_high=self.init_range_high,
+            crossover_type=self.crossover_type,
+            mutation_type=self.mutation_type,
+            mutation_percent_genes=self.mutation_percent_genes,
+            on_generation=self.on_gen,
+            save_solutions=self.save_solutions
+        )
+
     def fitness_function(self, ga_instance, solution, solution_idx):
         penalty = 0
         orders = self.orders
         PAPER_SIZE = self.PAPER_SIZE
+        penalty_value = 1000
 
         for i, var in enumerate(solution):
             if var < 0:  # ถ้ามีค่าน้อยกว่า 0 penalty > กันติดลบ
-                penalty += abs(PAPER_SIZE * 2)
+                penalty += penalty_value
 
         if sum(solution) > 6:  # ถ้าผลรวมมีค่ามากกว่า 6 penalty > outได้สูงสุด 6 out ต่อรอบ
-            penalty += abs(PAPER_SIZE * 2)
+            penalty += penalty_value*sum(solution)
 
         if solution[solution >= 1].size > 2:  # out สูงสุด 2 ครั้ง ต่อออร์เดอร์
-            penalty += abs(PAPER_SIZE * 2)
+            penalty += penalty_value
 
         output = numpy.sum(solution * orders["ตัดกว้าง"])  # ผลรวมของตัดกว้างทั้งหมด
 
         if output > PAPER_SIZE:  # ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น penalty
-            penalty += abs(output * 2)
+            penalty += penalty_value
 
         fitness_values = -PAPER_SIZE + output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
 
         if abs(fitness_values) <= 1.22:  # ถ้าผลรวมมีค่าน้อยกว่า 1.22 penalty > เงื่อนไขบริษัท
-            penalty += abs(output * 2)
+            penalty += penalty_value
 
         return fitness_values - penalty  # ลบด้วย penalty
 
@@ -78,11 +97,13 @@ class GA:
                 "num_layers": orders["จำนวนชั้น"],
                 "cut_width": orders["ตัดกว้าง"],
                 "type": orders["ประเภททับเส้น"],
+                "diff": orders["diff"],
                 "out": solution,
             }
         )
 
-        output = output[output["out"] >= 1]
+        if not self.showZero:
+            output = output[output["out"] >= 1]
         output = output.reset_index(drop=True)
 
         self.fitness_values = ga_instance.best_solution()[1]
@@ -112,18 +133,4 @@ class GA:
         print("\n")
 
     def get(self):
-        return pygad.GA(
-            num_generations=self.num_generations,
-            num_parents_mating=self.num_parents_mating,
-            fitness_func=self.fitness_function,
-            sol_per_pop=self.sol_per_pop,
-            num_genes=self.num_genes,
-            parent_selection_type=self.parent_selection_type,
-            gene_type=self.gene_type,
-            # init_range_low=self.init_range_low,
-            # init_range_high=self.init_range_high,
-            crossover_type=self.crossover_type,
-            mutation_type=self.mutation_type,
-            mutation_percent_genes=self.mutation_percent_genes,
-            on_generation=self.on_gen,
-        )
+        return self.model

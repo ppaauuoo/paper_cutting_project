@@ -35,6 +35,14 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="form-group mb-3">
+            <label for="filter_value" class="form-label">Filter Value:</label>
+            <select id="filter_value" name="filter_value" class="form-select" required>
+                <option value="4" {% if request.POST.filter_value == "4" %}selected{% endif %}>4</option>
+                <option value="8" {% if request.POST.filter_value == "8" %}selected{% endif %}>8</option>
+                <option value="16" {% if request.POST.filter_value == "16" %}selected{% endif %}>16</option>
+            </select>
+        </div>
         <div class="d-flex flex-wrap justify-content-start mt-3 gap-2">
             <button type="submit" name="optimize" class="btn btn-primary" id="optimizeBtn">
                 <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>

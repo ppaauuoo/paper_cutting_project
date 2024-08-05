@@ -1,29 +1,42 @@
 import pandas as pd
 
-
 class ORD:
-    def __init__(self, path, deadline_scope):
+    def __init__(self, path, deadline_scope, size, tuning_values, filter_value, filter=None):
         self.deadline_scope = deadline_scope
         self.ordplan = pd.read_csv(path, header=None)
+        self.filter = True if filter is None else filter
+        self.size = size
+        self.tuning_values = tuning_values
+        self.filter_value = filter_value
 
-    def prep(orders, selected_values, tuning_values):
-        selected_values = selected_values / tuning_values
+    def prep(self):
+        orders = self.ordplan
+
+        #เอาไซส์กระดาษมาหารกับปริมาณการตัด เช่น กระดาษ 63 ถ้าตัดสองครั้งจได้ ~31 แล้วบันทึกเก็บไว้
+        selected_values = self.size / self.tuning_values
         for i, row in orders.iterrows():
             diff = abs(selected_values - row["ตัดกว้าง"])
             orders.loc[i, "diff"] = diff
 
-        new_orders = (
-            orders[orders["diff"] <= 4].sort_values(by="ตัดกว้าง").reset_index(drop=True)
-        )
+        #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
+        new_orders = orders
+        if self.filter:
+            new_orders = (
+                orders[orders["diff"] < self.filter_value].sort_values(by="ตัดกว้าง").reset_index(drop=True)
+            )
         # print(new_orders)
 
         init_order = new_orders.iloc[0]
 
         temp = []
-        for i, order in new_orders.iterrows():
-            if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):
-                # if init_order[11] == order[11]:
-                temp.append(order)
+
+        #filter โดนยึดจากอันแรก
+        # for i, order in new_orders.iterrows():
+        #     if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):
+        #         # if init_order[11] == order[11]:
+        #         temp.append(order)
+
+        temp = new_orders
 
         temp = pd.DataFrame(temp)
 
@@ -82,7 +95,9 @@ class ORD:
             ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline]
         ordplan = ordplan.reset_index(drop=True)
 
-        return ordplan
+        self.ordplan = ordplan
+
+        return self.prep()
 
     def calculate_trim_and_roll(width):
         roll_paper = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
