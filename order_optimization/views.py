@@ -1,6 +1,7 @@
 from django.core.cache import cache
 from django.shortcuts import render, get_object_or_404
 from django.contrib import messages
+import pandas as pd
 from .models import CSVFile
 from .forms import CSVFileForm
 from .modules.ordplan import ORD
@@ -21,12 +22,15 @@ def optimize_order(request):
 
     if request.method == 'POST':
         if 'optimize' in request.POST:
-            results = handle_optimization(request)
+            results = manual_configuration(request)
             cache.set('optimization_results', results, CACHE_TIMEOUT)
         elif 'upload' in request.POST:
             handle_file_upload(request)
         elif 'delete' in request.POST:
             handle_file_deletion(request)
+        elif 'auto' in request.POST:
+            results=auto_configuration(request)
+            cache.set('optimization_results', results, CACHE_TIMEOUT)
 
     context = {
         'results': results,
@@ -36,17 +40,51 @@ def optimize_order(request):
     }
     return render(request, 'optimize.html', context)
 
-def handle_optimization(request):
+def manual_configuration(request):
     tuning_value = int(request.POST.get('tuning_value'))
     size_value = int(request.POST.get('size_value'))
+    filter_value = int(request.POST.get('filter_value'))
     file_id = request.POST.get('file_id')
+    num_generations = int(request.POST.get('num_generations'))
+
+    deadline_toggle = 0 if request.POST.get('deadline_toggle') == 'true' else -1
 
     csv_file = get_object_or_404(CSVFile, id=file_id)
     file_path = csv_file.file.path
 
-    orders = ORD(file_path, deadline_scope=-1).get()
+
+    orders = ORD(file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
     
-    ga_instance = GA(orders, size=size_value, tuning_values=tuning_value, num_generations=50)
+    if len(orders) <=0:
+        messages.error(request, 'Eror 404: No orders were found. Please try again.')
+        return
+    
+    return handle_optimization(request, orders, num_generations,size_value)
+
+def auto_configuration(request):
+
+    file_id = request.POST.get('file_id')
+    csv_file = get_object_or_404(CSVFile, id=file_id)
+    file_path = csv_file.file.path
+
+    filter_value = 8
+    num_generations = 50
+    deadline_toggle = 0
+    size_value = 0
+    tuning_value = 0
+
+    orders = ORD(auto=True, path=file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
+
+    if len(orders) <=0:
+        filter_value = 16
+        orders = ORD(auto=True, path=file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
+
+    return handle_optimization(request, orders, num_generations,size_value)
+    
+
+
+def handle_optimization(request, orders, num_generations,size_value):
+    ga_instance = GA(orders, size=size_value, num_generations=num_generations,showOutput=False,save_solutions=False,showZero=False)
     ga_instance.get().run()
     
     fitness_values = ga_instance.fitness_values
@@ -80,6 +118,8 @@ def handle_file_deletion(request):
     csv_file = get_object_or_404(CSVFile, id=file_id)
     csv_file.delete()
     messages.success(request, 'File deleted successfully.')
+
+
 
 def login_view(request):
     if request.method == 'POST':

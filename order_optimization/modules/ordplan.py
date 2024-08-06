@@ -1,33 +1,14 @@
 import pandas as pd
 
-
 class ORD:
-    def __init__(self, path, deadline_scope):
+    def __init__(self, path, deadline_scope, size, tuning_values, filter_value, filter=None, auto=None):
         self.deadline_scope = deadline_scope
         self.ordplan = pd.read_csv(path, header=None)
-
-    def prep(orders, selected_values, tuning_values):
-        selected_values = selected_values / tuning_values
-        for i, row in orders.iterrows():
-            diff = abs(selected_values - row["ตัดกว้าง"])
-            orders.loc[i, "diff"] = diff
-
-        new_orders = (
-            orders[orders["diff"] <= 4].sort_values(by="ตัดกว้าง").reset_index(drop=True)
-        )
-        # print(new_orders)
-
-        init_order = new_orders.iloc[0]
-
-        temp = []
-        for i, order in new_orders.iterrows():
-            if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):
-                # if init_order[11] == order[11]:
-                temp.append(order)
-
-        temp = pd.DataFrame(temp)
-
-        return temp
+        self.filter = True if filter is None else filter
+        self.auto = False if auto is None else auto
+        self.size = size
+        self.tuning_values = tuning_values
+        self.filter_value = filter_value
 
     def get(self):
         ordplan = self.ordplan
@@ -77,13 +58,54 @@ class ORD:
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
         ordplan["จำนวนสั่งขาย"] = ordplan["จำนวนสั่งขาย"].astype(int)  # turns str -> int
 
+        #filter deadline_scope
         if self.deadline_scope >= 0:
             deadline = ordplan["กำหนดส่ง"].iloc[self.deadline_scope]
             ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline]
         ordplan = ordplan.reset_index(drop=True)
 
-        return ordplan
+        self.ordplan = ordplan
 
+        return self.prep()
+
+
+    def prep(self):
+        orders = self.ordplan
+
+        #เอาไซส์กระดาษมาหารกับปริมาณการตัด เช่น กระดาษ 63 ถ้าตัดสองครั้งจได้ ~31 แล้วบันทึกเก็บไว้
+        if self.auto:
+            selected_values = self.ordplan["ตัดกว้าง"].loc[0] / (3 if self.ordplan["ตัดกว้าง"].loc[0] > 80 else 2)
+        else:
+            selected_values = self.size / self.tuning_values
+
+
+
+        for i, row in orders.iterrows():
+            diff = abs(selected_values - row["ตัดกว้าง"])
+            orders.loc[i, "diff"] = diff
+
+        #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
+        new_orders = orders
+        if self.filter:
+            new_orders = (
+                orders[orders["diff"] < self.filter_value].sort_values(by="ตัดกว้าง").reset_index(drop=True)
+            )
+        # print(new_orders)
+
+
+        temp = new_orders
+        #filter โดยยึดจากอันแรก
+        # init_order = new_orders.iloc[0]
+        # for i, order in new_orders.iterrows():
+        #     if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):
+        #         # if init_order[11] == order[11]:
+        #         temp.append(order)
+
+        temp = pd.DataFrame(temp)
+
+        return temp
+
+    
     def calculate_trim_and_roll(width):
         roll_paper = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
         trim_min = 1

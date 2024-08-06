@@ -9,6 +9,8 @@
             <a href="{% url 'logout' %}">Logout</a>
         </div>
     </div>
+
+    <!-- Parameters Section -->
     <h1 class="mb-4">Order Optimization</h1>
     <form method="post">
         {% csrf_token %}
@@ -21,13 +23,6 @@
             </select>
         </div>
         <div class="form-group mb-3">
-            <label for="tuning_value" class="form-label">Tuning Value:</label>
-            <select id="tuning_value" name="tuning_value" class="form-select" required>
-                <option value="2" {% if request.POST.tuning_value == "2" %}selected{% endif %}>2</option>
-                <option value="3" {% if request.POST.tuning_value == "3" %}selected{% endif %}>3</option>
-            </select>
-        </div>
-        <div class="form-group mb-3">
             <label for="size_value" class="form-label">Size Value:</label>
             <select id="size_value" name="size_value" class="form-select" required>
                 {% for size in roll_paper %}
@@ -35,7 +30,36 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="form-group mb-3">
+            <label for="tuning_value" class="form-label">Tuning Value:</label>
+            <select id="tuning_value" name="tuning_value" class="form-select" required>
+                <option value="2" {% if request.POST.tuning_value == "2" %}selected{% endif %}>2</option>
+                <option value="3" {% if request.POST.tuning_value == "3" %}selected{% endif %}>3</option>
+            </select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="filter_value" class="form-label">Filter Value:</label>
+            <select id="filter_value" name="filter_value" class="form-select" required>
+                <option value="4" {% if request.POST.filter_value == "4" %}selected{% endif %}>4</option>
+                <option value="8" {% if request.POST.filter_value == "8" %}selected{% endif %}>8</option>
+                <option value="16" {% if request.POST.filter_value == "16" %}selected{% endif %}>16</option>
+            </select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="num_generations" class="form-label">Number of Generations:</label>
+            <output for="num_generations" id="slider_output"></output>
+            <input type="range" id="num_generations" name="num_generations" min="20" max="100" value="50" class="form-range" required>
+        </div>
+        <div class="form-group mb-3">
+            <label for="deadline_toggle" class="form-label">Closest Deadline First:</label>
+            <input type="checkbox" id="deadline_toggle" name="deadline_toggle" class="form-check-input" value="true" {% if request.POST.deadline_toggle == "true" %}checked{% endif %}>
+        </div>
+
         <div class="d-flex flex-wrap justify-content-start mt-3 gap-2">
+            <button type="submit" name="auto" class="btn btn-danger" id="autoBrn">
+                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                <span class="btn-text">Auto</span>
+            </button>
             <button type="submit" name="optimize" class="btn btn-primary" id="optimizeBtn">
                 <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                 <span class="btn-text">Optimize</span>
@@ -104,6 +128,7 @@
         <table class="table table-striped table-hover">
             <thead class="text-center">
                 <tr>
+                    <th class="text-center">กำหนดส่ง</th>
                     <th class="text-center">เลขที่ใบสั่งขาย</th>
                     <th class="text-center">จำนวนชั้น</th>
                     <th class="text-center">ตัดกว้าง</th>
@@ -114,6 +139,7 @@
             <tbody>
                 {% for item in results.output %}
                 <tr>
+                    <td class="text-center">{{ item.deadline }}</td>
                     <td class="text-center">{{ item.order_number }}</td>
                     <td class="text-center">{{ item.num_layers }}</td>
                     <td class="text-center">{{ item.cut_width }}</td>
@@ -152,6 +178,21 @@
             btn.querySelector('.spinner-border').classList.remove('d-none');
             btn.querySelector('.btn-text').textContent = 'Optimizing...';
         }
+        if (e.submitter && e.submitter.name === 'auto') {
+            var btn = document.getElementById('autoBtm');
+            btn.classList.add('disabled');
+            btn.setAttribute('aria-disabled', 'true');
+            btn.querySelector('.spinner-border').classList.remove('d-none');
+            btn.querySelector('.btn-text').textContent = 'Optimizing...';
+        }
     });
+
+    const slider = document.getElementById('num_generations');
+    const output = document.getElementById('slider_output');
+    output.textContent = slider.value;
+
+    slider.oninput = function() {
+        output.textContent = this.value;
+    };
 </script>
 {% endblock %}
