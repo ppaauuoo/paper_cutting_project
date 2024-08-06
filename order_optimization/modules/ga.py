@@ -22,7 +22,7 @@ class GA:
         self.num_genes = len(self.orders)
 
         self.init_range_low = 0
-        self.init_range_high = 2
+        self.init_range_high = 3
         # self.init_range_high = abs(int(orders['จำนวนสั่งขาย'].median()/100 + size/100 - len(orders)*tuning_parameters))
 
         self.parent_selection_type = "tournament"
