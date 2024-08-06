@@ -68,19 +68,23 @@ def auto_configuration(request):
     csv_file = get_object_or_404(CSVFile, id=file_id)
     file_path = csv_file.file.path
 
-    filter_value = 8
+    filter_value_list = [4,8,16]
     num_generations = 50
     deadline_toggle = 0
-    size_value = 0
-    tuning_value = 0
+    tuning_value = 2
 
-    orders = ORD(auto=True, path=file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
+    orders = []
+    i=0
+    j=0
+    while len(orders) <= 0:
+        orders = ORD(path=file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value_list[i], size=ROLL_PAPER[j], tuning_values=tuning_value).get()
+        i+=1
+        if i > 2:
+            i=0
+            j+=1
+    
+    return handle_optimization(request, orders, num_generations,ROLL_PAPER[j])
 
-    if len(orders) <=0:
-        filter_value = 16
-        orders = ORD(auto=True, path=file_path, deadline_scope=deadline_toggle, filter=True, filter_value=filter_value, size=size_value, tuning_values=tuning_value).get()
-
-    return handle_optimization(request, orders, num_generations,size_value)
     
 def handle_optimization(request, orders, num_generations,size_value):
     ga_instance = GA(orders, size=size_value, num_generations=num_generations,showOutput=False,save_solutions=False,showZero=False)

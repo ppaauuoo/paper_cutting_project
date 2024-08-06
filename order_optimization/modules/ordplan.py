@@ -1,12 +1,11 @@
 import pandas as pd
 
 class ORD:
-    def __init__(self, path, deadline_scope, size, tuning_values, filter_value, filter=None, common=None, auto=None):
+    def __init__(self, path, deadline_scope, size, tuning_values, filter_value, filter=None, common=None):
         self.deadline_scope = deadline_scope
         self.ordplan = pd.read_csv(path, header=None)
         self.filter = True if filter is None else filter
         self.common = False if common is None else common
-        self.auto = False if auto is None else auto
 
         self.size = size
         self.tuning_values = tuning_values
@@ -66,39 +65,31 @@ class ORD:
             ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline]
         ordplan = ordplan.reset_index(drop=True)
 
-        self.ordplan = ordplan
 
-        return self.prep()
-
-
-    def prep(self):
-        orders = self.ordplan
 
         #เอาไซส์กระดาษมาหารกับปริมาณการตัด เช่น กระดาษ 63 ถ้าตัดสองครั้งจได้ ~31 แล้วบันทึกเก็บไว้
-        if self.auto:
-            selected_values = self.ordplan["ตัดกว้าง"].loc[0] / (3 if self.ordplan["ตัดกว้าง"].loc[0] > 80 else 2)
-        else:
-            selected_values = self.size / self.tuning_values
+        selected_values = self.size / self.tuning_values
 
 
 
-        for i, row in orders.iterrows():
+
+        for i, row in ordplan.iterrows():
             diff = abs(selected_values - row["ตัดกว้าง"])
-            orders.loc[i, "diff"] = diff
+            ordplan.loc[i, "diff"] = diff
 
         #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
-        new_orders = orders
         if self.filter:
-            new_orders = (
-                orders[orders["diff"] < self.filter_value].sort_values(by="ตัดกว้าง").reset_index(drop=True)
+            ordplan = (
+                ordplan[ordplan["diff"] < self.filter_value].sort_values(by="ตัดกว้าง").reset_index(drop=True)
             )
 
         if self.common:
             # Filter based on the first order
-            init_order = new_orders.iloc[0]
-            new_orders = new_orders[new_orders.apply(lambda order: all(init_order[i] == order[i] for i in [3, 4, 5, 6, 7, 8, 12]), axis=1)]
+            init_order = ordplan.iloc[0]
+            ordplan = ordplan[ordplan.apply(lambda order: all(init_order[i] == order[i] for i in [3, 4, 5, 6, 7, 8, 12]), axis=1)]
 
-        return new_orders
+        self.ordplan = ordplan
 
+        return ordplan
 
 
