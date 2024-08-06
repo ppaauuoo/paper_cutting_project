@@ -10,42 +10,6 @@ class ORD:
         self.tuning_values = tuning_values
         self.filter_value = filter_value
 
-    def prep(self):
-        orders = self.ordplan
-
-        #เอาไซส์กระดาษมาหารกับปริมาณการตัด เช่น กระดาษ 63 ถ้าตัดสองครั้งจได้ ~31 แล้วบันทึกเก็บไว้
-        if self.auto:
-            selected_values = self.ordplan["ตัดกว้าง"].loc[0] / (3 if self.ordplan["ตัดกว้าง"].loc[0] > 80 else 2)
-        else:
-            selected_values = self.size / self.tuning_values
-
-
-
-        for i, row in orders.iterrows():
-            diff = abs(selected_values - row["ตัดกว้าง"])
-            orders.loc[i, "diff"] = diff
-
-        #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
-        new_orders = orders
-        if self.filter:
-            new_orders = (
-                orders[orders["diff"] < self.filter_value].sort_values(by="ตัดกว้าง").reset_index(drop=True)
-            )
-        # print(new_orders)
-
-
-        temp = new_orders
-        #filter โดยยึดจากอันแรก
-        # init_order = new_orders.iloc[0]
-        # for i, order in new_orders.iterrows():
-        #     if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):
-        #         # if init_order[11] == order[11]:
-        #         temp.append(order)
-
-        temp = pd.DataFrame(temp)
-
-        return temp
-
     def get(self):
         ordplan = self.ordplan
 
@@ -104,6 +68,44 @@ class ORD:
 
         return self.prep()
 
+
+    def prep(self):
+        orders = self.ordplan
+
+        #เอาไซส์กระดาษมาหารกับปริมาณการตัด เช่น กระดาษ 63 ถ้าตัดสองครั้งจได้ ~31 แล้วบันทึกเก็บไว้
+        if self.auto:
+            selected_values = self.ordplan["ตัดกว้าง"].loc[0] / (3 if self.ordplan["ตัดกว้าง"].loc[0] > 80 else 2)
+        else:
+            selected_values = self.size / self.tuning_values
+
+
+
+        for i, row in orders.iterrows():
+            diff = abs(selected_values - row["ตัดกว้าง"])
+            orders.loc[i, "diff"] = diff
+
+        #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
+        new_orders = orders
+        if self.filter:
+            new_orders = (
+                orders[orders["diff"] < self.filter_value].sort_values(by="ตัดกว้าง").reset_index(drop=True)
+            )
+        # print(new_orders)
+
+
+        temp = new_orders
+        #filter โดยยึดจากอันแรก
+        # init_order = new_orders.iloc[0]
+        # for i, order in new_orders.iterrows():
+        #     if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):
+        #         # if init_order[11] == order[11]:
+        #         temp.append(order)
+
+        temp = pd.DataFrame(temp)
+
+        return temp
+
+    
     def calculate_trim_and_roll(width):
         roll_paper = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
         trim_min = 1
