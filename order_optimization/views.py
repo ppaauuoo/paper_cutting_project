@@ -1,15 +1,13 @@
 from django.core.cache import cache
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 import pandas as pd
 from .models import CSVFile
-from .forms import CSVFileForm
+from .forms import CSVFileForm, LoginForm
 from .modules.ordplan import ORD
 from .modules.ga import GA
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
-from django.shortcuts import redirect
-from .forms import LoginForm
 
 ROLL_PAPER = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
 CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
@@ -84,7 +82,6 @@ def auto_configuration(request):
 
     return handle_optimization(request, orders, num_generations,size_value)
     
-
 def handle_optimization(request, orders, num_generations,size_value):
     ga_instance = GA(orders, size=size_value, num_generations=num_generations,showOutput=False,save_solutions=False,showZero=False)
     ga_instance.get().run()
@@ -106,7 +103,6 @@ def handle_optimization(request, orders, num_generations,size_value):
     
     messages.success(request, 'Optimizing finished.')
     return results
-
 
 def handle_common(request):
     results = cache.get('optimization_results')
@@ -144,7 +140,6 @@ def handle_common(request):
 
 
     return results
-
 
 def handle_file_upload(request):
     form = CSVFileForm(request.POST, request.FILES)

@@ -3,10 +3,14 @@
 {% block title %}Order Optimization{% endblock %}
 
 {% block content %}
+    <div id="overlay">
+        <h1>Loading...</h1>
+    </div>
+
     <div class="d-flex justify-content-end">
         <div class="text-end">
-            <h2>Welcome, {{ user.username }}</h2>
-            <a href="{% url 'logout' %}">Logout</a>
+        <h2>Welcome, {{ user.username }}</h2>
+        <a href="{% url 'logout' %}">Logout</a>
         </div>
     </div>
 
@@ -31,28 +35,33 @@
             </select>
         </div>
         <div class="form-group mb-3">
-            <label for="tuning_value" class="form-label">Tuning Value:</label>
-            <select id="tuning_value" name="tuning_value" class="form-select" required>
-                <option value="2" {% if request.POST.tuning_value == "2" %}selected{% endif %}>2</option>
-                <option value="3" {% if request.POST.tuning_value == "3" %}selected{% endif %}>3</option>
-            </select>
-        </div>
-        <div class="form-group mb-3">
-            <label for="filter_value" class="form-label">Filter Value:</label>
-            <select id="filter_value" name="filter_value" class="form-select" required>
-                <option value="4" {% if request.POST.filter_value == "4" %}selected{% endif %}>4</option>
-                <option value="8" {% if request.POST.filter_value == "8" %}selected{% endif %}>8</option>
-                <option value="16" {% if request.POST.filter_value == "16" %}selected{% endif %}>16</option>
-            </select>
-        </div>
-        <div class="form-group mb-3">
-            <label for="num_generations" class="form-label">Number of Generations:</label>
-            <output for="num_generations" id="slider_output"></output>
-            <input type="range" id="num_generations" name="num_generations" min="20" max="100" value="50" class="form-range" required>
-        </div>
-        <div class="form-group mb-3">
-            <label for="deadline_toggle" class="form-label">Closest Deadline First:</label>
+            <label for="deadline_toggle" class="form-label">Closest Deadline First :</label>
             <input type="checkbox" id="deadline_toggle" name="deadline_toggle" class="form-check-input" value="true" {% if request.POST.deadline_toggle == "true" %}checked{% endif %}>
+        </div>
+        <a href="#advanced" data-bs-toggle="collapse" id="advanced-tab">Advanced...</a>
+
+        <!-- Advanced Collapsed -->
+        <div id="advanced" class="collapse" aria-labelledby="advanced-tab">
+            <div class="form-group mb-3">
+                <label for="tuning_value" class="form-label">Tuning Value:</label>
+                <select id="tuning_value" name="tuning_value" class="form-select" required>
+                    <option value="2" {% if request.POST.tuning_value == "2" %}selected{% endif %}>2</option>
+                    <option value="3" {% if request.POST.tuning_value == "3" %}selected{% endif %}>3</option>
+                </select>
+            </div>
+            <div class="form-group mb-3">
+                <label for="filter_value" class="form-label">Filter Value:</label>
+                <select id="filter_value" name="filter_value" class="form-select" required>
+                    <option value="4" {% if request.POST.filter_value == "4" %}selected{% endif %}>4</option>
+                    <option value="8" {% if request.POST.filter_value == "8" %}selected{% endif %}>8</option>
+                    <option value="16" {% if request.POST.filter_value == "16" %}selected{% endif %}>16</option>
+                </select>
+            </div>
+            <div class="form-group mb-3">
+                <label for="num_generations" class="form-label">Number of Generations :</label>
+                <output for="num_generations" id="slider_output"></output>
+                <input type="range" id="num_generations" name="num_generations" min="20" max="100" value="50" class="form-range" required>
+            </div>
         </div>
 
         <div class="d-flex flex-wrap justify-content-start mt-3 gap-2">
@@ -159,7 +168,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
                         <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
                     </svg> {{ results.trim }}
-                    <form method="post">
+                    <form method="post" onsubmit="document.getElementById('commonBtn').classList.add('disabled'); document.getElementById('commonBtn').querySelector('.spinner-border').classList.remove('d-none');">
                         {% csrf_token %}
                         <button type="submit" name="common" class="btn btn-primary" id="commonBtn">
                             <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
@@ -192,7 +201,6 @@
             btn.classList.add('disabled');
             btn.setAttribute('aria-disabled', 'true');
             btn.querySelector('.spinner-border').classList.remove('d-none');
-            btn.querySelector('.btn-text').textContent = 'Optimizing...';
         }
         if (e.submitter && e.submitter.name === 'common') {
             var btn = document.getElementById('commonBtn');
@@ -200,8 +208,15 @@
             btn.setAttribute('aria-disabled', 'true');
             btn.querySelector('.spinner-border').classList.remove('d-none');
         }
+        document.getElementById('overlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        window.PointerEvent = None
+        });
     });
-
+    window.addEventListener('load', function() {
+            // Remove the overlay when the page is fully loaded
+            document.getElementById('overlay').style.display = 'none';
+        });
         const slider = document.getElementById('num_generations');
         const output = document.getElementById('slider_output');
         output.textContent = slider.value;
@@ -209,9 +224,9 @@
         slider.oninput = function() {
             output.textContent = this.value;
         };  
-    
-    });
-
-
+    $(document).ready(function(){
+    // Trigger the click event on the tab link to open the Advanced tab
+    $('#advanced-tab').click();
+});
 </script>
 {% endblock %}
