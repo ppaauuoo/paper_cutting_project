@@ -31,6 +31,9 @@ def optimize_order(request):
         elif 'auto' in request.POST:
             results=auto_configuration(request)
             cache.set('optimization_results', results, CACHE_TIMEOUT)
+        elif 'common' in request.POST:
+            results=handle_common(request)
+            cache.set('optimization_results', results, CACHE_TIMEOUT)
 
     context = {
         'results': results,
@@ -82,7 +85,6 @@ def auto_configuration(request):
     return handle_optimization(request, orders, num_generations,size_value)
     
 
-
 def handle_optimization(request, orders, num_generations,size_value):
     ga_instance = GA(orders, size=size_value, num_generations=num_generations,showOutput=False,save_solutions=False,showZero=False)
     ga_instance.get().run()
@@ -105,6 +107,45 @@ def handle_optimization(request, orders, num_generations,size_value):
     messages.success(request, 'Optimizing finished.')
     return results
 
+
+def handle_common(request):
+    results = cache.get('optimization_results')
+    best_fitness = -results['trim']
+    best_output = None
+    best_index = None
+
+
+    for i, item in enumerate(results['output']):
+        if 'cut_width' in item:
+            size_value = item['cut_width'] + results['trim']
+            file_path = './data/true_ordplan.csv'
+
+            orders = ORD(file_path, deadline_scope=-1, filter=False, filter_value=4, 
+                         size=size_value, tuning_values=2, common=True).get()
+            
+            ga_instance = GA(orders, size=size_value, num_generations=50)
+            ga_instance.get().run()
+            
+            if abs(ga_instance.fitness_values) < abs(best_fitness):
+                best_fitness = ga_instance.fitness_values
+                best_output = ga_instance.output.to_dict('records')
+                best_index = i
+
+
+    if best_index is not None:
+        results['output'][best_index]['out'] -= 1
+        results['output'] = [item for item in results['output'] if item.get('out', 0) >= 1]
+        results['output'].extend(best_output)
+        results['fitness'] = results['fitness'] - results['output'][best_index]['cut_width'] + best_fitness + size_value
+        results['trim'] = abs(best_fitness)
+        messages.success(request, 'Common order found.')
+    else:
+        messages.error(request, 'No suitable common order found.')
+
+
+    return results
+
+
 def handle_file_upload(request):
     form = CSVFileForm(request.POST, request.FILES)
     if form.is_valid():
@@ -118,8 +159,6 @@ def handle_file_deletion(request):
     csv_file = get_object_or_404(CSVFile, id=file_id)
     csv_file.delete()
     messages.success(request, 'File deleted successfully.')
-
-
 
 def login_view(request):
     if request.method == 'POST':

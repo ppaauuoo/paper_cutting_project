@@ -68,11 +68,9 @@ class GA:
             if var < 0:  # ถ้ามีค่าน้อยกว่า 0 penalty > กันติดลบ
                 penalty += penalty_value
 
-        if sum(solution) > 6:  # ถ้าผลรวมมีค่ามากกว่า 6 penalty > outได้สูงสุด 6 out ต่อรอบ
+        if sum(solution) > 2:  # 
             penalty += penalty_value*sum(solution)
 
-        if solution[solution >= 1].size > 2:  # out สูงสุด 2 ครั้ง ต่อออร์เดอร์
-            penalty += penalty_value
 
         output = numpy.sum(solution * orders["ตัดกว้าง"])  # ผลรวมของตัดกว้างทั้งหมด
 

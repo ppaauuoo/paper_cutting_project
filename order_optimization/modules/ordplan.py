@@ -1,11 +1,13 @@
 import pandas as pd
 
 class ORD:
-    def __init__(self, path, deadline_scope, size, tuning_values, filter_value, filter=None, auto=None):
+    def __init__(self, path, deadline_scope, size, tuning_values, filter_value, filter=None, common=None, auto=None):
         self.deadline_scope = deadline_scope
         self.ordplan = pd.read_csv(path, header=None)
         self.filter = True if filter is None else filter
+        self.common = False if common is None else common
         self.auto = False if auto is None else auto
+
         self.size = size
         self.tuning_values = tuning_values
         self.filter_value = filter_value
@@ -90,84 +92,13 @@ class ORD:
             new_orders = (
                 orders[orders["diff"] < self.filter_value].sort_values(by="ตัดกว้าง").reset_index(drop=True)
             )
-        # print(new_orders)
+
+        if self.common:
+            # Filter based on the first order
+            init_order = new_orders.iloc[0]
+            new_orders = new_orders[new_orders.apply(lambda order: all(init_order[i] == order[i] for i in [3, 4, 5, 6, 7, 8, 12]), axis=1)]
+
+        return new_orders
 
 
-        temp = new_orders
-        #filter โดยยึดจากอันแรก
-        # init_order = new_orders.iloc[0]
-        # for i, order in new_orders.iterrows():
-        #     if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):
-        #         # if init_order[11] == order[11]:
-        #         temp.append(order)
 
-        temp = pd.DataFrame(temp)
-
-        return temp
-
-    
-    def calculate_trim_and_roll(width):
-        roll_paper = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
-        trim_min = 1
-        trim_max = 3
-        trim = [paper - width for paper in roll_paper]
-        valid_trim_values = [t for t in trim if trim_min <= t <= trim_max]
-
-        if valid_trim_values:
-            roll = roll_paper[trim.index(valid_trim_values[0])]
-            return valid_trim_values[0], int(roll)
-        else:
-            return None, None
-
-    def calculate_roll(width):
-        roll_paper = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
-        trim_min = 1
-        trim_max = 3
-        roll = None
-        for i in range(1, 4):
-            trim = [paper - width * i for paper in roll_paper]
-            valid_trim_values = [t for t in trim if trim_min <= t <= trim_max]
-
-            if valid_trim_values:
-                roll = roll_paper[trim.index(valid_trim_values[0])]
-
-        return roll
-
-    def calculate_roll_tuning(width, tuning_values):
-        roll_paper = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
-        trim_min = 1
-        trim_max = 3
-        roll = None
-        trim = [paper - width * tuning_values for paper in roll_paper]
-        valid_trim_values = [t for t in trim if trim_min <= t <= trim_max]
-
-        if valid_trim_values:
-            roll = roll_paper[trim.index(valid_trim_values[0])]
-        return roll
-
-    def calculate_roll_and_width(paper, width):
-        trim_min = 1
-        trim_max = 3
-        if trim_min <= paper - width <= trim_max:
-            return False
-        return True
-
-    def check_roll_compat(self, var, i, orders, PAPER_SIZE):
-        if var:  # ถ้า var = 0 False
-            if ORD.calculate_roll_and_width(
-                PAPER_SIZE, 2 * orders.loc[i, "ตัดกว้าง"]
-            ):  # ถ้า width *2 แล้วผ่าน False
-                if ORD.calculate_roll_and_width(
-                    PAPER_SIZE, 3 * orders.loc[i, "ตัดกว้าง"]
-                ):  # ถ้า width *3 แล้วผ่าน False
-                    if ORD.calculate_roll_and_width(
-                        PAPER_SIZE, 4 * orders.loc[i, "ตัดกว้าง"]
-                    ):  # ถ้า width *4 แล้วผ่าน False
-                        if ORD.calculate_roll_and_width(
-                            PAPER_SIZE, 5 * orders.loc[i, "ตัดกว้าง"]
-                        ):  # ถ้า width *5 แล้วผ่าน False
-                            if ORD.calculate_roll_and_width(
-                                PAPER_SIZE, 6 * orders.loc[i, "ตัดกว้าง"]
-                            ):  # ถ้า width *6 แล้วผ่าน False ex. 4*6 = 24 > 22-24 = -2
-                                return abs(PAPER_SIZE * 2)
-        return 0
