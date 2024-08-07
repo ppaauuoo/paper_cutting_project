@@ -8,6 +8,8 @@ from .modules.ordplan import ORD
 from .modules.ga import GA
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
+from django.http import JsonResponse
+
 
 ROLL_PAPER = [73, 75, 79, 82, 85, 91, 95, 97]
 FILTER = [8,6,4,2]
@@ -18,6 +20,7 @@ CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
 
 @login_required
 def optimize_order(request):
+    cache.delete("optimization_progress")  # Clear previous progress
     results = cache.get("optimization_results")
     csv_files = CSVFile.objects.all()
     form = CSVFileForm()
@@ -84,11 +87,11 @@ def auto_configuration(request):
     csv_file = get_object_or_404(CSVFile, id=file_id)
     file_path = csv_file.file.path
 
-    filter_value_list = [4, 8, 16]
+    filter_value_list = [6, 8, 16]
     num_generations = 50
     deadline_toggle = 0
     tuning_value = 2
-    out_range = 2
+    out_range = 3
 
     orders = []
     i = 0
@@ -120,7 +123,7 @@ def handle_optimization(request, orders, num_generations, out_range, size_value)
         save_solutions=False,
         showZero=False,
     )
-    ga_instance.get().run()
+    ga_instance.get(update_progress=update_progress).run()
 
     fitness_values = ga_instance.fitness_values
 
@@ -165,7 +168,7 @@ def handle_common(request):
 
         orders.reset_index()
         ga_instance = GA(orders, size=size_value, out_range=2, num_generations=50)
-        ga_instance.get().run()
+        ga_instance.get(update_progress=update_progress).run()
 
         if abs(ga_instance.fitness_values) < abs(best_fitness):
             best_fitness = ga_instance.fitness_values
@@ -221,3 +224,11 @@ def login_view(request):
     else:
         form = LoginForm()
     return render(request, "login.html", {"form": form})
+
+
+def get_progress(request):
+    progress = cache.get("optimization_progress", 0)
+    return JsonResponse({'progress': progress})
+
+def update_progress(progress):
+    cache.set("optimization_progress", progress, CACHE_TIMEOUT)

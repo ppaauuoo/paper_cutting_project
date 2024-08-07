@@ -123,8 +123,10 @@ class GA:
     def on_gen(self, ga_instance):
 
         self.current_generation += 1
-        progress = (self.current_generation / self.num_generations) * 100
-        
+        if self.update_progress:
+                progress = (self.current_generation / self.num_generations) * 100
+                self.update_progress(progress)
+
         orders = self.orders
 
         solution = ga_instance.best_solution()[0]
@@ -171,5 +173,6 @@ class GA:
         print("Trim :", abs(self.fitness_values))
         print("\n")
 
-    def get(self):
+    def get(self, update_progress):
+        self.update_progress= update_progress
         return self.model
