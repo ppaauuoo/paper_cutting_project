@@ -21,6 +21,7 @@ CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
 @login_required
 def optimize_order(request):
     cache.delete("optimization_progress")  # Clear previous progress
+    cache.delete("try_again")  # Clear previous progress
     results = cache.get("optimization_results")
     csv_files = CSVFile.objects.all()
     form = CSVFileForm()
@@ -82,16 +83,17 @@ def manual_configuration(request):
 
 
 def auto_configuration(request):
-
+    cache.delete("optimization_progress")  # Clear previous progress
+    again = cache.get("try_again", 0)
     file_id = request.POST.get("file_id")
     csv_file = get_object_or_404(CSVFile, id=file_id)
     file_path = csv_file.file.path
 
-    filter_value_list = [6, 8, 16]
-    num_generations = 50
+    filter_value_list = [4,6, 8]
+    num_generations = 50+(10*again)
     deadline_toggle = 0
-    tuning_value = 2
-    out_range = 3
+    tuning_value = 2 if again is None else 3
+    out_range = 3+again
 
     orders = []
     i = 0
@@ -137,6 +139,13 @@ def handle_optimization(request, orders, num_generations, out_range, size_value)
     }
 
     if abs(fitness_values) > 3.10:
+        again = cache.get("try_again", 0)
+
+        if "auto" in request.POST and again <= 5:
+            again+=1
+            cache.set("try_again", again, CACHE_TIMEOUT)
+            return auto_configuration(request)
+
         messages.error(
             request, "Optimizing finished with unsatisfied result, please try again."
         )
@@ -153,6 +162,7 @@ def handle_common(request):
     best_index = None
 
     for i, item in enumerate(results["output"]):
+    
         size_value = item["cut_width"] + results["trim"]
         file_path = "./data/true_ordplan.csv"
 
@@ -167,6 +177,7 @@ def handle_common(request):
         ).get()
 
         orders.reset_index()
+        cache.delete("optimization_progress")  # Clear previous progress
         ga_instance = GA(orders, size=size_value, out_range=2, num_generations=50)
         ga_instance.get(update_progress=update_progress).run()
 
