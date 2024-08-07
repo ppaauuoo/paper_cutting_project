@@ -134,8 +134,9 @@ class GA:
         output = pd.DataFrame(
             {
                 "order_number": orders["เลขที่ใบสั่งขาย"],
-                "num_layers": orders["จำนวนชั้น"],
+                "num_orders": orders["จำนวนสั่งขาย"],
                 "cut_width": orders["ตัดกว้าง"],
+                "cut_len": orders["ตัดยาว"],
                 "type": orders["ประเภททับเส้น"],
                 "deadline": orders["กำหนดส่ง"],
                 "diff": orders["diff"],

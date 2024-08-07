@@ -11,10 +11,10 @@ from django.contrib.auth import login, authenticate
 from django.http import JsonResponse
 
 
-ROLL_PAPER = [73, 75, 79, 82, 85, 91, 95, 97]
-FILTER = [8,6,4,2]
-OUT_RANGE = [3,5,7]
-TUNING_VALUE = [2,3]
+ROLL_PAPER = [66, 68, 70, 73, 74, 75, 79, 82, 85, 88, 91, 93, 95, 97]
+FILTER = [16,8,6,4,2]
+OUT_RANGE = [7,5,3]
+TUNING_VALUE = [3,2]
 CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
 
 
@@ -37,8 +37,11 @@ def optimize_order(request):
         elif "auto" in request.POST:
             results = auto_configuration(request)
             cache.set("optimization_results", results, CACHE_TIMEOUT)
-        elif "common" in request.POST:
-            results = handle_common(request)
+        elif "common_trim" in request.POST:
+            results = handle_common(request,'trim')
+            cache.set("optimization_results", results, CACHE_TIMEOUT)
+        elif "common_order" in request.POST:
+            results = handle_common(request,'order')
             cache.set("optimization_results", results, CACHE_TIMEOUT)
 
     context = {
@@ -89,7 +92,6 @@ def auto_configuration(request):
     csv_file = get_object_or_404(CSVFile, id=file_id)
     file_path = csv_file.file.path
 
-    filter_value_list = [4,6, 8]
     num_generations = 50+(10*again)
     deadline_toggle = 0
     tuning_value = 2 if again is None else 3
@@ -100,7 +102,7 @@ def auto_configuration(request):
     j = 0
     while len(orders) == 0:
         orders = ORD(
-            filter_value=filter_value_list[i],
+            filter_value=FILTER[-i],
             size=ROLL_PAPER[j],
             path=file_path,
             deadline_scope=deadline_toggle,
@@ -108,7 +110,7 @@ def auto_configuration(request):
             tuning_values=tuning_value,
         ).get()
         i += 1
-        if i > len(filter_value_list):
+        if i > len(FILTER):
             i = 0
             j += 1
 
@@ -131,17 +133,21 @@ def handle_optimization(request, orders, num_generations, out_range, size_value)
 
     output_data = ga_instance.output.to_dict("records")
 
+    init_order_number, foll_order_number = ORD.handle_orders_logic(output_data)
+
     results = {
         "output": output_data,
         "roll": ga_instance.PAPER_SIZE,
         "fitness": size_value + fitness_values,
         "trim": abs(fitness_values),
+        "init_order_number": init_order_number,
+        "foll_order_number": foll_order_number
     }
 
     if abs(fitness_values) > 3.10:
         again = cache.get("try_again", 0)
 
-        if "auto" in request.POST and again <= 5:
+        if "auto" in request.POST and again <= 4:
             again+=1
             cache.set("try_again", again, CACHE_TIMEOUT)
             return auto_configuration(request)

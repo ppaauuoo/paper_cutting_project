@@ -87,4 +87,16 @@ class ORD:
 
         return ordplan
 
+    def handle_orders_logic(output_data):
+        init_len = output_data[0]['cut_len']
+        init_out = output_data[0]['out']
+        init_num_orders = output_data[0]['num_orders']
+
+        foll_order_len = init_len
+        if len(output_data) > 1:
+            foll_order_len = output_data[1]['cut_len']
+
+        init_order_number = round(init_num_orders/init_out)
+        foll_order_number = round(init_len * init_order_number / foll_order_len)
+        return (init_order_number,foll_order_number)
 
