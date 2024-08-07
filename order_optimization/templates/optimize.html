@@ -45,15 +45,25 @@
             <div class="form-group mb-3">
                 <label for="tuning_value" class="form-label">Tuning Value:</label>
                 <select id="tuning_value" name="tuning_value" class="form-select" required>
-                    <option value="2" {% if request.POST.tuning_value == "2" %}selected{% endif %}>2</option>
-                    <option value="1" {% if request.POST.tuning_value == "1" %}selected{% endif %}>1</option>
+                    {% for val in tuning_value %}
+                        <option value="{{ val }}" {% if val|stringformat:"s"  == request.POST.tuning_value %}selected{% endif %}>{{ val }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="form-group mb-3">
                 <label for="filter_value" class="form-label">Filter Value:</label>
                 <select id="filter_value" name="filter_value" class="form-select" required>
-                    <option value="8" {% if request.POST.filter_value == "8" %}selected{% endif %}>8</option>
-                    <option value="16" {% if request.POST.filter_value == "16" %}selected{% endif %}>16</option>
+                    {% for val in filter %}
+                        <option value="{{ val }}" {% if val|stringformat:"s"  == request.POST.filter_value %}selected{% endif %}>{{ val }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group mb-3">
+                <label for="out_range" class="form-label">Out Range:</label>
+                <select id="out_range" name="out_range" class="form-select" required>
+                    {% for out in out_range %}
+                        <option value="{{ out }}" {% if out|stringformat:"s"  == request.POST.out_range %}selected{% endif %}>{{ out }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="form-group mb-3">

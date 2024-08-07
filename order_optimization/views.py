@@ -10,6 +10,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 
 ROLL_PAPER = [73, 75, 79, 82, 85, 91, 95, 97]
+FILTER = [8,6,4,2]
+OUT_RANGE = [3,5,7]
+TUNING_VALUE = [2,3]
 CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
 
 
@@ -37,6 +40,9 @@ def optimize_order(request):
     context = {
         "results": results,
         "roll_paper": ROLL_PAPER,
+        "filter": FILTER,
+        "out_range": OUT_RANGE,
+        "tuning_value": TUNING_VALUE,
         "csv_files": csv_files,
         "form": form,
     }
@@ -49,6 +55,7 @@ def manual_configuration(request):
     filter_value = int(request.POST.get("filter_value"))
     file_id = request.POST.get("file_id")
     num_generations = int(request.POST.get("num_generations"))
+    out_range = int(request.POST.get("out_range"))
 
     deadline_toggle = 0 if request.POST.get("deadline_toggle") == "true" else -1
 
@@ -68,7 +75,7 @@ def manual_configuration(request):
         messages.error(request, "Eror 404: No orders were found. Please try again.")
         return
 
-    return handle_optimization(request, orders, num_generations, size_value)
+    return handle_optimization(request, orders, num_generations, out_range, size_value)
 
 
 def auto_configuration(request):
@@ -81,6 +88,7 @@ def auto_configuration(request):
     num_generations = 50
     deadline_toggle = 0
     tuning_value = 2
+    out_range = 2
 
     orders = []
     i = 0
@@ -99,14 +107,15 @@ def auto_configuration(request):
             i = 0
             j += 1
 
-    return handle_optimization(request, orders, num_generations, ROLL_PAPER[j])
+    return handle_optimization(request, orders, num_generations, out_range, ROLL_PAPER[j])
 
 
-def handle_optimization(request, orders, num_generations, size_value):
+def handle_optimization(request, orders, num_generations, out_range, size_value):
     ga_instance = GA(
         orders,
         size=size_value,
         num_generations=num_generations,
+        out_range=out_range,
         showOutput=False,
         save_solutions=False,
         showZero=False,
@@ -155,7 +164,7 @@ def handle_common(request):
         ).get()
 
         orders.reset_index()
-        ga_instance = GA(orders, size=size_value, num_generations=50)
+        ga_instance = GA(orders, size=size_value, out_range=2, num_generations=50)
         ga_instance.get().run()
 
         if abs(ga_instance.fitness_values) < abs(best_fitness):

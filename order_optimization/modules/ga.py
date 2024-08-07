@@ -4,7 +4,7 @@ import pandas as pd
 from .ordplan import ORD
 
 class GA:
-    def __init__(self, orders, size, num_generations, showOutput=None, save_solutions=None, showZero=None):
+    def __init__(self, orders, size, num_generations, out_range,showOutput=None, save_solutions=None, showZero=None):
         self.orders = orders
         self.PAPER_SIZE = size
         self.showOutput = False if showOutput is None else showOutput
@@ -22,7 +22,7 @@ class GA:
         self.num_genes = len(self.orders)
 
         self.init_range_low = 0
-        self.init_range_high = 3
+        self.init_range_high = out_range
         # self.init_range_high = abs(int(orders['จำนวนสั่งขาย'].median()/100 + size/100 - len(orders)*tuning_parameters))
 
         self.parent_selection_type = "tournament"
@@ -57,6 +57,9 @@ class GA:
             on_generation=self.on_gen,
             save_solutions=self.save_solutions
         )
+
+        self.current_generation = 0
+
 
     def paper_type_logic(self, solution):
         init_type = None
@@ -118,6 +121,10 @@ class GA:
         return fitness_values - self.penalty  # ลบด้วย penalty
 
     def on_gen(self, ga_instance):
+
+        self.current_generation += 1
+        progress = (self.current_generation / self.num_generations) * 100
+        
         orders = self.orders
 
         solution = ga_instance.best_solution()[0]
