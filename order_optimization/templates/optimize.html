@@ -46,13 +46,12 @@
                 <label for="tuning_value" class="form-label">Tuning Value:</label>
                 <select id="tuning_value" name="tuning_value" class="form-select" required>
                     <option value="2" {% if request.POST.tuning_value == "2" %}selected{% endif %}>2</option>
-                    <option value="3" {% if request.POST.tuning_value == "3" %}selected{% endif %}>3</option>
+                    <option value="1" {% if request.POST.tuning_value == "1" %}selected{% endif %}>1</option>
                 </select>
             </div>
             <div class="form-group mb-3">
                 <label for="filter_value" class="form-label">Filter Value:</label>
                 <select id="filter_value" name="filter_value" class="form-select" required>
-                    <option value="4" {% if request.POST.filter_value == "4" %}selected{% endif %}>4</option>
                     <option value="8" {% if request.POST.filter_value == "8" %}selected{% endif %}>8</option>
                     <option value="16" {% if request.POST.filter_value == "16" %}selected{% endif %}>16</option>
                 </select>

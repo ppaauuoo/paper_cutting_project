@@ -48,7 +48,7 @@ class ORD:
 
         ordplan = ordplan[
             (ordplan["ตัดกว้าง"] != 0) & (ordplan["ตัดยาว"] != 0)
-        ]  # filter out zero values -> index misaligned
+        ].reset_index(drop=True)  # filter out zero values -> index misaligned
 
         ordplan["ตัดกว้าง"] = round(ordplan["ตัดกว้าง"] / 25.4, 4)
         ordplan["ตัดยาว"] = round(ordplan["ตัดยาว"] / 25.4, 4)
@@ -62,16 +62,10 @@ class ORD:
         #filter deadline_scope
         if self.deadline_scope >= 0:
             deadline = ordplan["กำหนดส่ง"].iloc[self.deadline_scope]
-            ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline]
-        ordplan = ordplan.reset_index(drop=True)
-
-
+            ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline].reset_index(drop=True)
 
         #เอาไซส์กระดาษมาหารกับปริมาณการตัด เช่น กระดาษ 63 ถ้าตัดสองครั้งจได้ ~31 แล้วบันทึกเก็บไว้
         selected_values = self.size / self.tuning_values
-
-
-
 
         for i, row in ordplan.iterrows():
             diff = abs(selected_values - row["ตัดกว้าง"])
@@ -86,7 +80,8 @@ class ORD:
         if self.common:
             # Filter based on the first order
             init_order = ordplan.iloc[0]
-            ordplan = ordplan[ordplan.apply(lambda order: all(init_order[i] == order[i] for i in [3, 4, 5, 6, 7, 8, 12]), axis=1)]
+            ordplan = ordplan[ordplan.apply(lambda order: all(init_order[i] == order[i] for i in [3, 4, 5, 6, 7, 8, 12]), axis=1)].reset_index(drop=True)
+
 
         self.ordplan = ordplan
 

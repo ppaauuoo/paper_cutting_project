@@ -58,31 +58,64 @@ class GA:
             save_solutions=self.save_solutions
         )
 
-    def fitness_function(self, ga_instance, solution, solution_idx):
-        penalty = 0
+    def paper_type_logic(self, solution):
+        init_type = None
         orders = self.orders
-        PAPER_SIZE = self.PAPER_SIZE
-        penalty_value = 1000
-
         for i, var in enumerate(solution):
-            if var < 0:  # ถ้ามีค่าน้อยกว่า 0 penalty > กันติดลบ
-                penalty += penalty_value
+            if init_type is not None:
+                break
+            if var >= 1:
+                match orders['ประเภททับเส้น'][i]:
+                    case "X":
+                        init_type = 1
+                    case "N", "W":
+                        init_type = 2
 
-        if sum(solution) > 2:  # 
-            penalty += penalty_value*sum(solution)
+        if init_type is not None:
+            for i, var in enumerate(solution):
+                if var >= 1:
+                    match init_type:
+                        case 1:
+                            if orders['ประเภททับเส้น'][i] not in ["X", "Y"]:  # Changed OR to AND condition
+                                self.penalty += self.penalty_value
+                        case 2:
+                            if orders['ประเภททับเส้น'][i] == "X":
+                                self.penalty += self.penalty_value
 
+    def paper_out_logic(self, solution):
+        if sum(solution) > 6:  # 
+            self.penalty += self.penalty_value*sum(solution)
 
-        output = numpy.sum(solution * orders["ตัดกว้าง"])  # ผลรวมของตัดกว้างทั้งหมด
+        order_length = 0
+        for i, var in enumerate(solution):
+            if var >= 1:
+                order_length+=1
+        if order_length > 2:
+            self.penalty += self.penalty_value*order_length
 
-        if output > PAPER_SIZE:  # ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น penalty
-            penalty += penalty_value
+    def paper_size_logic(self,output):
+        if output > self.PAPER_SIZE:  # ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น penalty
+            self.penalty += self.penalty_value
 
-        fitness_values = -PAPER_SIZE + output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
-
+    def paper_trim_logic(self,fitness_values):
         if abs(fitness_values) <= 1.22:  # ถ้าผลรวมมีค่าน้อยกว่า 1.22 penalty > เงื่อนไขบริษัท
-            penalty += penalty_value
+            self.penalty += self.penalty_value
 
-        return fitness_values - penalty  # ลบด้วย penalty
+    def fitness_function(self, ga_instance, solution, solution_idx):
+        self.penalty = 0
+        self.penalty_value = 1000
+
+        self.paper_type_logic(solution)
+
+        self.paper_out_logic(solution)
+
+        output = numpy.sum(solution * self.orders["ตัดกว้าง"])  # ผลรวมของตัดกว้างทั้งหมด
+        self.paper_size_logic(output)
+
+        fitness_values = -self.PAPER_SIZE + output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
+        self.paper_trim_logic(fitness_values)
+
+        return fitness_values - self.penalty  # ลบด้วย penalty
 
     def on_gen(self, ga_instance):
         orders = self.orders
