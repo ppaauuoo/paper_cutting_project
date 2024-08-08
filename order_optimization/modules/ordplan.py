@@ -1,16 +1,15 @@
 import pandas as pd
 
 class ORD:
-    def __init__(self, path, deadline_scope, size, tuning_values, filter_value, filter=None, common=None):
-        self.deadline_scope = deadline_scope
+    def __init__(self, path: str, deadline_scope: int, size: float, tuning_values: int, filter_value: int, filter: bool = True, common: bool = False, filler: int =0) -> None:
         self.ordplan = pd.read_excel(path, engine='openpyxl')
-        self.filter = True if filter is None else filter
-        self.common = False if common is None else common
-
+        self.deadline_scope = deadline_scope
+        self.filter = filter
+        self.common = common
         self.size = size
         self.tuning_values = tuning_values
         self.filter_value = filter_value
-
+        self.filler=filler
     def get(self):
         ordplan = self.ordplan
 
@@ -41,16 +40,23 @@ class ORD:
 
         if self.common:
             col = [
-                "กำหนดส่ง",
-                "กว้างผลิต",
-                "ยาวผลิต",
-                "เลขที่ใบสั่งขาย",
-                "จำนวนสั่งขาย",
+                "แผ่นหน้า",
+                "ลอน C",
+                "แผ่นกลาง",
+                "ลอน B",
+                "แผ่นหลัง",
+                "จน.ชั้น",
                 "ประเภททับเส้น",
             ]
-                # Filter based on the first order
+                    # Filter based on the first order
             init_order = ordplan.iloc[0]
-            ordplan = ordplan[ordplan.apply(lambda order: all(init_order[i] == order[i] for i in col), axis=1)].reset_index(drop=True)
+            if self.filler:
+                init_order = ordplan[ordplan['เลขที่ใบสั่งขาย'] == self.filler]
+                ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.filler]
+
+            if isinstance(init_order, pd.Series):
+                ordplan = ordplan[ordplan.apply(lambda order: all(init_order[i] == order[i] for i in col), axis=1)].reset_index(drop=True)
+
 
 
         self.ordplan = ordplan

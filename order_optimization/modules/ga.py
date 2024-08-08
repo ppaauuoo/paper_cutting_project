@@ -4,12 +4,12 @@ import pandas as pd
 from .ordplan import ORD
 
 class GA:
-    def __init__(self, orders, size, num_generations, out_range,showOutput=None, save_solutions=None, showZero=None):
+    def __init__(self, orders: ORD, size: float, num_generations: int, out_range: int,showOutput:bool = False, save_solutions:bool = False, showZero: bool = False)->None:
         self.orders = orders
         self.PAPER_SIZE = size
-        self.showOutput = False if showOutput is None else showOutput
-        self.save_solutions = False if save_solutions is None else save_solutions
-        self.showZero = False if showZero is None else showZero
+        self.showOutput = showOutput
+        self.save_solutions = save_solutions
+        self.showZero = showZero
 
         self.num_generations = num_generations
         # num_parents_mating = len(orders)

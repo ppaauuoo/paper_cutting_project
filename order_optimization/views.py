@@ -38,10 +38,10 @@ def optimize_order(request):
             results = auto_configuration(request)
             cache.set("optimization_results", results, CACHE_TIMEOUT)
         elif "common_trim" in request.POST:
-            results = handle_common(request,'trim')
+            results = handle_common(request)
             cache.set("optimization_results", results, CACHE_TIMEOUT)
         elif "common_order" in request.POST:
-            results = handle_common(request,'order')
+            results = handle_filler(request)
             cache.set("optimization_results", results, CACHE_TIMEOUT)
 
     context = {
@@ -56,7 +56,7 @@ def optimize_order(request):
     return render(request, "optimize.html", context)
 
 
-def manual_configuration(request):
+def manual_configuration(request)->Callable:
     file_id = request.POST.get("file_id")
     size_value = int(request.POST.get("size_value"))
     deadline_toggle = -1 if request.POST.get("deadline_toggle") == "true" else 0
@@ -70,7 +70,7 @@ def manual_configuration(request):
         return
     return handle_optimization(request, orders, num_generations, out_range, size_value)
 
-def auto_configuration(request):
+def auto_configuration(request)->Callable:
     again = cache.get("try_again", 0)
     file_id = request.POST.get("file_id")
     num_generations = 50+(10*again)
@@ -87,7 +87,7 @@ def auto_configuration(request):
             j += 1
     return handle_optimization(request, orders, num_generations, out_range, ROLL_PAPER[j])
 
-def handle_optimization(request, orders, num_generations, out_range, size_value):
+def handle_optimization(request, orders: ORD, num_generations: int, out_range: int, size_value: float)->Callable|Dict:
     ga_instance = run_genetic_algorithm(orders, size_value, out_range, num_generations)
     fitness_values, output_data = get_outputs(ga_instance)
     init_order_number, foll_order_number = ORD.handle_orders_logic(output_data)
@@ -125,7 +125,7 @@ def recursive_auto_logic(request):
         return auto_configuration(request)
     return messages.error(request, "Error : Auto config malfuncioned, please contact admin.")
 
-def handle_common(request, action: str) -> Dict:
+def handle_common(request) -> Dict:
     """
     Handle common order optimization.
 
@@ -161,6 +161,33 @@ def handle_common(request, action: str) -> Dict:
 
     return results
 
+def handle_filler(request):
+    results = cache.get("optimization_results")
+    init_order = results['output'][0]['order_number']
+    file_id = request.POST.get("selected_file_id")
+    size_value = results['output'][0]['cut_width']
+    init_out = results['output'][0]['out']
+    orders = get_orders(file_id,size_value,deadline_scope=-1,tuning_values=1, filter=False,common=True,filler=init_order)
+    i = 0
+    while i < len(orders) and results['foll_order_number'] > results['output'][1]['num_orders'] + orders['จำนวนสั่งขาย'][i]: i += 1
+
+    output = output_format(orders.iloc[i], init_out).to_dict(orient='records')
+    results['output'].extend(output)
+    return results
+
+def output_format(orders: ORD, init_out: int) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "order_number": [orders["เลขที่ใบสั่งขาย"]],
+            "num_orders": [orders["จำนวนสั่งขาย"]],
+            "cut_width": [orders["กว้างผลิต"]],
+            "cut_len": [orders["ยาวผลิต"]],
+            "type": [orders["ประเภททับเส้น"]],
+            "deadline": [orders["กำหนดส่ง"]],
+            "out": [init_out],
+        }
+    )
+
 def get_orders(
     file_id: str,
     size_value: float,
@@ -168,7 +195,8 @@ def get_orders(
     filter_value: int = 16,
     tuning_values: int = 3,
     filter: bool = True,
-    common: bool = False
+    common: bool = False,
+    filler: int = 0
 ) -> ORD:
     """
     Get orders for optimization.
@@ -194,7 +222,8 @@ def get_orders(
         filter_value=filter_value,
         size=size_value,
         tuning_values=tuning_values,
-        common=common
+        common=common,
+        filler = filler
     ).get()
 
 def get_outputs(ga_instance: GA) -> Tuple[float, List[Dict]]:
