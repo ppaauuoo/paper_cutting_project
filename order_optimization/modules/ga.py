@@ -112,7 +112,7 @@ class GA:
 
         self.paper_out_logic(solution)
 
-        output = numpy.sum(solution * self.orders["ตัดกว้าง"])  # ผลรวมของตัดกว้างทั้งหมด
+        output = numpy.sum(solution * self.orders["กว้างผลิต"])  # ผลรวมของตัดกว้างทั้งหมด
         self.paper_size_logic(output)
 
         fitness_values = -self.PAPER_SIZE + output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
@@ -135,11 +135,10 @@ class GA:
             {
                 "order_number": orders["เลขที่ใบสั่งขาย"],
                 "num_orders": orders["จำนวนสั่งขาย"],
-                "cut_width": orders["ตัดกว้าง"],
-                "cut_len": orders["ตัดยาว"],
+                "cut_width": orders["กว้างผลิต"],
+                "cut_len": orders["ยาวผลิต"],
                 "type": orders["ประเภททับเส้น"],
                 "deadline": orders["กำหนดส่ง"],
-                "diff": orders["diff"],
                 "out": solution,
             }
         )
