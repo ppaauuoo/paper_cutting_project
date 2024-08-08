@@ -161,17 +161,15 @@ def handle_optimization(request, orders, num_generations, out_range, size_value)
     return results
 
 
-def handle_common(request, action):
+def handle_common(request):
     results = cache.get("optimization_results")
     best_fitness = -results["trim"]
     best_output = None
     best_index = None
 
     for i, item in enumerate(results["output"]):
-        if action == "order" and i == 0:
-            continue
-        
-        size_value = item["cut_width"] + results["trim"] if action=="order" else item['cut_width']
+    
+        size_value = item["cut_width"] + results["trim"]
         file_path = "./data/true_ordplan.csv"
 
         orders = ORD(
@@ -180,58 +178,33 @@ def handle_common(request, action):
             filter=False,
             filter_value=16,
             size=size_value,
-            tuning_values=2 if action=="trim" else 1,
+            tuning_values=2,
             common=True,
         ).get()
 
-        match action:
-            case 'trim':
-                cache.delete("optimization_progress")  # Clear previous progress
-                ga_instance = GA(orders, size=size_value, out_range=3, num_generations=50)
-                ga_instance.get(update_progress=update_progress).run()
-                if abs(ga_instance.fitness_values) < abs(best_fitness):
-                    best_fitness = ga_instance.fitness_values
-                    best_output = ga_instance.output.to_dict("records")
-                    best_index = i
-            case 'order':
-                first_common_order = orders[0]
-                if first_common_order['จำนวนสั่งขาย']+results['output'][-1]['num_orders'] > results['foll_order_number']:
-                    best_fitness = ga_instance.fitness_values
-                    output = pd.DataFrame(
-                        {
-                            "order_number": first_common_order["เลขที่ใบสั่งขาย"],
-                            "num_orders": first_common_order["จำนวนสั่งขาย"],
-                            "cut_width": first_common_order["ตัดกว้าง"],
-                            "cut_len": first_common_order["ตัดยาว"],
-                            "type": first_common_order["ประเภททับเส้น"],
-                            "deadline": first_common_order["กำหนดส่ง"],
-                            "diff": first_common_order["diff"],
-                            "out": 1,
-                        }
-                    )                    
-                    best_output = output.todict('records')
-                    best_index = i
+        orders.reset_index()
+        cache.delete("optimization_progress")  # Clear previous progress
+        ga_instance = GA(orders, size=size_value, out_range=2, num_generations=50)
+        ga_instance.get(update_progress=update_progress).run()
 
+        if abs(ga_instance.fitness_values) < abs(best_fitness):
+            best_fitness = ga_instance.fitness_values
+            best_output = ga_instance.output.to_dict("records")
+            best_index = i
 
     if best_index is not None:
-        match action:
-            case 'trim':
-                results["output"].pop(best_index) 
-                results["output"] = [
-                    item for item in results["output"] if item.get("out", 0) >= 1
-                ]
-                results["output"].extend(best_output)
-                results["fitness"] = (
-                    results["fitness"]
-                    - results["output"][best_index]["cut_width"]
-                    + best_fitness
-                    + size_value
-                )
-                results["trim"] = abs(best_fitness)
-            case 'order':
-                results["output"].extend(best_output)
-
-
+        results["output"][best_index]["out"] -= 1
+        results["output"] = [
+            item for item in results["output"] if item.get("out", 0) >= 1
+        ]
+        results["output"].extend(best_output)
+        results["fitness"] = (
+            results["fitness"]
+            - results["output"][best_index]["cut_width"]
+            + best_fitness
+            + size_value
+        )
+        results["trim"] = abs(best_fitness)
         messages.success(request, "Common order found.")
     else:
         messages.error(request, "No suitable common order found.")
