@@ -200,7 +200,8 @@
                         </svg> {{ results.foll_order_number }}
                         <form method="post" onsubmit="document.getElementById('commonBtn').classList.add('disabled'); document.getElementById('commonBtn').querySelector('.spinner-border').classList.remove('d-none'); document.getElementById('overlay').style.display = 'flex'; document.body.style.overflow = 'hidden';">
                             {% csrf_token %}
-                            <button type="submit" name="common_order" class="btn btn-primary btn-sm" id="commonBtn">
+                            <input type="hidden" id="selected_file_id" name="selected_file_id">
+                            <button type="submit" name="common_order" class="btn btn-primary btn-sm" id="commonBtn" onclick="document.getElementById('selected_file_id').value = {{ file.id }};">
                                 <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                                 <span class="btn-text">Find Filler</span>
                             </button>
@@ -223,7 +224,8 @@
                         </svg> {{ results.trim }}
                         <form method="post" onsubmit="document.getElementById('commonTrimBtn').classList.add('disabled'); document.getElementById('commonTrimBtn').querySelector('.spinner-border').classList.remove('d-none'); document.getElementById('overlay').style.display = 'flex'; document.body.style.overflow = 'hidden';">
                             {% csrf_token %}
-                            <button type="submit" name="common_trim" class="btn btn-primary btn-sm" id="commonTrimBtn">
+                            <input type="hidden" id="selected_file_id" name="selected_file_id">
+                            <button type="submit" name="common_trim" class="btn btn-primary btn-sm" id="commonTrimBtn" onclick="document.getElementById('selected_file_id').value = document.getElementById('file_id').value;">
                                 <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                                 <span class="btn-text">Find Common</span>
                             </button>
@@ -277,7 +279,7 @@
         document.body.style.overflow = 'hidden';
 
         // Start progress updates
-        progressInterval = setInterval(updateProgress, 2000); // Update every 5 second for more responsive feedback
+        progressInterval = setInterval(updateProgress, 2000); // Update every 2 second for more responsive feedback
 
         // Submit the form
         this.submit();
@@ -300,5 +302,6 @@
             clearInterval(progressInterval);
         }
     });
+
 </script>
 {% endblock %}

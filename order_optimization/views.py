@@ -140,12 +140,12 @@ def handle_common(request, action: str) -> Dict:
     best_fitness = -results["trim"]
     best_output: Optional[List[Dict]] = None
     best_index: Optional[int] = None
-    file_id = request.POST.get("file_id")
+    file_id = request.POST.get("selected_file_id")
 
 
     for i, item in enumerate(results["output"]):
         size_value = item["cut_width"] + results["trim"]
-        orders = get_orders(file_id,size_value,deadline_scope=-1,tuning_values=2, filter=False,common=True)
+        orders = get_orders(file_id,size_value,deadline_scope=-1,tuning_values=3, filter=False,common=True)
         ga_instance = run_genetic_algorithm(orders, size_value)
     
 
@@ -218,6 +218,7 @@ def run_genetic_algorithm(
     size_value: float,
     out_range: int = 3,
     num_generations: int = 50,
+    show_output: bool = False
 ) -> GA:
     """
     Run genetic algorithm optimization.
@@ -236,7 +237,8 @@ def run_genetic_algorithm(
         orders,
         size=size_value,
         out_range=out_range,
-        num_generations=num_generations
+        num_generations=num_generations,
+        showOutput=show_output
     )
     ga_instance.get(update_progress=update_progress).run()
 
