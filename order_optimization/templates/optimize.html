@@ -41,9 +41,10 @@
             </select>
         </div>
         <div class="form-group mb-3">
-            <label for="deadline_toggle" class="form-label">Closest Deadline First :</label>
-            <input type="checkbox" id="deadline_toggle" name="deadline_toggle" class="form-check-input" value="true" {% if request.POST.deadline_toggle != "true" %}{% else %}checked{% endif %}>
+            <label for="satisfied" class="form-label">Try until satisfied :</label>
+            <input type="checkbox" id="satisfied" name="satisfied" class="form-check-input" value="true" {% if request.POST.satisfied == "true" %}checked{% endif %}>
         </div>
+
         <a href="#advanced" data-bs-toggle="collapse" id="advanced-tab">Advanced...</a>
 
         <!-- Advanced Collapsed -->
@@ -76,6 +77,16 @@
                 <label for="num_generations" class="form-label">Number of Generations :</label>
                 <output for="num_generations" id="slider_output"></output>
                 <input type="range" id="num_generations" name="num_generations" min="20" max="100" value="50" class="form-range" required>
+            </div>
+            <div class="form-group mb-3">
+                <span class="text-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
+                        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                    </svg> 
+                    <label for="deadline_toggle" class="form-label">Scan All :</label>
+                </span>
+
+                <input type="checkbox" id="deadline_toggle" name="deadline_toggle" class="form-check-input" value="true" {% if request.POST.deadline_toggle == "true" %}checked{% endif %}>
             </div>
         </div>
 
@@ -176,49 +187,53 @@
             </tbody>
         </table>
     </div>
-    <div class="mt-3">
-        <p><strong>First Order:</strong> {{ results.init_order_number }}</p>
-        <p><strong>Second Order:</strong>
-            {% with last_output=results.output|last %}
-                {% if results.foll_order_number > last_output.num_orders %}
-                <span class="text-danger">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
-                        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
-                    </svg> {{ results.foll_order_number }}
-                    <form method="post" onsubmit="document.getElementById('commonBtn').classList.add('disabled'); document.getElementById('commonBtn').querySelector('.spinner-border').classList.remove('d-none'); document.getElementById('overlay').style.display = 'flex'; document.body.style.overflow = 'hidden';">
-                        {% csrf_token %}
-                        <button type="submit" name="common_order" class="btn btn-primary" id="commonBtn">
-                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                            <span class="btn-text">Find Common</span>
-                        </button>
-                    </form>
-                </span>
-                {% else %}
-                    {{ results.foll_order_number }}
-                {% endif %}
-            {% endwith %}
-        </p>
-        <p><strong>Roll Size:</strong> {{ results.roll }}</p>
-        <p><strong>Used:</strong> {{ results.fitness }}</p>
-        <p><strong>Trim:</strong> 
-            {% if results.trim > 3.10 %}
-                <span class="text-danger">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
-                        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
-                    </svg> {{ results.trim }}
-                    <form method="post" onsubmit="document.getElementById('commonBtn').classList.add('disabled'); document.getElementById('commonBtn').querySelector('.spinner-border').classList.remove('d-none'); document.getElementById('overlay').style.display = 'flex'; document.body.style.overflow = 'hidden';">
-                        {% csrf_token %}
-                        <button type="submit" name="common_trim" class="btn btn-primary" id="commonBtn">
-                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                            <span class="btn-text">Find Common</span>
-                        </button>
-                    </form>
+    <div class="mt-3 row">
+        <div class="col-md-6">
+            <p><strong>Roll Size:</strong> {{ results.roll }}</p>
+            <p><strong>First Order:</strong> {{ results.init_order_number }}</p>
+            <p><strong>Second Order:</strong>
+                {% with last_output=results.output|last %}
+                    {% if results.foll_order_number > last_output.num_orders %}
+                    <span class="text-danger">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
+                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                        </svg> {{ results.foll_order_number }}
+                        <form method="post" onsubmit="document.getElementById('commonBtn').classList.add('disabled'); document.getElementById('commonBtn').querySelector('.spinner-border').classList.remove('d-none'); document.getElementById('overlay').style.display = 'flex'; document.body.style.overflow = 'hidden';">
+                            {% csrf_token %}
+                            <button type="submit" name="common_order" class="btn btn-primary btn-sm" id="commonBtn">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                <span class="btn-text">Find Filler</span>
+                            </button>
+                        </form>
+                    </span>
+                    {% else %}
+                        {{ results.foll_order_number }}
+                    {% endif %}
+                {% endwith %}
+            </p>
 
-                </span>
-            {% else %}
-                {{ results.trim }}
-            {% endif %}
-        </p>
+        </div>
+        <div class="col-md-6">
+            <p><strong>Used:</strong> {{ results.fitness }}</p>
+            <p><strong>Trim:</strong> 
+                {% if results.trim > 3.10 %}
+                    <span class="text-danger">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
+                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                        </svg> {{ results.trim }}
+                        <form method="post" onsubmit="document.getElementById('commonTrimBtn').classList.add('disabled'); document.getElementById('commonTrimBtn').querySelector('.spinner-border').classList.remove('d-none'); document.getElementById('overlay').style.display = 'flex'; document.body.style.overflow = 'hidden';">
+                            {% csrf_token %}
+                            <button type="submit" name="common_trim" class="btn btn-primary btn-sm" id="commonTrimBtn">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                <span class="btn-text">Find Common</span>
+                            </button>
+                        </form>
+                    </span>
+                {% else %}
+                    {{ results.trim }}
+                {% endif %}
+            </p>
+        </div>
     </div>
     {% endif %}
 {% endblock %}
