@@ -52,13 +52,13 @@ def optimize_order(request):
     }
     return render(request, "optimize.html", context)
 
-def handle_selector()->Dict:
+def handle_selector(request)->Dict:
     
-    # selector_id = request.POST.get("selector_id")
-    # selector_out = request.POST.get("selector_out")
+    selector_id = request.POST.get("selector_id")
+    selector_out = int(request.POST.get("selector_out"))
     return {
         "order_id": 12181159253,
-        "out": 3
+        "out": selector_out
     }
 
 def manual_configuration(request)->Callable:
@@ -93,7 +93,7 @@ def auto_configuration(request)->Callable:
     return handle_optimization(request, orders, num_generations, out_range, ROLL_PAPER[j])
 
 def handle_optimization(request, orders: ORD, num_generations: int, out_range: int, size_value: float)->Callable:
-    ga_instance = run_genetic_algorithm(orders, size_value, out_range, num_generations)
+    ga_instance = run_genetic_algorithm(request,orders, size_value, out_range, num_generations)
     fitness_values, output_data = get_outputs(ga_instance)
     init_order_number, foll_order_number = ORD.handle_orders_logic(output_data)
     results = results_format(ga_instance, output_data, size_value, fitness_values, init_order_number, foll_order_number)
@@ -248,12 +248,12 @@ def get_outputs(ga_instance: GA) -> Tuple[float, List[Dict]]:
     return fitness_values, output_data
 
 def run_genetic_algorithm(
+    request,
     orders: ORD,
     size_value: float,
     out_range: int = 3,
     num_generations: int = 50,
     show_output: bool = False,
-    selector: Dict = handle_selector()
 ) -> GA:
     """
     Run genetic algorithm optimization.
@@ -274,7 +274,7 @@ def run_genetic_algorithm(
         out_range=out_range,
         num_generations=num_generations,
         showOutput=show_output,
-        selector=selector
+        selector=handle_selector(request)
     )
     ga_instance.get(update_progress=update_progress).run()
 

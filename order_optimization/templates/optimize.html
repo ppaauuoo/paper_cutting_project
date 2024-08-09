@@ -111,7 +111,57 @@
 
             
         </div>
+
+
+        <!-- File Preview Modal -->
+        <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-fullscreen">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="filePreviewModalLabel">Preview</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group mb-3">
+                            <label for="selector_out" class="form-label">Out for selected:</label>
+                            <select id="selector_out" name="selector_out" class="form-select" required>
+                                {% for out in '1234'|make_list %}
+                                    <option value="{{ out }}" {% if out|stringformat:"s"  == request.POST.selector_out %}selected{% endif %}>{{ out }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <form onsubmit="return false;">
+                            <input type="text" id="previewSearchInput" placeholder="Search...">
+                            <h5 id="previewLoading">Loading...</h5>
+                            <div id="previewDiv" class="table-responsive">
+                                <table id="previewTable" class="table table-striped table-hover">
+                                    <thead class="text-center">
+                                        <tr>
+                                            <th class="text-center">กำหนดส่ง</th>
+                                            <th class="text-center">เลขที่ใบสั่งขาย</th>
+                                            <th class="text-center">จำนวนสั่งขาย</th>
+                                            <th class="text-center">ตัดกว้าง</th>
+                                            <th class="text-center">ตัดยาว</th>
+                                            <th class="text-center">ประเภทตัดเส้น</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody >
+                                    </tbody>
+                                </table>
+                            </div>
+                        </form>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
     </form>
+
+
+
 
     <!-- Files List Modal -->
     <div class="modal fade" id="csvFilesModal" tabindex="-1" aria-labelledby="csvFilesModalLabel" aria-hidden="true">
@@ -162,37 +212,6 @@
     </div>
 
 
-    <!-- File Preview Modal -->
-    <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-fullscreen">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="filePreviewModalLabel">Preview</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="text" id="previewSearch" onkeyup="previewSearch()" placeholder="Search...">
-                    <h5 id="previewLoading">Loading...</h5>
-                    <div id="previewDiv" class="table-responsive">
-                        <table id="previewTable" class="table table-striped table-hover">
-                            <thead class="text-center">
-                                <tr>
-                                    <th class="text-center">กำหนดส่ง</th>
-                                    <th class="text-center">เลขที่ใบสั่งขาย</th>
-                                    <th class="text-center">จำนวนสั่งขาย</th>
-                                    <th class="text-center">ตัดกว้าง</th>
-                                    <th class="text-center">ตัดยาว</th>
-                                    <th class="text-center">ประเภทตัดเส้น</th>
-                                </tr>
-                            </thead>
-                            <tbody >
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
 
     <!-- Results Section -->
@@ -284,33 +303,6 @@
 
     let progressInterval;
 
-    function previewSearch() {
-        // Declare variables
-        var input, filter, table, tr, td, i, txtValue;
-        input = document.getElementById("previewSearch");
-        filter = input.value.toUpperCase();
-        table = document.getElementById("previewTable");
-        tr = table.getElementsByTagName("tr");
-      
-        // Loop through all table rows, and hide those who don't match the search query
-        for (i = 1; i < tr.length; i++) {
-          td = tr[i].getElementsByTagName("td");
-          var match = false;
-          for (var j = 0; j < td.length; j++) {
-            txtValue = td[j].textContent || td[j].innerText;
-            if (txtValue.toUpperCase().indexOf(filter) > -1) {
-              match = true;
-              break;
-            }
-          }
-          if (match) {
-            tr[i].style.display = "";
-          } else {
-            tr[i].style.display = "none";
-          }
-        }
-      }
-      
 
     function updateProgress() {
         fetch('/get_progress/')
@@ -384,6 +376,43 @@
 
     }
 
+    document.addEventListener('DOMContentLoaded', function() {
+        var searchInput = document.getElementById('previewSearchInput');
+        var previewTable = document.getElementById('previewTable');
+    
+        if (!searchInput) {
+            console.error('Search input element not found');
+            return;
+        }
+    
+        if (!previewTable) {
+            console.error('Preview table element not found');
+            return;
+        }
+    
+        searchInput.addEventListener('input', previewSearch);
+
+        
+        function previewSearch() {
+            var filter = searchInput.value.toUpperCase();
+            var tr = previewTable.getElementsByTagName("tr");
+
+            for (var i = 0; i < tr.length; i++) {
+                var td = tr[i].getElementsByTagName("td");
+                var match = false;
+                for (var j = 0; j < td.length; j++) {
+                    var txtValue = td[j].textContent || td[j].innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        match = true;
+                        break;
+                    }
+                }
+                tr[i].style.display = match ? "" : "none";
+            }
+        }
+      
+    })
+
     document.querySelector('form').addEventListener('submit', function(e) {
         const submitter = e.submitter;
         
@@ -392,8 +421,6 @@
                 optimizerLoader('optimizeBtn')
             case 'auto':
                 optimizerLoader('autoBtn')
-            case 'file_preview':
-                console.log('sup')
         }
 
         // Submit the form
