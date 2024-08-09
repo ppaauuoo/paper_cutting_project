@@ -17,7 +17,6 @@ OUT_RANGE = [7,5,3]
 TUNING_VALUE = [3,2]
 CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
 
-
 @login_required
 def optimize_order(request):
     cache.delete("optimization_progress")  # Clear previous progress
@@ -27,23 +26,24 @@ def optimize_order(request):
     form = CSVFileForm()
 
     if request.method == "POST":
-        if "optimize" in request.POST:
-            results = manual_configuration(request)
-            cache.set("optimization_results", results, CACHE_TIMEOUT)
-        elif "upload" in request.POST:
-            handle_file_upload(request)
-        elif "delete" in request.POST:
-            handle_file_deletion(request)
-        elif "auto" in request.POST:
-            results = auto_configuration(request)
-            cache.set("optimization_results", results, CACHE_TIMEOUT)
-        elif "common_trim" in request.POST:
-            results = handle_common(request)
-            cache.set("optimization_results", results, CACHE_TIMEOUT)
-        elif "common_order" in request.POST:
-            results = handle_filler(request)
-            cache.set("optimization_results", results, CACHE_TIMEOUT)
-
+        match request.POST:
+            case {"optimize": _}:
+                results = manual_configuration(request)
+                cache.set("optimization_results", results, CACHE_TIMEOUT)
+            case {"upload": _}:
+                handle_file_upload(request)
+            case {"delete": _}:
+                handle_file_deletion(request)
+            case {"auto": _}:
+                results = auto_configuration(request)
+                cache.set("optimization_results", results, CACHE_TIMEOUT)
+            case {"common_trim": _}:
+                results = handle_common(request)
+                cache.set("optimization_results", results, CACHE_TIMEOUT)
+            case {"common_order": _}:
+                results = handle_filler(request)
+                cache.set("optimization_results", results, CACHE_TIMEOUT)
+        
     context = {
         "results": results,
         "roll_paper": ROLL_PAPER,
@@ -54,7 +54,6 @@ def optimize_order(request):
         "form": form,
     }
     return render(request, "optimize.html", context)
-
 
 def manual_configuration(request)->Callable:
     file_id = request.POST.get("file_id")
@@ -286,7 +285,6 @@ def update_results(results: Dict, best_index: int, best_output: List[Dict], best
     )
     results["trim"] = abs(best_fitness)
 
-
 def handle_file_upload(request):
     form = CSVFileForm(request.POST, request.FILES)
     if form.is_valid():
@@ -295,13 +293,11 @@ def handle_file_upload(request):
     else:
         messages.error(request, "Error uploading file.")
 
-
 def handle_file_deletion(request):
     file_id = request.POST.get("file_id")
     csv_file = get_object_or_404(CSVFile, id=file_id)
     csv_file.delete()
     messages.success(request, "File deleted successfully.")
-
 
 def login_view(request):
     if request.method == "POST":
@@ -316,7 +312,6 @@ def login_view(request):
     else:
         form = LoginForm()
     return render(request, "login.html", {"form": form})
-
 
 def get_progress(request):
     progress = cache.get("optimization_progress", 0)
