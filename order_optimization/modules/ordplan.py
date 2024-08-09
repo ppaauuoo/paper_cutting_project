@@ -1,7 +1,7 @@
 import pandas as pd
-
+from typing import Dict
 class ORD:
-    def __init__(self, path: str, deadline_scope: int, size: float, tuning_values: int, filter_value: int, filter: bool = True, common: bool = False, filler: int =0) -> None:
+    def __init__(self, path: str, deadline_scope: int = 0, size: float = 66, tuning_values: int = 3, filter_value: int = 16, filter: bool = True, common: bool = False, filler: int =0,preview: bool = False) -> None:
         self.ordplan = pd.read_excel(path, engine='openpyxl')
         self.deadline_scope = deadline_scope
         self.filter = filter
@@ -10,7 +10,8 @@ class ORD:
         self.tuning_values = tuning_values
         self.filter_value = filter_value
         self.filler=filler
-    def get(self):
+        self.preview=preview
+    def get(self)-> Dict:
         ordplan = self.ordplan
 
         ordplan["กว้างผลิต"] = round(ordplan["กว้างผลิต"] / 25.4, 2)
@@ -25,7 +26,6 @@ class ORD:
         if self.deadline_scope >= 0:
             deadline = ordplan["กำหนดส่ง"].iloc[self.deadline_scope]
             ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline].reset_index(drop=True)
-
 
         #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
         if self.filter:
