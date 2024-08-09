@@ -17,32 +17,29 @@ OUT_RANGE = [7,5,3]
 TUNING_VALUE = [3,2]
 CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
 
-
 @login_required
 def optimize_order(request):
+    if request.method == "POST":
+        match request.POST:
+            case {"optimize": _}:
+                manual_configuration(request)
+            case {"upload": _}:
+                handle_file_upload(request)
+            case {"delete": _}:
+                handle_file_deletion(request)
+            case {"auto": _}:
+                auto_configuration(request)
+            case {"common_trim": _}:
+                handle_common(request)
+            case {"common_order": _}:
+                handle_filler(request)
+
     cache.delete("optimization_progress")  # Clear previous progress
     cache.delete("try_again")  # Clear previous progress
-    results = cache.get("optimization_results")
     csv_files = CSVFile.objects.all()
     form = CSVFileForm()
 
-    if request.method == "POST":
-        if "optimize" in request.POST:
-            results = manual_configuration(request)
-            cache.set("optimization_results", results, CACHE_TIMEOUT)
-        elif "upload" in request.POST:
-            handle_file_upload(request)
-        elif "delete" in request.POST:
-            handle_file_deletion(request)
-        elif "auto" in request.POST:
-            results = auto_configuration(request)
-            cache.set("optimization_results", results, CACHE_TIMEOUT)
-        elif "common_trim" in request.POST:
-            results = handle_common(request)
-            cache.set("optimization_results", results, CACHE_TIMEOUT)
-        elif "common_order" in request.POST:
-            results = handle_filler(request)
-            cache.set("optimization_results", results, CACHE_TIMEOUT)
+    results = cache.get("optimization_results")
 
     context = {
         "results": results,
@@ -54,7 +51,6 @@ def optimize_order(request):
         "form": form,
     }
     return render(request, "optimize.html", context)
-
 
 def manual_configuration(request)->Callable:
     file_id = request.POST.get("file_id")
@@ -87,7 +83,7 @@ def auto_configuration(request)->Callable:
             j += 1
     return handle_optimization(request, orders, num_generations, out_range, ROLL_PAPER[j])
 
-def handle_optimization(request, orders: ORD, num_generations: int, out_range: int, size_value: float)->Callable|Dict:
+def handle_optimization(request, orders: ORD, num_generations: int, out_range: int, size_value: float)->Callable:
     ga_instance = run_genetic_algorithm(orders, size_value, out_range, num_generations)
     fitness_values, output_data = get_outputs(ga_instance)
     init_order_number, foll_order_number = ORD.handle_orders_logic(output_data)
@@ -95,7 +91,7 @@ def handle_optimization(request, orders: ORD, num_generations: int, out_range: i
     
     if abs(fitness_values) <= 3 and abs(fitness_values) >= 1:
         messages.success(request, "Optimizing finished.")
-        return results
+        return cache.set("optimization_results", results, CACHE_TIMEOUT)
     
     if "auto" in request.POST:
         return recursive_auto_logic(request)
@@ -105,7 +101,7 @@ def handle_optimization(request, orders: ORD, num_generations: int, out_range: i
         return handle_optimization(request, orders, num_generations, out_range, size_value)
     
     messages.error(request, "Optimizing finished with unsatisfied result, please try again.")
-    return results
+    return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
 def results_format(ga_instance: object, output_data: dict, size_value: int, fitness_values: float, init_order_number: int, foll_order_number: int) -> Dict:
     return {
@@ -159,7 +155,7 @@ def handle_common(request) -> Dict:
     else:
         messages.error(request, "No suitable common order found.")
 
-    return results
+    return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
 def handle_filler(request):
     results = cache.get("optimization_results")
@@ -173,9 +169,9 @@ def handle_filler(request):
 
     output = output_format(orders.iloc[i], init_out).to_dict(orient='records')
     results['output'].extend(output)
-    return results
+    return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
-def output_format(orders: ORD, init_out: int) -> pd.DataFrame:
+def output_format(orders: ORD, init_out: int = 0) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "order_number": [orders["เลขที่ใบสั่งขาย"]],
@@ -286,7 +282,6 @@ def update_results(results: Dict, best_index: int, best_output: List[Dict], best
     )
     results["trim"] = abs(best_fitness)
 
-
 def handle_file_upload(request):
     form = CSVFileForm(request.POST, request.FILES)
     if form.is_valid():
@@ -295,13 +290,21 @@ def handle_file_upload(request):
     else:
         messages.error(request, "Error uploading file.")
 
-
 def handle_file_deletion(request):
     file_id = request.POST.get("file_id")
     csv_file = get_object_or_404(CSVFile, id=file_id)
     csv_file.delete()
     messages.success(request, "File deleted successfully.")
 
+def get_file_preview(request):
+    file_id = request.GET.get("file_id")
+    csv_file = get_object_or_404(CSVFile, id=file_id)
+    file_path = csv_file.file.path
+    
+    # Load the CSV file into a DataFrame
+    df = (ORD(path=file_path, preview=True).get()).to_dict('records')
+
+    return JsonResponse({'file_preview': df})
 
 def login_view(request):
     if request.method == "POST":
@@ -316,7 +319,6 @@ def login_view(request):
     else:
         form = LoginForm()
     return render(request, "login.html", {"form": form})
-
 
 def get_progress(request):
     progress = cache.get("optimization_progress", 0)
