@@ -4,12 +4,12 @@ import pandas as pd
 from .ordplan import ORD
 
 class GA:
-    def __init__(self, orders, size, num_generations, showOutput=None, save_solutions=None, showZero=None):
+    def __init__(self, orders: ORD, size: float, num_generations: int, out_range: int,showOutput:bool = False, save_solutions:bool = False, showZero: bool = False)->None:
         self.orders = orders
         self.PAPER_SIZE = size
-        self.showOutput = False if showOutput is None else showOutput
-        self.save_solutions = False if save_solutions is None else save_solutions
-        self.showZero = False if showZero is None else showZero
+        self.showOutput = showOutput
+        self.save_solutions = save_solutions
+        self.showZero = showZero
 
         self.num_generations = num_generations
         # num_parents_mating = len(orders)
@@ -22,7 +22,7 @@ class GA:
         self.num_genes = len(self.orders)
 
         self.init_range_low = 0
-        self.init_range_high = 2
+        self.init_range_high = out_range
         # self.init_range_high = abs(int(orders['จำนวนสั่งขาย'].median()/100 + size/100 - len(orders)*tuning_parameters))
 
         self.parent_selection_type = "tournament"
@@ -58,35 +58,75 @@ class GA:
             save_solutions=self.save_solutions
         )
 
-    def fitness_function(self, ga_instance, solution, solution_idx):
-        penalty = 0
+        self.current_generation = 0
+
+
+    def paper_type_logic(self, solution):
+        init_type = None
         orders = self.orders
-        PAPER_SIZE = self.PAPER_SIZE
-        penalty_value = 1000
-
         for i, var in enumerate(solution):
-            if var < 0:  # ถ้ามีค่าน้อยกว่า 0 penalty > กันติดลบ
-                penalty += penalty_value
+            if init_type is not None:
+                break
+            if var >= 1:
+                match orders['ประเภททับเส้น'][i]:
+                    case "X":
+                        init_type = 1
+                    case "N", "W":
+                        init_type = 2
 
-        if sum(solution) > 6:  # ถ้าผลรวมมีค่ามากกว่า 6 penalty > outได้สูงสุด 6 out ต่อรอบ
-            penalty += penalty_value*sum(solution)
+        if init_type is not None:
+            for i, var in enumerate(solution):
+                if var >= 1:
+                    match init_type:
+                        case 1:
+                            if orders['ประเภททับเส้น'][i] not in ["X", "Y"]:  # Changed OR to AND condition
+                                self.penalty += self.penalty_value
+                        case 2:
+                            if orders['ประเภททับเส้น'][i] == "X":
+                                self.penalty += self.penalty_value
 
-        if solution[solution >= 1].size > 2:  # out สูงสุด 2 ครั้ง ต่อออร์เดอร์
-            penalty += penalty_value
+    def paper_out_logic(self, solution):
+        if sum(solution) > 6:  # 
+            self.penalty += self.penalty_value*sum(solution)
 
-        output = numpy.sum(solution * orders["ตัดกว้าง"])  # ผลรวมของตัดกว้างทั้งหมด
+        order_length = 0
+        for i, var in enumerate(solution):
+            if var >= 1:
+                order_length+=1
+        if order_length > 2:
+            self.penalty += self.penalty_value*order_length
 
-        if output > PAPER_SIZE:  # ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น penalty
-            penalty += penalty_value
+    def paper_size_logic(self,output):
+        if output > self.PAPER_SIZE:  # ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น penalty
+            self.penalty += self.penalty_value
 
-        fitness_values = -PAPER_SIZE + output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
-
+    def paper_trim_logic(self,fitness_values):
         if abs(fitness_values) <= 1.22:  # ถ้าผลรวมมีค่าน้อยกว่า 1.22 penalty > เงื่อนไขบริษัท
-            penalty += penalty_value
+            self.penalty += self.penalty_value
 
-        return fitness_values - penalty  # ลบด้วย penalty
+    def fitness_function(self, ga_instance, solution, solution_idx):
+        self.penalty = 0
+        self.penalty_value = 1000
+
+        self.paper_type_logic(solution)
+
+        self.paper_out_logic(solution)
+
+        output = numpy.sum(solution * self.orders["กว้างผลิต"])  # ผลรวมของตัดกว้างทั้งหมด
+        self.paper_size_logic(output)
+
+        fitness_values = -self.PAPER_SIZE + output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
+        self.paper_trim_logic(fitness_values)
+
+        return fitness_values - self.penalty  # ลบด้วย penalty
 
     def on_gen(self, ga_instance):
+
+        self.current_generation += 1
+        if self.update_progress:
+                progress = (self.current_generation / self.num_generations) * 100
+                self.update_progress(progress)
+
         orders = self.orders
 
         solution = ga_instance.best_solution()[0]
@@ -94,11 +134,11 @@ class GA:
         output = pd.DataFrame(
             {
                 "order_number": orders["เลขที่ใบสั่งขาย"],
-                "num_layers": orders["จำนวนชั้น"],
-                "cut_width": orders["ตัดกว้าง"],
+                "num_orders": orders["จำนวนสั่งขาย"],
+                "cut_width": orders["กว้างผลิต"],
+                "cut_len": orders["ยาวผลิต"],
                 "type": orders["ประเภททับเส้น"],
                 "deadline": orders["กำหนดส่ง"],
-                "diff": orders["diff"],
                 "out": solution,
             }
         )
@@ -133,5 +173,6 @@ class GA:
         print("Trim :", abs(self.fitness_values))
         print("\n")
 
-    def get(self):
+    def get(self, update_progress):
+        self.update_progress= update_progress
         return self.model

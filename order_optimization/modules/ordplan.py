@@ -1,173 +1,78 @@
 import pandas as pd
 
 class ORD:
-    def __init__(self, path, deadline_scope, size, tuning_values, filter_value, filter=None, auto=None):
+    def __init__(self, path: str, deadline_scope: int, size: float, tuning_values: int, filter_value: int, filter: bool = True, common: bool = False, filler: int =0) -> None:
+        self.ordplan = pd.read_excel(path, engine='openpyxl')
         self.deadline_scope = deadline_scope
-        self.ordplan = pd.read_csv(path, header=None)
-        self.filter = True if filter is None else filter
-        self.auto = False if auto is None else auto
+        self.filter = filter
+        self.common = common
         self.size = size
         self.tuning_values = tuning_values
         self.filter_value = filter_value
-
+        self.filler=filler
     def get(self):
         ordplan = self.ordplan
 
-        col_to_drop = (
-            list(range(9, 12))
-            + list(range(13, 14))
-            + list(range(15, 18))
-            + list(range(19, 26))
-        )
-        ordplan = ordplan.drop(columns=col_to_drop, axis=1)
+        ordplan["กว้างผลิต"] = round(ordplan["กว้างผลิต"] / 25.4, 2)
+        ordplan["ยาวผลิต"] = round(ordplan["ยาวผลิต"] / 25.4, 2)
 
-        col = [
-            "กำหนดส่ง",
-            "แผ่นหน้า",
-            "ลอน C",
-            "แผ่นกลาง",
-            "ลอน B",
-            "แผ่นหลัง",
-            "จำนวนชั้น",
-            "ตัดกว้าง",
-            "ตัดยาว",
-            "เลขที่ใบสั่งขาย",
-            "จำนวนสั่งขาย",
-            "ประเภททับเส้น",
-        ]
-        ordplan.columns = col
-
-        new_col = ["เลขที่ใบสั่งขาย"] + [
-            col for col in ordplan.columns if col != "เลขที่ใบสั่งขาย"
-        ]
-        ordplan = ordplan.reindex(columns=new_col)
-        ordplan["เลขที่ใบสั่งขาย"] = (
-            ordplan["เลขที่ใบสั่งขาย"].astype(str).str.replace("121811", "x")
-        )
-
-        ordplan = ordplan[
-            (ordplan["ตัดกว้าง"] != 0) & (ordplan["ตัดยาว"] != 0)
-        ]  # filter out zero values -> index misaligned
-
-        ordplan["ตัดกว้าง"] = round(ordplan["ตัดกว้าง"] / 25.4, 4)
-        ordplan["ตัดยาว"] = round(ordplan["ตัดยาว"] / 25.4, 4)
-
-        ordplan["จำนวนสั่งขาย"] = ordplan["จำนวนสั่งขาย"].str.replace(
-            ",", ""
-        )  # fix error values ex. 10,00 -> 1000
+        ordplan["กำหนดส่ง"] = pd.to_datetime(ordplan["กำหนดส่ง"]).dt.strftime('%m/%d/%y')
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
-        ordplan["จำนวนสั่งขาย"] = ordplan["จำนวนสั่งขาย"].astype(int)  # turns str -> int
+        
+
 
         #filter deadline_scope
         if self.deadline_scope >= 0:
             deadline = ordplan["กำหนดส่ง"].iloc[self.deadline_scope]
-            ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline]
-        ordplan = ordplan.reset_index(drop=True)
+            ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline].reset_index(drop=True)
+
+
+        #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
+        if self.filter:
+            #เอาไซส์กระดาษมาหารกับปริมาณการตัด เช่น กระดาษ 63 ถ้าตัดสองครั้งจได้ ~31 แล้วบันทึกเก็บไว้
+            selected_values = self.size / self.tuning_values
+            for i, row in ordplan.iterrows():
+                diff = abs(selected_values - row["กว้างผลิต"])
+                ordplan.loc[i, "diff"] = diff
+            ordplan = (
+                ordplan[ordplan["diff"] < self.filter_value].sort_values(by="กว้างผลิต").reset_index(drop=True)
+            )
+
+        if self.common:
+            col = [
+                "แผ่นหน้า",
+                "ลอน C",
+                "แผ่นกลาง",
+                "ลอน B",
+                "แผ่นหลัง",
+                "จน.ชั้น",
+                "ประเภททับเส้น",
+            ]
+                    # Filter based on the first order
+            init_order = ordplan.iloc[0]
+            if self.filler:
+                init_order = ordplan[ordplan['เลขที่ใบสั่งขาย'] == self.filler]
+                ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.filler]
+
+            if isinstance(init_order, pd.Series):
+                ordplan = ordplan[ordplan.apply(lambda order: all(init_order[i] == order[i] for i in col), axis=1)].reset_index(drop=True)
+
+
 
         self.ordplan = ordplan
 
-        return self.prep()
+        return ordplan
 
+    def handle_orders_logic(output_data):
+        init_len = output_data[0]['cut_len']
+        init_out = output_data[0]['out']
+        init_num_orders = output_data[0]['num_orders']
 
-    def prep(self):
-        orders = self.ordplan
+        foll_order_len = init_len
+        if len(output_data) > 1:
+            foll_order_len = output_data[1]['cut_len']
 
-        #เอาไซส์กระดาษมาหารกับปริมาณการตัด เช่น กระดาษ 63 ถ้าตัดสองครั้งจได้ ~31 แล้วบันทึกเก็บไว้
-        if self.auto:
-            selected_values = self.ordplan["ตัดกว้าง"].loc[0] / (3 if self.ordplan["ตัดกว้าง"].loc[0] > 80 else 2)
-        else:
-            selected_values = self.size / self.tuning_values
+        init_order_number = round(init_num_orders/init_out)
+        foll_order_number = round(init_len * init_order_number / foll_order_len)
+        return (init_order_number,foll_order_number)
 
-
-
-        for i, row in orders.iterrows():
-            diff = abs(selected_values - row["ตัดกว้าง"])
-            orders.loc[i, "diff"] = diff
-
-        #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
-        new_orders = orders
-        if self.filter:
-            new_orders = (
-                orders[orders["diff"] < self.filter_value].sort_values(by="ตัดกว้าง").reset_index(drop=True)
-            )
-        # print(new_orders)
-
-
-        temp = new_orders
-        #filter โดยยึดจากอันแรก
-        # init_order = new_orders.iloc[0]
-        # for i, order in new_orders.iterrows():
-        #     if all(init_order[i] == order[i] for i in [2, 3, 4, 5, 6, 7, 11]):
-        #         # if init_order[11] == order[11]:
-        #         temp.append(order)
-
-        temp = pd.DataFrame(temp)
-
-        return temp
-
-    
-    def calculate_trim_and_roll(width):
-        roll_paper = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
-        trim_min = 1
-        trim_max = 3
-        trim = [paper - width for paper in roll_paper]
-        valid_trim_values = [t for t in trim if trim_min <= t <= trim_max]
-
-        if valid_trim_values:
-            roll = roll_paper[trim.index(valid_trim_values[0])]
-            return valid_trim_values[0], int(roll)
-        else:
-            return None, None
-
-    def calculate_roll(width):
-        roll_paper = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
-        trim_min = 1
-        trim_max = 3
-        roll = None
-        for i in range(1, 4):
-            trim = [paper - width * i for paper in roll_paper]
-            valid_trim_values = [t for t in trim if trim_min <= t <= trim_max]
-
-            if valid_trim_values:
-                roll = roll_paper[trim.index(valid_trim_values[0])]
-
-        return roll
-
-    def calculate_roll_tuning(width, tuning_values):
-        roll_paper = [68, 73, 75, 79, 82, 85, 88, 91, 95, 97]
-        trim_min = 1
-        trim_max = 3
-        roll = None
-        trim = [paper - width * tuning_values for paper in roll_paper]
-        valid_trim_values = [t for t in trim if trim_min <= t <= trim_max]
-
-        if valid_trim_values:
-            roll = roll_paper[trim.index(valid_trim_values[0])]
-        return roll
-
-    def calculate_roll_and_width(paper, width):
-        trim_min = 1
-        trim_max = 3
-        if trim_min <= paper - width <= trim_max:
-            return False
-        return True
-
-    def check_roll_compat(self, var, i, orders, PAPER_SIZE):
-        if var:  # ถ้า var = 0 False
-            if ORD.calculate_roll_and_width(
-                PAPER_SIZE, 2 * orders.loc[i, "ตัดกว้าง"]
-            ):  # ถ้า width *2 แล้วผ่าน False
-                if ORD.calculate_roll_and_width(
-                    PAPER_SIZE, 3 * orders.loc[i, "ตัดกว้าง"]
-                ):  # ถ้า width *3 แล้วผ่าน False
-                    if ORD.calculate_roll_and_width(
-                        PAPER_SIZE, 4 * orders.loc[i, "ตัดกว้าง"]
-                    ):  # ถ้า width *4 แล้วผ่าน False
-                        if ORD.calculate_roll_and_width(
-                            PAPER_SIZE, 5 * orders.loc[i, "ตัดกว้าง"]
-                        ):  # ถ้า width *5 แล้วผ่าน False
-                            if ORD.calculate_roll_and_width(
-                                PAPER_SIZE, 6 * orders.loc[i, "ตัดกว้าง"]
-                            ):  # ถ้า width *6 แล้วผ่าน False ex. 4*6 = 24 > 22-24 = -2
-                                return abs(PAPER_SIZE * 2)
-        return 0
