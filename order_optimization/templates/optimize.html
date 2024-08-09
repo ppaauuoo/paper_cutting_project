@@ -171,7 +171,8 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="table-responsive">
+                    <h5 id="previewLoading" >Loading...</h5>
+                    <div id="previewTable" class="table-responsive">
                         <table class="table table-striped table-hover">
                             <thead class="text-center">
                                 <tr>
@@ -287,7 +288,6 @@
             .then(response => response.json())
             .then(data => {
                 const progress = data.progress;
-                console.log('Progress value:', progress);
                 document.getElementById('progress-bar').style.width = `${progress}%`;
                 document.getElementById('progress-bar').setAttribute('aria-valuenow', progress);
                 
@@ -302,7 +302,9 @@
 
     function filePreview(event) {
         event.preventDefault(); // Prevent the default button click behavior
-    
+        document.getElementById('previewLoading').style.display = 'flex';
+        document.getElementById('previewTable').style.display = 'none';
+        
         // Get the file_id from the button or any other appropriate source
         const fileId = document.getElementById('file_id').value;
 
@@ -311,6 +313,8 @@
             .then(response => response.json())
             .then(data => {
                 // Update the modal content with the file preview data
+                document.getElementById('previewLoading').style.display = 'none';
+                document.getElementById('previewTable').style.display = 'flex';
                 updateFilePreviewModal(data.file_preview);
             })
             .catch(error => {
