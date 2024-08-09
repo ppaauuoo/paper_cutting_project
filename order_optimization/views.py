@@ -52,6 +52,15 @@ def optimize_order(request):
     }
     return render(request, "optimize.html", context)
 
+def handle_selector()->Dict:
+    
+    # selector_id = request.POST.get("selector_id")
+    # selector_out = request.POST.get("selector_out")
+    return {
+        "order_id": 12181159253,
+        "out": 3
+    }
+
 def manual_configuration(request)->Callable:
     file_id = request.POST.get("file_id")
     size_value = int(request.POST.get("size_value"))
@@ -121,7 +130,7 @@ def recursive_auto_logic(request):
         return auto_configuration(request)
     return messages.error(request, "Error : Auto config malfuncioned, please contact admin.")
 
-def handle_common(request) -> Dict:
+def handle_common(request) -> Callable:
     """
     Handle common order optimization.
 
@@ -243,7 +252,8 @@ def run_genetic_algorithm(
     size_value: float,
     out_range: int = 3,
     num_generations: int = 50,
-    show_output: bool = False
+    show_output: bool = False,
+    selector: Dict = handle_selector()
 ) -> GA:
     """
     Run genetic algorithm optimization.
@@ -263,7 +273,8 @@ def run_genetic_algorithm(
         size=size_value,
         out_range=out_range,
         num_generations=num_generations,
-        showOutput=show_output
+        showOutput=show_output,
+        selector=selector
     )
     ga_instance.get(update_progress=update_progress).run()
 

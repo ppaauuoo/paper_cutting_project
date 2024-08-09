@@ -66,10 +66,10 @@ class GA:
     def orderSelectorLogic(self):
             orders = self.orders
                     # Find the index of the row that matches the selector
-            index = orders[orders['เลขที่ใบสั่งขาย'] == self.selector].index
+            index = orders[orders['เลขที่ใบสั่งขาย'] == self.selector['order_id']].index
 
             # If the row is found
-            if index.size > 0:
+            if index>0:
                 # Remove the row from its current position
                 moved_order = orders.loc[index].copy()
                 orders = orders.drop(index)
