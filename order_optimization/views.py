@@ -298,12 +298,20 @@ def handle_file_deletion(request):
 
 def get_file_preview(request):
     file_id = request.GET.get("file_id")
+    cache_key = f"file_preview_{file_id}"
+
+    df = cache.get(cache_key)
+
+    if df:
+        return JsonResponse({'file_preview': df})
+
     csv_file = get_object_or_404(CSVFile, id=file_id)
     file_path = csv_file.file.path
-    
+
     # Load the CSV file into a DataFrame
     df = (ORD(path=file_path, preview=True).get()).to_dict('records')
 
+    cache.set(cache_key, df, CACHE_TIMEOUT)
     return JsonResponse({'file_preview': df})
 
 def login_view(request):
