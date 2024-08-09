@@ -2,14 +2,17 @@ import pygad
 import numpy
 import pandas as pd
 from .ordplan import ORD
-
+from typing import Dict
 class GA:
-    def __init__(self, orders: ORD, size: float, num_generations: int, out_range: int,showOutput:bool = False, save_solutions:bool = False, showZero: bool = False)->None:
+    def __init__(self, orders: ORD, size: float, num_generations: int, out_range: int,showOutput:bool = False, save_solutions:bool = False, showZero: bool = False, selector: Dict = None)->None:
         self.orders = orders
         self.PAPER_SIZE = size
         self.showOutput = showOutput
         self.save_solutions = save_solutions
         self.showZero = showZero
+        self.selector = selector
+        if selector:
+            self.orderSelectorLogic()
 
         self.num_generations = num_generations
         # num_parents_mating = len(orders)
@@ -60,6 +63,19 @@ class GA:
 
         self.current_generation = 0
 
+    def orderSelectorLogic(self):
+            orders = self.orders
+                    # Find the index of the row that matches the selector
+            index = orders[orders['เลขที่ใบสั่งขาย'] == self.selector].index
+
+            # If the row is found
+            if index.size > 0:
+                # Remove the row from its current position
+                moved_order = orders.loc[index].copy()
+                orders = orders.drop(index)
+
+                # Add the row to the beginning of the DataFrame
+                self.orders = pd.concat([moved_order, orders], ignore_index=True)
 
     def paper_type_logic(self, solution):
         init_type = None
@@ -108,9 +124,14 @@ class GA:
         self.penalty = 0
         self.penalty_value = 1000
 
+        if self.selector:
+            solution[0]=self.selector['out']
+
         self.paper_type_logic(solution)
 
         self.paper_out_logic(solution)
+
+
 
         output = numpy.sum(solution * self.orders["กว้างผลิต"])  # ผลรวมของตัดกว้างทั้งหมด
         self.paper_size_logic(output)
