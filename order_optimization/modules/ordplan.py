@@ -27,44 +27,46 @@ class ORD:
             deadline = self.ordplan["กำหนดส่ง"].iloc[self.deadline_scope]
             ordplan = self.ordplan[self.ordplan["กำหนดส่ง"] <= deadline].sort_values("กำหนดส่ง").reset_index(drop=True)
             self.deadline_scope+=10
-            if len(ordplan) >= 200 or len(self.ordplan) <= self.deadline_scope: break
 
-        #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
-        if self.filter:
-            #เอาไซส์กระดาษมาหารกับปริมาณการตัด เช่น กระดาษ 63 ถ้าตัดสองครั้งจได้ ~31 แล้วบันทึกเก็บไว้
-            selected_values = self.size / self.tuning_values
-            for i, row in ordplan.iterrows():
-                diff = abs(selected_values - row["กว้างผลิต"])
-                ordplan.loc[i, "diff"] = diff
-            
-            ordplan = (
-                ordplan[ordplan["diff"] < self.filter_value]
-            )
 
-        if self.selector:
-            self.selectorFilter()
-            ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.selector['order_id']]
-            ordplan = pd.concat([self.selected_order, ordplan], ignore_index=True)
+            #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
+            if self.filter:
+                #เอาไซส์กระดาษมาหารกับปริมาณการตัด เช่น กระดาษ 63 ถ้าตัดสองครั้งจได้ ~31 แล้วบันทึกเก็บไว้
+                selected_values = self.size / self.tuning_values
+                for i, row in ordplan.iterrows():
+                    diff = abs(selected_values - row["กว้างผลิต"])
+                    ordplan.loc[i, "diff"] = diff
+                
+                ordplan = (
+                    ordplan[ordplan["diff"] < self.filter_value]
+                )
 
-        if self.common:
-            col = [
-                "แผ่นหน้า",
-                "ลอน C",
-                "แผ่นกลาง",  
-                "ลอน B",
-                "แผ่นหลัง",
-                "จน.ชั้น",
-                "ประเภททับเส้น",
-            ]
-                    # Filter based on the first order
-            init_order = ordplan.iloc[0]
-            if self.filler:
-                init_order = ordplan[ordplan['เลขที่ใบสั่งขาย'] == self.filler]
-                ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.filler]
+            if self.selector:
+                self.selectorFilter()
+                ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.selector['order_id']]
+                ordplan = pd.concat([self.selected_order, ordplan], ignore_index=True)
 
-            if isinstance(init_order, pd.Series):
-                ordplan = ordplan[ordplan.apply(lambda order: all(init_order[i] == order[i] for i in col), axis=1)]
+            if self.common:
+                col = [
+                    "แผ่นหน้า",
+                    "ลอน C",
+                    "แผ่นกลาง",  
+                    "ลอน B",
+                    "แผ่นหลัง",
+                    "จน.ชั้น",
+                    "ประเภททับเส้น",
+                ]
+                        # Filter based on the first order
+                init_order = ordplan.iloc[0]
+                if self.filler:
+                    init_order = ordplan[ordplan['เลขที่ใบสั่งขาย'] == self.filler]
+                    ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.filler]
 
+                if isinstance(init_order, pd.Series):
+                    ordplan = ordplan[ordplan.apply(lambda order: all(init_order[i] == order[i] for i in col), axis=1)]
+
+                if len(ordplan) >= 10 or len(self.ordplan) <= self.deadline_scope: break
+        
         self.ordplan = ordplan.reset_index(drop=True)
 
         return self.ordplan
