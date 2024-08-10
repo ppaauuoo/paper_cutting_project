@@ -139,14 +139,14 @@
                                         <tr>
                                             <th class="text-center">กำหนดส่ง</th>
                                             <th class="text-center">เลขที่ใบสั่งขาย</th>
-                                            <th class="text-center">จำนวนสั่งขาย</th>
-                                            <th class="text-center">ตัดกว้าง</th>
-                                            <th class="text-center">ตัดยาว</th>
+                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(2)">จำนวนสั่งขาย</th>
+                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(3)">ตัดกว้าง</th>
+                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(4)">ตัดยาว</th>
                                             <th class="text-center">ประเภทตัดเส้น</th>
                                         </tr>
                                     </thead>
                                     <tbody >
-                                    </tbody>
+                                    </tbody> 
                                 </table>
                             </div>
                         </form>
@@ -443,6 +443,54 @@
         }
     });
 
-
+    function sortTable(n) {
+        var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+        table = document.getElementById("previewTable");
+        switching = true;
+        // Set the sorting direction to ascending:
+        dir = "asc";
+        
+        // Remove arrows from all headers
+        var headers = table.getElementsByTagName("TH");
+        for (i = 0; i < headers.length; i++) {
+            headers[i].innerHTML = headers[i].innerHTML.replace(/[▲▼]/, "");
+        }
+        
+        // Add arrow to the clicked header
+        headers[n].innerHTML += dir === "asc" ? " ▲" : " ▼";
+    
+        while (switching) {
+            switching = false;
+            rows = table.rows;
+            for (i = 1; i < (rows.length - 1); i++) {
+                shouldSwitch = false;
+                x = rows[i].getElementsByTagName("TD")[n];
+                y = rows[i + 1].getElementsByTagName("TD")[n];
+                if (dir == "asc") {
+                    if (Number(x.innerHTML) > Number(y.innerHTML)) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                } else if (dir == "desc") {
+                    if (Number(x.innerHTML) < Number(y.innerHTML)) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                switchcount++;
+            } else {
+                if (switchcount == 0 && dir == "asc") {
+                    dir = "desc";
+                    switching = true;
+                    // Change arrow to down when switching to descending
+                    headers[n].innerHTML = headers[n].innerHTML.replace("▲", "▼");
+                }
+            }
+        }
+    }
 </script>
 {% endblock %}
