@@ -25,7 +25,7 @@
     <form method="post">
         {% csrf_token %}
         <div class="form-group mb-3">
-            <label for="file_id" class="form-label">Select File:</label>
+            <label for="file_id" class="form-label">Select CSV File:</label>
             <select id="file_id" name="file_id" class="form-select" required>
                 {% for file in csv_files %}
                     <option value="{{ file.id }}" {% if file.id|stringformat:"s" == request.POST.file_id %}selected{% endif %}>{{ file.name }}</option>
@@ -75,7 +75,7 @@
             </div>
             <div class="form-group mb-3">
                 <label for="num_generations" class="form-label">Number of Generations :</label>
-                <output for="num_generations" id="slider_output">50</output>
+                <output for="num_generations" id="slider_output"></output>
                 <input type="range" id="num_generations" name="num_generations" min="20" max="100" value="50" class="form-range" required>
             </div>
             <div class="form-group mb-3">
@@ -100,76 +100,20 @@
                 <span class="btn-text">Optimize</span>
             </button>
             <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                <span class="btn-text">Add File</span>
+                <span class="btn-text">Add CSV File</span>
             </button>
             <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#csvFilesModal">
-                <span class="btn-text">View Files List</span>
+                <span class="btn-text">View CSV Files</span>
             </button>
-            <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#filePreviewModal" onclick="filePreview(event)">
-                <span class="btn-text">View Preview</span>
-            </button>
-
-            
         </div>
-
-
-        <!-- File Preview Modal -->
-        <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-fullscreen">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="filePreviewModalLabel">Preview</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group mb-3">
-                            <label for="selector_out" class="form-label">Out for selected:</label>
-                            <select id="selector_out" name="selector_out" class="form-select" required>
-                                {% for out in '1234'|make_list %}
-                                    <option value="{{ out }}" {% if out|stringformat:"s"  == request.POST.selector_out %}selected{% endif %}>{{ out }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <form onsubmit="return false;">
-                            <input type="text" id="previewSearchInput" placeholder="Search...">
-                            <h5 id="previewLoading">Loading...</h5>
-                            <div id="previewDiv" class="table-responsive">
-                                <table id="previewTable" class="table table-striped table-hover">
-                                    <thead class="text-center">
-                                        <tr>
-                                            <th class="text-center">กำหนดส่ง</th>
-                                            <th class="text-center">เลขที่ใบสั่งขาย</th>
-                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(2)">จำนวนสั่งขาย</th>
-                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(3)">ตัดกว้าง</th>
-                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(4)">ตัดยาว</th>
-                                            <th class="text-center">ประเภทตัดเส้น</th>
-                                            <th class="text-center">เลือก</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody >
-                                    </tbody> 
-                                </table>
-                            </div>
-                        </form>
-
-
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
     </form>
-
-
-
 
     <!-- Files List Modal -->
     <div class="modal fade" id="csvFilesModal" tabindex="-1" aria-labelledby="csvFilesModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="csvFilesModalLabel">Available Files</h5>
+                    <h5 class="modal-title" id="csvFilesModalLabel">Available CSV Files</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -198,7 +142,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="uploadModalLabel">Upload File</h5>
+                    <h5 class="modal-title" id="uploadModalLabel">Upload CSV File</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -211,9 +155,6 @@
             </div>
         </div>
     </div>
-
-
-
 
     <!-- Results Section -->
     {% if results %}
@@ -301,63 +242,13 @@
 
 {% block extra_scripts %}
 <script>
-
-    let progressInterval;
-    function sortTable(n) {
-        var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-        table = document.getElementById("previewTable");
-        switching = true;
-        // Set the sorting direction to ascending:
-        dir = "asc";
-        
-        // Remove arrows from all headers
-        var headers = table.getElementsByTagName("TH");
-        for (i = 0; i < headers.length; i++) {
-            headers[i].innerHTML = headers[i].innerHTML.replace(/[▲▼]/, "");
-        }
-        
-        // Add arrow to the clicked header
-        headers[n].innerHTML += dir === "asc" ? " ▲" : " ▼";
-    
-        while (switching) {
-            switching = false;
-            rows = table.rows;
-            for (i = 1; i < (rows.length - 1); i++) {
-                shouldSwitch = false;
-                x = rows[i].getElementsByTagName("TD")[n];
-                y = rows[i + 1].getElementsByTagName("TD")[n];
-                if (dir == "asc") {
-                    if (Number(x.innerHTML) > Number(y.innerHTML)) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                } else if (dir == "desc") {
-                    if (Number(x.innerHTML) < Number(y.innerHTML)) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                }
-            }
-            if (shouldSwitch) {
-                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                switching = true;
-                switchcount++;
-            } else {
-                if (switchcount == 0 && dir == "asc") {
-                    dir = "desc";
-                    switching = true;
-                    // Change arrow to down when switching to descending
-                    headers[n].innerHTML = headers[n].innerHTML.replace("▲", "▼");
-                }
-            }
-        }
-    }
-
     function updateProgress() {
-        fetch('/progress/')
+        fetch('/get_progress/')
             .then(response => response.json())
             .then(data => {
+                console.log('Progress data:', data);
                 const progress = data.progress;
+                console.log('Progress value:', progress);
                 document.getElementById('progress-bar').style.width = `${progress}%`;
                 document.getElementById('progress-bar').setAttribute('aria-valuenow', progress);
                 
@@ -370,121 +261,26 @@
             .catch(error => console.error('Error fetching progress:', error));
     }
 
-    function filePreview(event) {
-        event.preventDefault(); // Prevent the default button click behavior
-        document.getElementById('previewLoading').style.display = 'flex';
-        document.getElementById('previewDiv').style.display = 'none';
-        
-        // Get the file_id from the button or any other appropriate source
-        const fileId = document.getElementById('file_id').value;
-
-        // Make the AJAX request to the Django backend
-        fetch(`/file_selector/?file_id=${fileId}`)
-            .then(response => response.json())
-            .then(data => {
-                // Update the modal content with the file preview data
-                document.getElementById('previewLoading').style.display = 'none';
-                document.getElementById('previewDiv').style.display = 'flex';
-                updateFilePreviewModal(data.file_selector);
-            })
-            .catch(error => {
-                console.error('Error fetching file preview:', error);
-                // Handle the error, e.g., display an error message to the user
-            });
-    }
-    
-    function updateFilePreviewModal(filePreviewData) {
-        // Update the modal content with the file preview data
-        // This will depend on your HTML structure and how you want to display the data
-        const tableBody = document.querySelector('#filePreviewModal .modal-body tbody');
-        tableBody.innerHTML = '';
-    
-        filePreviewData.forEach(item => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="text-center">${item.กำหนดส่ง}</td>
-                <td class="text-center">${item.เลขที่ใบสั่งขาย}</td>
-                <td class="text-center">${item.จำนวนสั่งขาย}</td>
-                <td class="text-center">${item.กว้างผลิต}</td>
-                <td class="text-center">${item.ยาวผลิต}</td>
-                <td class="text-center">${item.ประเภททับเส้น}</td>
-                <td class="text-center">
-                    <input type="radio" id="${item.เลขที่ใบสั่งขาย}" name="selector_id" value="${item.เลขที่ใบสั่งขาย}" class="large-radio">
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-    }
-
-    function updateSelectedOrder() {
-        const selectedRadio = document.querySelector('input[name="selector_id"]:checked');
-        if (selectedRadio) {
-            document.getElementById('slider_output').value = selectedRadio.value;
-        }
-        return null; // Return null if nothing is selected
-    }
-
-    function optimizerLoader(btnId){
-        const btn = document.getElementById(btnId);
-        btn.classList.add('disabled');
-        btn.setAttribute('aria-disabled', 'true');
-        btn.querySelector('.spinner-border').classList.remove('d-none');
-        document.getElementById('overlay').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        // Start progress updates
-        progressInterval = setInterval(updateProgress, 2000); // Update every 2 second for more responsive feedback
-
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        var searchInput = document.getElementById('previewSearchInput');
-        var previewTable = document.getElementById('previewTable');
-    
-        if (!searchInput) {
-            console.error('Search input element not found');
-            return;
-        }
-    
-        if (!previewTable) {
-            console.error('Preview table element not found');
-            return;
-        }
-    
-        searchInput.addEventListener('input', previewSearch);
-
-        
-        function previewSearch() {
-            var filter = searchInput.value.toUpperCase();
-            var tr = previewTable.getElementsByTagName("tr");
-
-            for (var i = 0; i < tr.length; i++) {
-                var td = tr[i].getElementsByTagName("td");
-                var match = false;
-                for (var j = 0; j < td.length; j++) {
-                    var txtValue = td[j].textContent || td[j].innerText;
-                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                        match = true;
-                        break;
-                    }
-                }
-                tr[i].style.display = match ? "" : "none";
-            }
-        }
-      
-    })
+    let progressInterval;
 
     document.querySelector('form').addEventListener('submit', function(e) {
         const submitter = e.submitter;
-        
-        switch(submitter.name){
-            case 'optimize':
-                optimizerLoader('optimizeBtn')
-            case 'auto':
-                optimizerLoader('autoBtn')
+        if (submitter) {
+            const btn = submitter.name === 'optimize' ? document.getElementById('optimizeBtn') : document.getElementById('autoBtn');
+            btn.classList.add('disabled');
+            btn.setAttribute('aria-disabled', 'true');
+            btn.querySelector('.spinner-border').classList.remove('d-none');
+            if (submitter.name === 'optimize') {
+                btn.querySelector('.btn-text').textContent = 'Optimizing...';
+            }
         }
 
-    
-        updateSelectedOrder()
+        document.getElementById('overlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        // Start progress updates
+        progressInterval = setInterval(updateProgress, 2000); // Update every 2 second for more responsive feedback
+
         // Submit the form
         this.submit();
     });
@@ -493,10 +289,12 @@
         // Remove the overlay when the page is fully loaded
         document.getElementById('overlay').style.display = 'none';
     });
+    const slider = document.getElementById('num_generations');
+    const output = document.getElementById('slider_output');
+    output.textContent = slider.value;
 
-
-    document.getElementById('num_generations').oninput = function() {
-        document.getElementById('slider_output').textContent = this.value;
+    slider.oninput = function() {
+        output.textContent = this.value;
     };  
 
     window.addEventListener('unload', function() {
@@ -504,7 +302,6 @@
             clearInterval(progressInterval);
         }
     });
-
 
 </script>
 {% endblock %}

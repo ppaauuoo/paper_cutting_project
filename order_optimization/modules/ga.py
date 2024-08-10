@@ -2,15 +2,14 @@ import pygad
 import numpy
 import pandas as pd
 from .ordplan import ORD
-from typing import Dict
+
 class GA:
-    def __init__(self, orders: ORD, size: float, num_generations: int, out_range: int,showOutput:bool = False, save_solutions:bool = False, showZero: bool = False, selector: Dict = None)->None:
+    def __init__(self, orders: ORD, size: float, num_generations: int, out_range: int,showOutput:bool = False, save_solutions:bool = False, showZero: bool = False)->None:
         self.orders = orders
         self.PAPER_SIZE = size
         self.showOutput = showOutput
         self.save_solutions = save_solutions
         self.showZero = showZero
-        self.selector = selector
 
         self.num_generations = num_generations
         # num_parents_mating = len(orders)
@@ -60,7 +59,8 @@ class GA:
         )
 
         self.current_generation = 0
-        
+
+
     def paper_type_logic(self, solution):
         init_type = None
         orders = self.orders
@@ -108,14 +108,9 @@ class GA:
         self.penalty = 0
         self.penalty_value = 1000
 
-        if self.selector['order_id']:
-            solution[0]=self.selector['out']
-
         self.paper_type_logic(solution)
 
         self.paper_out_logic(solution)
-
-
 
         output = numpy.sum(solution * self.orders["กว้างผลิต"])  # ผลรวมของตัดกว้างทั้งหมด
         self.paper_size_logic(output)
@@ -128,9 +123,9 @@ class GA:
     def on_gen(self, ga_instance):
 
         self.current_generation += 1
-        if self.set_progress:
+        if self.update_progress:
                 progress = (self.current_generation / self.num_generations) * 100
-                self.set_progress(progress)
+                self.update_progress(progress)
 
         orders = self.orders
 
@@ -178,6 +173,6 @@ class GA:
         print("Trim :", abs(self.fitness_values))
         print("\n")
 
-    def get(self, set_progress):
-        self.set_progress= set_progress
+    def get(self, update_progress):
+        self.update_progress= update_progress
         return self.model

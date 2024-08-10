@@ -1,7 +1,7 @@
 import pandas as pd
-from typing import Dict
+
 class ORD:
-    def __init__(self, path: str, deadline_scope: int = 0, size: float = 66, tuning_values: int = 3, filter_value: int = 16, filter: bool = True, common: bool = False, filler: int =0,selector: int = 0) -> None:
+    def __init__(self, path: str, deadline_scope: int, size: float, tuning_values: int, filter_value: int, filter: bool = True, common: bool = False, filler: int =0) -> None:
         self.ordplan = pd.read_excel(path, engine='openpyxl')
         self.deadline_scope = deadline_scope
         self.filter = filter
@@ -10,8 +10,7 @@ class ORD:
         self.tuning_values = tuning_values
         self.filter_value = filter_value
         self.filler=filler
-        self.selector=selector
-    def get(self)-> Dict:
+    def get(self):
         ordplan = self.ordplan
 
         ordplan["กว้างผลิต"] = round(ordplan["กว้างผลิต"] / 25.4, 2)
@@ -20,10 +19,13 @@ class ORD:
         ordplan["กำหนดส่ง"] = pd.to_datetime(ordplan["กำหนดส่ง"]).dt.strftime('%m/%d/%y')
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
         
+
+
         #filter deadline_scope
         if self.deadline_scope >= 0:
             deadline = ordplan["กำหนดส่ง"].iloc[self.deadline_scope]
             ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline].reset_index(drop=True)
+
 
         #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
         if self.filter:
@@ -32,16 +34,9 @@ class ORD:
             for i, row in ordplan.iterrows():
                 diff = abs(selected_values - row["กว้างผลิต"])
                 ordplan.loc[i, "diff"] = diff
-            
-
             ordplan = (
                 ordplan[ordplan["diff"] < self.filter_value].sort_values(by="กว้างผลิต").reset_index(drop=True)
             )
-
-        if self.selector:
-            self.selectorFilter()
-            ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.selector]
-            ordplan = pd.concat([self.selected_order, ordplan], ignore_index=True)
 
         if self.common:
             col = [
@@ -62,6 +57,8 @@ class ORD:
             if isinstance(init_order, pd.Series):
                 ordplan = ordplan[ordplan.apply(lambda order: all(init_order[i] == order[i] for i in col), axis=1)].reset_index(drop=True)
 
+
+
         self.ordplan = ordplan
 
         return ordplan
@@ -78,7 +75,4 @@ class ORD:
         init_order_number = round(init_num_orders/init_out)
         foll_order_number = round(init_len * init_order_number / foll_order_len)
         return (init_order_number,foll_order_number)
-
-    def selectorFilter(self):
-        self.selected_order = self.ordplan[self.ordplan['เลขที่ใบสั่งขาย'] == self.selector]
 
