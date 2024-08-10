@@ -53,11 +53,11 @@ def optimize_order(request):
     return render(request, "optimize.html", context)
 
 def handle_selector(request)->Dict:
-    
-    selector_id = request.POST.get("selector_id")
+    # selector_id = request.POST.get("selector_id")
+    selector_id = None
     selector_out = int(request.POST.get("selector_out"))
     return {
-        "order_id": 12181159253,
+        "order_id": selector_id,
         "out": selector_out
     }
 
@@ -69,7 +69,7 @@ def manual_configuration(request)->Callable:
     tuning_value = int(request.POST.get("tuning_value"))
     num_generations = int(request.POST.get("num_generations"))
     out_range = int(request.POST.get("out_range"))
-    orders = get_orders(file_id,size_value,deadline_toggle,filter_value,tuning_value)
+    orders = get_orders(request, file_id,size_value,deadline_toggle,filter_value,tuning_value)
     if len(orders) <= 0:
         messages.error(request, "Eror 404: No orders were found. Please try again.")
         return
@@ -77,20 +77,28 @@ def manual_configuration(request)->Callable:
 
 def auto_configuration(request)->Callable:
     again = cache.get("try_again", 0)
-    file_id = request.POST.get("file_id")
     num_generations = 50+(10*again)
-    tuning_value = 2 if again is None else 3
-    out_range = 3+again
-    orders = []
+    out_range = 2+again
+    orders,size = search_compat_size_and_filter(request)
+    return handle_optimization(request, orders, num_generations, out_range, size)
+
+def search_compat_size_and_filter(request):
     i = 0
-    j = 0
-    while len(orders) == 0:
-        orders = get_orders(file_id,ROLL_PAPER[j],FILTER[-i],tuning_value)
+    j = 7
+    orders = cache.get('auto_order', [])
+    size = cache.get('order_size', ROLL_PAPER[j])
+    file_id = request.POST.get("file_id")
+    tuning_value = 3
+    while len(orders) <= 2:
+        orders = get_orders(request, file_id,size,FILTER[-i],tuning_value)
         i += 1
         if i > len(FILTER):
             i = 0
-            j += 1
-    return handle_optimization(request, orders, num_generations, out_range, ROLL_PAPER[j])
+            j+=1
+            size=cache.set('order_size', ROLL_PAPER[j], CACHE_TIMEOUT)
+    cache.set('auto_order', orders, CACHE_TIMEOUT)
+    return (orders, size)
+
 
 def handle_optimization(request, orders: ORD, num_generations: int, out_range: int, size_value: float)->Callable:
     ga_instance = run_genetic_algorithm(request,orders, size_value, out_range, num_generations)
@@ -127,7 +135,8 @@ def recursive_auto_logic(request):
     if again <= 4:
         again+=1
         cache.set("try_again", again, CACHE_TIMEOUT)
-        return auto_configuration(request)
+        return auto_configuration(request) 
+    cache.delete("auto_order")
     return messages.error(request, "Error : Auto config malfuncioned, please contact admin.")
 
 def handle_common(request) -> Callable:
@@ -150,7 +159,7 @@ def handle_common(request) -> Callable:
 
     for i, item in enumerate(results["output"]):
         size_value = item["cut_width"] + results["trim"]
-        orders = get_orders(file_id,size_value,deadline_scope=-1,tuning_values=3, filter=False,common=True)
+        orders = get_orders(request, file_id,size_value,deadline_scope=-1,tuning_values=3, filter=False,common=True)
         ga_instance = run_genetic_algorithm(orders, size_value)
     
 
@@ -172,7 +181,7 @@ def handle_filler(request):
     file_id = request.POST.get("selected_file_id")
     size_value = results['output'][0]['cut_width']
     init_out = results['output'][0]['out']
-    orders = get_orders(file_id,size_value,deadline_scope=-1,tuning_values=1, filter=False,common=True,filler=init_order)
+    orders = get_orders(request, file_id,size_value,deadline_scope=-1,tuning_values=1, filter=False,common=True,filler=init_order)
     i = 0
     while i < len(orders) and results['foll_order_number'] > results['output'][1]['num_orders'] + orders['จำนวนสั่งขาย'][i]: i += 1
 
@@ -194,6 +203,7 @@ def output_format(orders: ORD, init_out: int = 0) -> pd.DataFrame:
     )
 
 def get_orders(
+    request,
     file_id: str,
     size_value: float,
     deadline_scope: int = 0,
@@ -201,7 +211,7 @@ def get_orders(
     tuning_values: int = 3,
     filter: bool = True,
     common: bool = False,
-    filler: int = 0
+    filler: int = 0,
 ) -> ORD:
     """
     Get orders for optimization.
@@ -228,7 +238,8 @@ def get_orders(
         size=size_value,
         tuning_values=tuning_values,
         common=common,
-        filler = filler
+        filler = filler,
+        selector = handle_selector(request)['order_id']
     ).get()
 
 def get_outputs(ga_instance: GA) -> Tuple[float, List[Dict]]:
@@ -320,7 +331,7 @@ def get_file_preview(request):
     file_path = csv_file.file.path
 
     # Load the CSV file into a DataFrame
-    df = (ORD(path=file_path, preview=True).get()).to_dict('records')
+    df = (ORD(path=file_path).get()).to_dict('records')
 
     cache.set(cache_key, df, CACHE_TIMEOUT)
     return JsonResponse({'file_preview': df})

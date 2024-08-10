@@ -75,7 +75,7 @@
             </div>
             <div class="form-group mb-3">
                 <label for="num_generations" class="form-label">Number of Generations :</label>
-                <output for="num_generations" id="slider_output"></output>
+                <output for="num_generations" id="slider_output">50</output>
                 <input type="range" id="num_generations" name="num_generations" min="20" max="100" value="50" class="form-range" required>
             </div>
             <div class="form-group mb-3">
@@ -409,17 +409,17 @@
                 <td class="text-center">${item.ยาวผลิต}</td>
                 <td class="text-center">${item.ประเภททับเส้น}</td>
                 <td class="text-center">
-                    <input type="radio" id="${item.เลขที่ใบสั่งขาย}" name="selectedOrder" value="${item.เลขที่ใบสั่งขาย}" class="large-radio">
+                    <input type="radio" id="${item.เลขที่ใบสั่งขาย}" name="selector_id" value="${item.เลขที่ใบสั่งขาย}" class="large-radio">
                 </td>
             `;
             tableBody.appendChild(row);
         });
     }
 
-    function getSelectedOrder() {
-        const selectedRadio = document.querySelector('input[name="selectedOrder"]:checked');
+    function updateSelectedOrder() {
+        const selectedRadio = document.querySelector('input[name="selector_id"]:checked');
         if (selectedRadio) {
-            return selectedRadio.value;
+            document.getElementById('slider_output').value = selectedRadio.value;
         }
         return null; // Return null if nothing is selected
     }
@@ -483,6 +483,8 @@
                 optimizerLoader('autoBtn')
         }
 
+    
+        updateSelectedOrder()
         // Submit the form
         this.submit();
     });
@@ -494,7 +496,7 @@
 
 
     document.getElementById('num_generations').oninput = function() {
-        output.textContent = this.value;
+        document.getElementById('slider_output').textContent = this.value;
     };  
 
     window.addEventListener('unload', function() {
