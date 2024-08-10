@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.optimize_order, name='optimize_order'),
-    path('get_progress/', views.get_progress, name='get_progress'),
+    path('', views.order_optimizer_view, name='order_optimizer_view'),
+    path('progress/', views.progress_view, name='progress_view'),
+    path('file_selector/', views.file_selector_view, name='file_selector_view'),
 ]
