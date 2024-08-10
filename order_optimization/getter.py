@@ -16,12 +16,16 @@ def set_progress(progress) -> None:
     cache.set("optimization_progress", progress, CACHE_TIMEOUT)
 
 def get_selected_order(request)->Dict:
-    selector_id = int(request.POST.get("selector_id"))
-    selector_out = int(request.POST.get("selector_out"))
-    return {
-        "order_id": selector_id,
-        "out": selector_out
-    }
+    selector_id = request.POST.get("selector_id")
+    if selector_id:
+        selector_id = int(selector_id)
+        selector_out = int(request.POST.get("selector_out"))
+        return {
+            "order_id": selector_id,
+            "out": selector_out
+        }
+    return None
+
 
 def get_genetic_algorithm(
     request,
@@ -94,7 +98,7 @@ def get_orders(
         tuning_values=tuning_values,
         common=common,
         filler = filler,
-        selector = get_selected_order(request)['order_id']
+        selector = get_selected_order(request)
     ).get()
 
 def get_outputs(ga_instance: GA) -> Tuple[float, List[Dict]]:

@@ -108,7 +108,7 @@ class GA:
         self.penalty = 0
         self.penalty_value = 1000
 
-        if self.selector['order_id']:
+        if self.selector:
             solution[0]=self.selector['out']
 
         self.paper_type_logic(solution)

@@ -283,8 +283,8 @@
                         </svg> {{ results.trim }}
                         <form method="post" onsubmit="document.getElementById('commonTrimBtn').classList.add('disabled'); document.getElementById('commonTrimBtn').querySelector('.spinner-border').classList.remove('d-none'); document.getElementById('overlay').style.display = 'flex'; document.body.style.overflow = 'hidden';">
                             {% csrf_token %}
-                            <input type="hidden" id="selected_file_id" name="selected_file_id">
-                            <button type="submit" name="common_trim" class="btn btn-primary btn-sm" id="commonTrimBtn" onclick="document.getElementById('selected_file_id').value = document.getElementById('file_id').value;">
+                            <input type="hidden" id="selected_file_id_trim" name="selected_file_id">
+                            <button type="submit" name="common_trim" class="btn btn-primary btn-sm" id="commonTrimBtn" onclick="document.getElementById('selected_file_id_trim').value = document.getElementById('file_id').value;">
                                 <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                                 <span class="btn-text">Find Common</span>
                             </button>
