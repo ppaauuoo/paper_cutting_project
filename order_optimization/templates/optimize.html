@@ -354,7 +354,7 @@
     }
 
     function updateProgress() {
-        fetch('/get_progress/')
+        fetch('/progress/')
             .then(response => response.json())
             .then(data => {
                 const progress = data.progress;
@@ -379,13 +379,13 @@
         const fileId = document.getElementById('file_id').value;
 
         // Make the AJAX request to the Django backend
-        fetch(`/get_file_preview/?file_id=${fileId}`)
+        fetch(`/file_selector/?file_id=${fileId}`)
             .then(response => response.json())
             .then(data => {
                 // Update the modal content with the file preview data
                 document.getElementById('previewLoading').style.display = 'none';
                 document.getElementById('previewDiv').style.display = 'flex';
-                updateFilePreviewModal(data.file_preview);
+                updateFilePreviewModal(data.file_selector);
             })
             .catch(error => {
                 console.error('Error fetching file preview:', error);
