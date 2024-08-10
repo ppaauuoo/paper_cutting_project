@@ -35,7 +35,6 @@ def optimize_order(request):
                 handle_filler(request)
 
     cache.delete("optimization_progress")  # Clear previous progress
-    cache.delete("try_again")  # Clear previous progress
     csv_files = CSVFile.objects.all()
     form = CSVFileForm()
 
@@ -87,15 +86,18 @@ def search_compat_size_and_filter(request):
     orders = cache.get('auto_order', [])
     size = cache.get('order_size', ROLL_PAPER[j])
     file_id = request.POST.get("file_id")
-    tuning_value = 3
-    while len(orders) <= 2:
+    tuning_value = TUNING_VALUE[1]
+    while len(orders) <= 0:
         orders = get_orders(request, file_id,size,FILTER[-i],tuning_value)
         i += 1
         if i > len(FILTER):
             i = 0
             j+=1
-            size=cache.set('order_size', ROLL_PAPER[j], CACHE_TIMEOUT)
+            size=ROLL_PAPER[j]
+
     cache.set('auto_order', orders, CACHE_TIMEOUT)
+    cache.set('order_size', size, CACHE_TIMEOUT)
+
     return (orders, size)
 
 
@@ -135,7 +137,8 @@ def recursive_auto_logic(request):
         again+=1
         cache.set("try_again", again, CACHE_TIMEOUT)
         return auto_configuration(request) 
-    cache.delete("auto_order")
+    
+    cache.delete("try_again")
     return messages.error(request, "Error : Auto config malfuncioned, please contact admin.")
 
 def handle_common(request) -> Callable:
