@@ -53,8 +53,7 @@ def optimize_order(request):
     return render(request, "optimize.html", context)
 
 def handle_selector(request)->Dict:
-    # selector_id = request.POST.get("selector_id")
-    selector_id = None
+    selector_id = int(request.POST.get("selector_id"))
     selector_out = int(request.POST.get("selector_out"))
     return {
         "order_id": selector_id,
