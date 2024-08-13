@@ -26,6 +26,7 @@ def get_selected_order(request)->Dict|None:
         }
     return None
 
+
 def get_genetic_algorithm(
     request,
     orders: ORD,

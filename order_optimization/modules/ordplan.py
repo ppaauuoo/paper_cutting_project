@@ -70,7 +70,8 @@ class ORD:
 
         self.ordplan = ordplan
 
-        return ordplan
+
+        return self.ordplan
 
     def handle_orders_logic(output_data):
         init_len = output_data[0]['cut_len']
