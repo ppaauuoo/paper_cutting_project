@@ -85,6 +85,21 @@ class GA:
                             if orders['ประเภททับเส้น'][i] == "X":
                                 self.penalty += self.penalty_value
 
+
+    def least_order_logic(self, solution):
+        init_type = None
+        orders = self.orders
+        for i, var in enumerate(solution):
+            if init_type is not None:
+                break
+            if var >= 1:
+                init_type = orders['จำนวนสั่งขาย'][i]
+
+        if init_type is not None:
+            for i, var in enumerate(solution):
+                if var >= 1 and orders['จำนวนสั่งขาย'][i] < init_type:
+                    self.penalty += self.penalty_value
+
     def paper_out_logic(self, solution):
         if sum(solution) > 6:  # 
             self.penalty += self.penalty_value*sum(solution)
@@ -111,11 +126,12 @@ class GA:
         if self.selector:
             solution[0]=self.selector['out']
 
+
         self.paper_type_logic(solution)
 
+        self.least_order_logic(solution)
+
         self.paper_out_logic(solution)
-
-
 
         output = numpy.sum(solution * self.orders["กว้างผลิต"])  # ผลรวมของตัดกว้างทั้งหมด
         self.paper_size_logic(output)
@@ -145,7 +161,6 @@ class GA:
                 "cut_len": orders["ยาวผลิต"],
                 "type": orders["ประเภททับเส้น"],
                 "deadline": orders["กำหนดส่ง"],
-                "out": solution,
                 "front_sheet": orders["แผ่นหน้า"],
                 "c_wave": orders["ลอน C"],
                 "middle_sheet": orders["แผ่นกลาง"],
@@ -155,6 +170,7 @@ class GA:
                 "left_line": orders["ทับเส้นซ้าย"],
                 "center_line": orders["ทับเส้นกลาง"],
                 "right_line": orders["ทับเส้นขวา"],
+                "out": solution,
             }
         )
 

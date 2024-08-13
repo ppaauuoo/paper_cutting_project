@@ -45,6 +45,11 @@
             <input type="checkbox" id="satisfied" name="satisfied" class="form-check-input" value="true" {% if request.POST.satisfied == "true" %}checked{% endif %}>
         </div>
 
+        <div class="form-group mb-3">
+            <label for="first_date_only" class="form-label">First Deadline Only :</label>
+            <input type="checkbox" id="first_date_only" name="first_date_only" class="form-check-input" value="true" {% if request.POST.first_date_only == "true" %}checked{% endif %}>
+        </div>
+
         <a href="#advanced" data-bs-toggle="collapse" id="advanced-tab">Advanced...</a>
 
         <!-- Advanced Collapsed -->

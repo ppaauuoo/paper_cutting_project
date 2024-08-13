@@ -26,7 +26,8 @@ def handle_manual_config(request)->Callable:
     tuning_value = int(request.POST.get("tuning_value"))
     num_generations = int(request.POST.get("num_generations"))
     out_range = int(request.POST.get("out_range"))
-    orders = get_orders(request, file_id,size_value,deadline_toggle,filter_value,tuning_value)
+    first_date_only = request.POST.get("first_date_only")
+    orders = get_orders(request, file_id,size_value,deadline_toggle,filter_value,tuning_value,first_date_only)
     if len(orders) <= 0:
         messages.error(request, "Eror 404: No orders were found. Please try again.")
         return
@@ -36,18 +37,18 @@ def handle_auto_config(request)->Callable:
     again = cache.get("try_again", 0)
     num_generations = 50+(10*again)
     out_range = 2+again
-    orders,size = size_filter_logic(request)
+    orders,size = auto_size_filter_logic(request)
     return handle_optimization(request, orders, num_generations, out_range, size)
 
-def size_filter_logic(request):
+def auto_size_filter_logic(request):
     i = 0
-    j = 7
+    j = 8
     orders = cache.get('auto_order', [])
     size = cache.get('order_size', ROLL_PAPER[j])
     file_id = request.POST.get("file_id")
     tuning_value = TUNING_VALUE[1]
     while len(orders) <= 0:
-        orders = get_orders(request, file_id,size,FILTER[-i],tuning_value)
+        orders = get_orders(request, file_id,size,FILTER[-i],tuning_value,first_date_only=True)
         i += 1
         if i > len(FILTER):
             i = 0
