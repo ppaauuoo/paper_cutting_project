@@ -111,10 +111,11 @@ def handle_common(request) -> Callable:
 
 
     for i, item in enumerate(results["output"]):
+
         size_value = (item["cut_width"]*item["out"]) + results["trim"]
         orders = get_orders(request, file_id,size_value,deadline_scope=-1,tuning_values=3, filter=False,common=True)
         ga_instance = get_genetic_algorithm(request,orders,size_value)
-    
+
 
         if abs(ga_instance.fitness_values) < abs(best_fitness):
             best_fitness, best_output = get_outputs(ga_instance)
@@ -127,6 +128,7 @@ def handle_common(request) -> Callable:
         messages.error(request, "No suitable common order found.")
 
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
+
 
 def update_results(results: Dict, best_index: int, best_output: List[Dict], best_fitness: float, size_value: float) -> None:
     """Update results with the best common order."""

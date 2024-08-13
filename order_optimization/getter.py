@@ -15,7 +15,7 @@ CACHE_TIMEOUT = settings.CACHE_TIMEOUT
 def set_progress(progress) -> None:
     cache.set("optimization_progress", progress, CACHE_TIMEOUT)
 
-def get_selected_order(request)->Dict:
+def get_selected_order(request)->Dict|None:
     selector_id = request.POST.get("selector_id")
     if selector_id:
         selector_id = int(selector_id)

@@ -1,4 +1,4 @@
 __pycache__
 alpha
 *.zip
-db.sqlite3
+*.sqlite3
