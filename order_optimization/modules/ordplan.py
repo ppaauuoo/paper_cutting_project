@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Dict
 class ORD:
-    def __init__(self, path: str, deadline_scope: int = 0, size: float = 66, tuning_values: int = 3, filter_value: int = 16, filter: bool = True, common: bool = False, filler: int =0,selector: int = 0) -> None:
+    def __init__(self, path: str, deadline_scope: int = 0, size: float = 66, tuning_values: int = 3, filter_value: int = 16, filter: bool = True, common: bool = False, filler: int =0,selector: Dict = None) -> None:
         self.ordplan = pd.read_excel(path, engine='openpyxl')
         self.deadline_scope = deadline_scope
         self.filter = filter
@@ -40,7 +40,7 @@ class ORD:
 
         if self.selector:
             self.selectorFilter()
-            ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.selector]
+            ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.selector['order_id']]
             ordplan = pd.concat([self.selected_order, ordplan], ignore_index=True)
 
         if self.common:
@@ -80,5 +80,5 @@ class ORD:
         return (init_order_number,foll_order_number)
 
     def selectorFilter(self):
-        self.selected_order = self.ordplan[self.ordplan['เลขที่ใบสั่งขาย'] == self.selector]
+        self.selected_order = self.ordplan[self.ordplan['เลขที่ใบสั่งขาย'] == self.selector['order_id']]
 
