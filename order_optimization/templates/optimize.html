@@ -41,7 +41,7 @@
             </select>
         </div>
         <div class="form-group mb-3">
-            <label for="satisfied" class="form-label">Closest deadline first :</label>
+            <label for="satisfied" class="form-label">Until Satisfied :</label>
             <input type="checkbox" id="satisfied" name="satisfied" class="form-check-input" value="true" {% if request.POST.satisfied == "true" %}checked{% endif %}>
         </div>
 
@@ -139,9 +139,10 @@
                                         <tr>
                                             <th class="text-center">กำหนดส่ง</th>
                                             <th class="text-center">เลขที่ใบสั่งขาย</th>
-                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(2)">จำนวนสั่งขาย</th>
-                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(3)">ตัดกว้าง</th>
-                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(4)">ตัดยาว</th>
+                                            <th class="text-center">ชนิดส่วนประกอบ</th>
+                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(3)">จำนวนสั่งขาย</th>
+                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(4)">ตัดกว้าง</th>
+                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(5)">ตัดยาว</th>
                                             <th class="text-center">ประเภทตัดเส้น</th>
                                             <th class="text-center">เลือก</th>
                                         </tr>
@@ -224,6 +225,7 @@
                 <tr>
                     <th class="text-center">กำหนดส่ง</th>
                     <th class="text-center">เลขที่ใบสั่งขาย</th>
+                    <th class="text-center">ชนิดส่วนประกอบ</th>
                     <th class="text-center">จำนวนสั่งขาย</th>
                     <th class="text-center">ตัดกว้าง</th>
                     <th class="text-center">ตัดยาว</th>
@@ -236,6 +238,7 @@
                 <tr>
                     <td class="text-center">{{ item.deadline }}</td>
                     <td class="text-center">{{ item.order_number }}</td>
+                    <td class="text-center">{{ item.order_type }}</td>
                     <td class="text-center">{{ item.num_orders }}</td>
                     <td class="text-center">{{ item.cut_width }}</td>
                     <td class="text-center">{{ item.cut_len }}</td>
@@ -404,6 +407,7 @@
             row.innerHTML = `
                 <td class="text-center">${item.กำหนดส่ง}</td>
                 <td class="text-center">${item.เลขที่ใบสั่งขาย}</td>
+                <td class="text-center">${item.ชนิดส่วนประกอบ}</td>                
                 <td class="text-center">${item.จำนวนสั่งขาย}</td>
                 <td class="text-center">${item.กว้างผลิต}</td>
                 <td class="text-center">${item.ยาวผลิต}</td>

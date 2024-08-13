@@ -140,11 +140,21 @@ class GA:
             {
                 "order_number": orders["เลขที่ใบสั่งขาย"],
                 "num_orders": orders["จำนวนสั่งขาย"],
+                "order_type": orders["ชนิดส่วนประกอบ"],
                 "cut_width": orders["กว้างผลิต"],
                 "cut_len": orders["ยาวผลิต"],
                 "type": orders["ประเภททับเส้น"],
                 "deadline": orders["กำหนดส่ง"],
                 "out": solution,
+                "front_sheet": orders["แผ่นหน้า"],
+                "c_wave": orders["ลอน C"],
+                "middle_sheet": orders["แผ่นกลาง"],
+                "b_wave": orders["ลอน B"],
+                "back_sheet": orders["แผ่นหลัง"],
+                "num_layers": orders["จน.ชั้น"],
+                "left_line": orders["ทับเส้นซ้าย"],
+                "center_line": orders["ทับเส้นกลาง"],
+                "right_line": orders["ทับเส้นขวา"],
             }
         )
 

@@ -113,8 +113,8 @@ def handle_common(request) -> Callable:
     for i, item in enumerate(results["output"]):
 
         size_value = (item["cut_width"]*item["out"]) + results["trim"]
-        orders = get_orders(request, file_id,size_value,deadline_scope=-1,tuning_values=3, filter=False,common=True)
-        ga_instance = get_genetic_algorithm(request,orders,size_value)
+        orders = get_orders(request, file_id,size_value,deadline_scope=-1, filter=False, common=True)
+        ga_instance = get_genetic_algorithm(request,orders,size_value, show_output=True)
 
 
         if abs(ga_instance.fitness_values) < abs(best_fitness):
@@ -132,14 +132,15 @@ def handle_common(request) -> Callable:
 
 def update_results(results: Dict, best_index: int, best_output: List[Dict], best_fitness: float, size_value: float) -> None:
     """Update results with the best common order."""
-    old_order = results["output"][best_index]
     results["output"].pop(best_index)
     results["output"] = [item for item in results["output"] if item.get("out", 0) >= 1]
     results["output"].extend(best_output)
-    results["fitness"] = (
-        ( results["roll"] - (old_order["cut_width"]*old_order["out"]))
-        + (best_fitness + size_value)
-    )
+
+    for item in results["output"]: 
+            results["fitness"] += item["cut_width"]*item["out"]
+            print(results["fitness"])
+
+
     print("results['roll']:", results["roll"])
     print("results['output'][best_index]['cut_width']:", results["output"][best_index]["cut_width"])
     print("results['output'][best_index]['out']:", results["output"][best_index]["out"])
