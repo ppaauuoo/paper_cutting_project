@@ -3,3 +3,7 @@ pandas
 pygad
 ortools
 openpyxl
+joblib
+scikit-learn
+category-encoders
+seaborn
