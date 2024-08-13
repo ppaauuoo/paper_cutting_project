@@ -111,9 +111,9 @@ def handle_common(request) -> Callable:
 
 
     for i, item in enumerate(results["output"]):
-        size_value = item["cut_width"] + results["trim"]
+        size_value = (item["cut_width"]*item["out"]) + results["trim"]
         orders = get_orders(request, file_id,size_value,deadline_scope=-1,tuning_values=3, filter=False,common=True)
-        ga_instance = get_genetic_algorithm(orders, size_value)
+        ga_instance = get_genetic_algorithm(request,orders,size_value)
     
 
         if abs(ga_instance.fitness_values) < abs(best_fitness):
@@ -127,6 +127,23 @@ def handle_common(request) -> Callable:
         messages.error(request, "No suitable common order found.")
 
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
+
+def update_results(results: Dict, best_index: int, best_output: List[Dict], best_fitness: float, size_value: float) -> None:
+    """Update results with the best common order."""
+    old_order = results["output"][best_index]
+    results["output"].pop(best_index)
+    results["output"] = [item for item in results["output"] if item.get("out", 0) >= 1]
+    results["output"].extend(best_output)
+    results["fitness"] = (
+        ( results["roll"] - (old_order["cut_width"]*old_order["out"]))
+        + (best_fitness + size_value)
+    )
+    print("results['roll']:", results["roll"])
+    print("results['output'][best_index]['cut_width']:", results["output"][best_index]["cut_width"])
+    print("results['output'][best_index]['out']:", results["output"][best_index]["out"])
+    print("best_fitness:", best_fitness)
+    print("size_value:", size_value)
+    results["trim"] = abs(best_fitness)
 
 def handle_filler(request):
     results = cache.get("optimization_results")
@@ -172,15 +189,3 @@ def results_format(ga_instance: object, output_data: dict, size_value: int, fitn
 
 
 
-def update_results(results: Dict, best_index: int, best_output: List[Dict], best_fitness: float, size_value: float) -> None:
-    """Update results with the best common order."""
-    results["output"][best_index]["out"] -= 1
-    results["output"] = [item for item in results["output"] if item.get("out", 0) >= 1]
-    results["output"].extend(best_output)
-    results["fitness"] = (
-        results["fitness"]
-        - results["output"][best_index]["cut_width"]
-        + best_fitness
-        + size_value
-    )
-    results["trim"] = abs(best_fitness)
