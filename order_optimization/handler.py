@@ -26,7 +26,8 @@ def handle_manual_config(request)->Callable:
     tuning_value = int(request.POST.get("tuning_value"))
     num_generations = int(request.POST.get("num_generations"))
     out_range = int(request.POST.get("out_range"))
-    orders = get_orders(request, file_id,size_value,deadline_toggle,filter_value,tuning_value)
+    first_date_only = request.POST.get("first_date_only")
+    orders = get_orders(request, file_id,size_value,deadline_toggle,filter_value,tuning_value,first_date_only)
     if len(orders) <= 0:
         messages.error(request, "Eror 404: No orders were found. Please try again.")
         return

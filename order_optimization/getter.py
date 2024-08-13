@@ -71,6 +71,7 @@ def get_orders(
     filter: bool = True,
     common: bool = False,
     filler: int = 0,
+    first_date_only: bool = False
 ) -> ORD:
     """
     Get orders for optimization.
@@ -98,7 +99,8 @@ def get_orders(
         tuning_values=tuning_values,
         common=common,
         filler = filler,
-        selector = get_selected_order(request)
+        selector = get_selected_order(request),
+        first_date_only=first_date_only
     ).get()
 
 def get_outputs(ga_instance: GA) -> Tuple[float, List[Dict]]:

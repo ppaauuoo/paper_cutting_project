@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Dict
 class ORD:
-    def __init__(self, path: str, deadline_scope: int = 0, size: float = 66, tuning_values: int = 3, filter_value: int = 16, filter: bool = True, common: bool = False, filler: int =0,selector: Dict = None) -> None:
+    def __init__(self, path: str, deadline_scope: int = 0, size: float = 66, tuning_values: int = 3, filter_value: int = 16, filter: bool = True, common: bool = False, filler: int =0,selector: Dict = None,first_date_only:bool = False) -> None:
         self.ordplan = pd.read_excel(path, engine='openpyxl')
         self.deadline_scope = deadline_scope
         self.filter = filter
@@ -11,6 +11,7 @@ class ORD:
         self.filter_value = filter_value
         self.filler=filler
         self.selector=selector
+        self.first_date_only=first_date_only
     def get(self)-> Dict:
         ordplan = self.ordplan
 
@@ -22,11 +23,12 @@ class ORD:
         
         self.ordplan = ordplan
 
+        deadline_range = 50
         #filter deadline_scope
         while self.deadline_scope >= 0:
             deadline = self.ordplan["กำหนดส่ง"].iloc[self.deadline_scope]
             ordplan = self.ordplan[self.ordplan["กำหนดส่ง"] <= deadline].sort_values("กำหนดส่ง").reset_index(drop=True)
-            self.deadline_scope+=10
+            self.deadline_scope+=deadline_range
 
             #โดยออเดอร์ที่สามารถนำมาคู่กันได้ สำหรับกระดาษไซส์นี้ จะมีขนาดไม่เกิน 31(+-filter value) โดย filter value คือค่าที่กำหนดเอง
             if self.filter:
@@ -46,10 +48,12 @@ class ORD:
                 ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.selector['order_id']]
                 ordplan = pd.concat([self.selected_order, ordplan], ignore_index=True)
 
-
-            if len(ordplan) >= 10 or len(self.ordplan) <= self.deadline_scope: break
+            if len(ordplan) >= deadline_range or len(self.ordplan) <= self.deadline_scope: break
             print('short ordplan')
 
+        if self.first_date_only:
+            deadline = ordplan["กำหนดส่ง"].iloc[0]
+            ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline].reset_index(drop=True)
 
         if self.common:
                 col = [
@@ -77,11 +81,7 @@ class ORD:
                 mask = ordplan[col].eq(init_order[col]).all(axis=1)
                 ordplan = ordplan.loc[mask].reset_index(drop=True)
     
-            
-
         self.ordplan = ordplan.reset_index(drop=True)
-
-
 
         return self.ordplan
 
