@@ -1,31 +1,15 @@
-import joblib
-import pandas as pd
-
 import os
-from sklearn.ensemble import RandomForestClassifier
+import ydf  # Yggdrasil Decision Forests
+import pandas as pd  # We use Pandas to load small datasets
 
-models_dir = os.path.abspath(os.path.join('.','order_optimization','modules','randomforest_models'))
+models_dir = os.path.abspath(os.path.join('.','order_optimization','modules','yggdrasil_models'))
 
-model_names = ['front_sheetP', 'c_waveP', 'middle_sheetP', 'b_waveP', 'back_sheetP']
-models = {}
+model_names = ['front_sheet-P', 'c_wave-P', 'middle_sheet-P', 'b_wave-P', 'back_sheet-P']
 
-
-for name in model_names:
-# Load the saved model
-    models[name] = joblib.load(os.path.join(models_dir, f'{name}_randomforest.joblib'))
+model = {}
 
 
-paper_part = 'front_sheet'
-
-test_data = {
-    f'{paper_part}-O': ['CM127     '],
-}
-
-test = pd.DataFrame(test_data)
-print(test)
-
-X = test
-
-first_row = X.iloc[0]
-print(first_row)
-print(models['front_sheetP'].predict([first_row]))
+for paper in model_names:
+    print(f"{models_dir}\{paper}")
+    model[paper] = ydf.load_model(f"{models_dir}\{paper}")
+    print(f"This is a {model[paper].name()} model.")
