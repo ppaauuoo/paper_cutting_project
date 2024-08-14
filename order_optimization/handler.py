@@ -188,6 +188,13 @@ def results_format(ga_instance: object, output_data: dict, size_value: int, fitn
         "foll_order_number": foll_order_number
     }
 
+def handle_saving(request):
+    df = cache.get("optimized_orders_view", [])
+    data = cache.get("optimization_results")
+    cache.delete("optimization_results")
+    df.append(data['output'])
+    print(df) 
+    cache.set("optimized_orders_view", df, CACHE_TIMEOUT)
 
 
 

@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 from django.http import JsonResponse
 
-from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config
+from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_saving
 from .modules.ordplan import ORD
 
 from django.conf import settings
@@ -36,6 +36,8 @@ def order_optimizer_view(request):
                 handle_common(request)
             case {"common_order": _}:
                 handle_filler(request)
+            case {"save": _}:
+                handle_saving(request)
 
     cache.delete("optimization_progress")  # Clear previous progress
     csv_files = CSVFile.objects.all()
@@ -104,3 +106,6 @@ def progress_view(request):
     progress = cache.get("optimization_progress", 0)
     return JsonResponse({'progress': progress})
 
+def optimized_orders_view(request):
+    df = cache.get("optimized_orders_view")
+    return JsonResponse({'optimized_orders_view': df})

@@ -113,6 +113,11 @@
             <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#filePreviewModal" onclick="filePreview(event)">
                 <span class="btn-text">View Preview</span>
             </button>
+            {% if results %}
+            <button class="btn btn-success" type="submit" name="save">
+                <span class="btn-text">Save</span>
+            </button>
+            {% endif  %}
 
             
         </div>
@@ -505,7 +510,7 @@
 
 
     document.getElementById('num_generations').oninput = function() {
-        document.getElementById('slider_output').textContent = this.value;
+        document.getElementById('slider_output').textContent = this.value;f
     };  
 
     window.addEventListener('unload', function() {
