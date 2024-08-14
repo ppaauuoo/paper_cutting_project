@@ -35,10 +35,9 @@ def handle_manual_config(request)->Callable:
 
 def handle_auto_config(request)->Callable:
     again = cache.get("try_again", 0)
-    num_generations = 50+(10*again)
-    out_range = 2+again
+    out_range = 3+again
     orders,size = auto_size_filter_logic(request)
-    return handle_optimization(request, orders, num_generations, out_range, size)
+    return handle_optimization(request=request, orders=orders, out_range=out_range, size_value=size)
 
 def auto_size_filter_logic(request):
     i = 0
@@ -48,7 +47,7 @@ def auto_size_filter_logic(request):
     file_id = request.POST.get("file_id")
     tuning_value = TUNING_VALUE[1]
     while len(orders) <= 0:
-        orders = get_orders(request, file_id,size,FILTER[-i],tuning_value,first_date_only=True)
+        orders = get_orders(request, file_id,size,FILTER[-i],tuning_value,first_date_only=False)
         i += 1
         if i > len(FILTER):
             i = 0
@@ -60,14 +59,14 @@ def auto_size_filter_logic(request):
 
     return (orders, size)
 
-def handle_optimization(request, orders: ORD, num_generations: int, out_range: int, size_value: float)->Callable:
+def handle_optimization(request,  size_value: float, orders: ORD, num_generations: int = 50, out_range: int = 6)->Callable:
     ga_instance = get_genetic_algorithm(request,orders, size_value, out_range, num_generations)
     fitness_values, output_data = get_outputs(ga_instance)
     init_order_number, foll_order_number = ORD.handle_orders_logic(output_data)
     results = results_format(ga_instance, output_data, size_value, fitness_values, init_order_number, foll_order_number)
     
     if abs(fitness_values) <= 3 and abs(fitness_values) >= 1:
-        messages.success(request, "Optimizing finished.")
+        messages.success(request, "Optimizing finished.")   
         return cache.set("optimization_results", results, CACHE_TIMEOUT)
     
     again = cache.get("try_again", 0)
@@ -180,6 +179,7 @@ def output_format(orders: ORD, init_out: int = 0) -> pd.DataFrame:
 
 def results_format(ga_instance: object, output_data: dict, size_value: int, fitness_values: float, init_order_number: int, foll_order_number: int) -> Dict:
     return {
+
         "output": output_data,
         "roll": ga_instance.PAPER_SIZE,
         "fitness": size_value + fitness_values,
@@ -189,11 +189,14 @@ def results_format(ga_instance: object, output_data: dict, size_value: int, fitn
     }
 
 def handle_saving(request):
-    df = cache.get("optimized_orders_view", [])
-    data = cache.get("optimization_results")
+    saved_list = cache.get("optimized_orders_view", [])
+    data = cache.get("optimization_results", [])
+                
+    # Update the cache
     cache.delete("optimization_results")
-    df.append(data['output'])
-    cache.set("optimized_orders_view", df, CACHE_TIMEOUT)
+    saved_list.append(data['output'])  # Append the entire data list
+
+    cache.set("optimized_orders_view", saved_list, CACHE_TIMEOUT)
 
 
 

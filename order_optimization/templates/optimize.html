@@ -25,6 +25,12 @@
     <form method="post">
         {% csrf_token %}
         <div class="form-group mb-3">
+            <div class="date-picker">
+                <label for="date">Date:</label>
+                <input type="date" id="date" name="date">
+            </div>
+        </div>
+        <div class="form-group mb-3">
             <label for="file_id" class="form-label">Select File:</label>
             <select id="file_id" name="file_id" class="form-select" required>
                 {% for file in csv_files %}
@@ -496,22 +502,27 @@
     
         // Loop through each order list in the outer array
         savedOrdersData.forEach((orderList) => {
-            // Loop through each item in the inner array
-            orderList.forEach((item, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="text-center">${index + 1}</td> <!-- Group Number -->
-                    <td class="text-center">${item.deadline}</td>
-                    <td class="text-center">${item.order_number}</td>
-                    <td class="text-center">${item.order_type}</td>
-                    <td class="text-center">${item.num_orders}</td>
-                    <td class="text-center">${item.cut_width}</td>
-                    <td class="text-center">${item.cut_len}</td>
-                    <td class="text-center">${item.type}</td>
-                    <td class="text-center">${item.out}</td>
-                `;
-                tableBody.appendChild(row);
-            });
+            // Check if orderList is an array
+            if (Array.isArray(orderList)) {
+                // Loop through each item in the inner array
+                orderList.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="text-center">${index + 1}</td> <!-- Group Number -->
+                        <td class="text-center">${item.deadline}</td>
+                        <td class="text-center">${item.order_number}</td>
+                        <td class="text-center">${item.order_type}</td>
+                        <td class="text-center">${item.num_orders}</td>
+                        <td class="text-center">${item.cut_width}</td>
+                        <td class="text-center">${item.cut_len}</td>
+                        <td class="text-center">${item.type}</td>
+                        <td class="text-center">${item.out}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } else {
+                console.error('Expected an array but got:', orderList);
+            }
         });
     }
 
@@ -595,7 +606,7 @@
 
 
     document.getElementById('num_generations').oninput = function() {
-        document.getElementById('slider_output').textContent = this.value;f
+        document.getElementById('slider_output').textContent = this.value;
     };  
 
     window.addEventListener('unload', function() {
@@ -604,6 +615,8 @@
         }
     });
 
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').value = today;
 
 </script>
 {% endblock %}

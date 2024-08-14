@@ -117,4 +117,5 @@ def get_outputs(ga_instance: GA) -> Tuple[float, List[Dict]]:
     """
     fitness_values = ga_instance.fitness_values
     output_data = ga_instance.output.to_dict("records")
+
     return fitness_values, output_data
