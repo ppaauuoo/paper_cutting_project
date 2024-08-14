@@ -108,4 +108,4 @@ def progress_view(request):
 
 def optimized_orders_view(request):
     df = cache.get("optimized_orders_view")
-    return JsonResponse({'optimized_orders_view': df})
+    return JsonResponse({'optimized_orders': df})
