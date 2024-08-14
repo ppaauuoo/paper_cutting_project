@@ -193,7 +193,6 @@ def handle_saving(request):
     data = cache.get("optimization_results")
     cache.delete("optimization_results")
     df.append(data['output'])
-    print(df) 
     cache.set("optimized_orders_view", df, CACHE_TIMEOUT)
 
 
