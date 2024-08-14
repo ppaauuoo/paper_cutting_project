@@ -9,7 +9,7 @@ from django.contrib.auth import login, authenticate
 from django.http import JsonResponse
 
 from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config
-from .modules.ordplan import ORD
+from modules.ordplan import ORD
 
 from django.conf import settings
 

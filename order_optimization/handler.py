@@ -1,4 +1,4 @@
-from .modules.ordplan import ORD
+from modules.ordplan import ORD
 
 from typing import Callable, Dict
 from django.contrib import messages

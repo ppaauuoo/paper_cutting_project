@@ -1,11 +1,11 @@
-from .modules.ordplan import ORD
+from modules.ordplan import ORD
+from modules.ga import GA
 
 from django.shortcuts import get_object_or_404
 
 from .models import CSVFile
   
 from typing import Dict, List, Tuple
-from .modules.ga import GA
 from django.core.cache import cache
 
 from django.conf import settings
