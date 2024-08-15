@@ -1,5 +1,5 @@
 from django.core.cache import cache
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, redirect
 from django.contrib import messages
 from .models import CSVFile
 from .forms import CSVFileForm, LoginForm
@@ -9,6 +9,7 @@ from django.contrib.auth import login, authenticate
 from django.http import JsonResponse
 
 from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_saving
+from .getter import get_csv_file
 from .modules.ordplan import ORD
 
 from django.conf import settings
@@ -42,7 +43,6 @@ def order_optimizer_view(request):
     cache.delete("optimization_progress")  # Clear previous progress
     csv_files = CSVFile.objects.all()
     form = CSVFileForm()
-
     results = cache.get("optimization_results")
 
     context = {
@@ -65,47 +65,41 @@ def file_upload_view(request):
         messages.error(request, "Error uploading file.")
 
 def file_deletion_view(request):
-    file_id = request.POST.get("file_id")
-    csv_file = get_object_or_404(CSVFile, id=file_id)
+    csv_file = get_csv_file(request.POST.get("file_id"))
     csv_file.delete()
     messages.success(request, "File deleted successfully.")
 
 def file_selector_view(request):
     file_id = request.GET.get("file_id")
     cache_key = f"file_selector_{file_id}"
-
     df = cache.get(cache_key)
 
     if df:
         return JsonResponse({'file_selector': df})
 
-    csv_file = get_object_or_404(CSVFile, id=file_id)
+    csv_file = get_csv_file(file_id)
     file_path = csv_file.file.path
-
-    # Load the CSV file into a DataFrame
     df = (ORD(path=file_path).get()).to_dict('records')
-
     cache.set(cache_key, df, CACHE_TIMEOUT)
     return JsonResponse({'file_selector': df})
 
 def login_view(request):
-    if request.method == "POST":
-        form = LoginForm(request, data=request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get("username")
-            password = form.cleaned_data.get("password")
-            user = authenticate(username=username, password=password)
-            if user is not None:
-                login(request, user)
-                return redirect("order_optimizer_view")
-    else:
-        form = LoginForm()
+    if request.method != "POST":
+        return render(request, "login.html", {"form": LoginForm()})
+
+    form = LoginForm(request, data=request.POST)
+    if form.is_valid():
+        username = form.cleaned_data.get("username")
+        password = form.cleaned_data.get("password")
+        user = authenticate(username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect("order_optimizer_view")
+    
     return render(request, "login.html", {"form": form})
 
 def progress_view(request):
-    progress = cache.get("optimization_progress", 0)
-    return JsonResponse({'progress': progress})
+    return JsonResponse({'progress': cache.get("optimization_progress", 0)})
 
 def optimized_orders_view(request):
-    df = cache.get("optimized_orders_view")
-    return JsonResponse({'optimized_orders': df})
+    return JsonResponse({'optimized_orders': cache.get("optimized_orders_view")})
