@@ -48,15 +48,16 @@ class ORD:
     def expand_deadline_scope(self):
         if self.deadline_scope < 0:
             return
-        ordplan = self.ordplan        
+        ordplan = self.ordplan
         deadline_range = DEADLINE_RANGE
-        while len(ordplan) <= deadline_range or len(set(self.ordplan["กำหนดส่ง"])) <= self.deadline_scope:
-            deadline = set(self.ordplan["กำหนดส่ง"]).iloc[self.deadline_scope] # expand deadline
-            ordplan = self.ordplan[self.ordplan["กำหนดส่ง"] <= deadline].sort_values("กำหนดส่ง").reset_index(drop=True) # get new ordplan
+        deadlines = ordplan["กำหนดส่ง"].unique()
+        while len(ordplan) <= deadline_range and len(deadlines) <= self.deadline_scope:
+            deadline = deadlines[self.deadline_scope]
+            ordplan = ordplan[ordplan["กำหนดส่ง"] <= deadline].sort_values("กำหนดส่ง").reset_index(drop=True)
             self.deadline_scope += 1
             self.filter_diff_order()
         self.ordplan = ordplan
-
+    
     def format_data(self):
         ordplan = self.ordplan
         ordplan["กว้างผลิต"] = round(ordplan["กว้างผลิต"] / MM_TO_INCH, 2)
@@ -85,17 +86,17 @@ class ORD:
         if not self.common:
             return
         ordplan = self.ordplan
-        init_order = self.lordplan.iloc[0] # use first order as init
+        init_order = self.ordplan.iloc[0] # use first order as init
         
-        init_order = self.set_filler_order()
+        init_order = self.set_filler_order(init_order)
         
         common_cols = COMMON_FILTER
         mask = ordplan[common_cols].eq(init_order[common_cols]).all(axis=1) #common mask
         self.ordplan = ordplan.loc[mask].reset_index(drop=True) #filter out with mask
 
-    def set_filler_order(self):
+    def set_filler_order(self,init_order):
         if not self.filler:
-            return
+            return init_order
         ordplan = self.ordplan
         init_order = ordplan[ordplan['เลขที่ใบสั่งขาย'] == self.filler] #use filler as init instead
         self.ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.filler] #remove dupe filler
