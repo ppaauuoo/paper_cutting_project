@@ -41,24 +41,17 @@ def test_format_data(test_xlsx_file):
     assert ord.ordplan["กำหนดส่ง"][0] == "08/01/23"
 
 @pytest.mark.django_db
-def test_filter_diff_order(test_xlsx_file):
+def test_filter_diff_order_small(test_xlsx_file):
     ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=1)
     ord.filter_diff_order()
     assert len(ord.ordplan) == 4
 
 @pytest.mark.django_db
-def test_filter_diff_order(test_xlsx_file):
+def test_filter_diff_order_large(test_xlsx_file):
     ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=16)
     ord.filter_diff_order()
     assert len(ord.ordplan) == 6
 
-@pytest.mark.django_db
-def test_expand_deadline_scope(test_xlsx_file):
-    ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=16, deadline_scope=0)
-    ord.format_data()
-    ord.expand_deadline_scope()
-    assert len(ord.ordplan) == 6
-    assert len(set(ord.ordplan["กำหนดส่ง"])) == 5
 
 
 
@@ -86,8 +79,26 @@ def test_common_order(test_xlsx_file):
     assert len(ord.ordplan) == 2
 
 @pytest.mark.django_db
-def test_common_order(test_xlsx_file):
+def test_filler_common_order(test_xlsx_file):
     ord = ORD(test_xlsx_file, size=66, common=True, filler=6)
     ord.format_data()
     ord.filter_common_order()
     assert len(ord.ordplan) == 1
+
+
+@pytest.mark.django_db
+def test_expand_deadline_scope(test_xlsx_file):
+    ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=16, deadline_scope=0)
+    ord.format_data()
+    ord.expand_deadline_scope()
+    assert len(ord.ordplan) == 6
+    assert len(set(ord.ordplan["กำหนดส่ง"])) == 5
+
+
+@pytest.mark.django_db
+def test_expand_deadline_scope_nolimit(test_xlsx_file):
+    ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=16, deadline_scope=-1)
+    ord.format_data()
+    ord.expand_deadline_scope()
+    assert len(ord.ordplan) == 6
+    assert len(set(ord.ordplan["กำหนดส่ง"])) == 5
