@@ -25,6 +25,7 @@ MIN_TRIM = 1
 
 def handle_optimization(func):
     def wrapper(request, *args, **kwargs):
+        kwargs = func(request)
         size_value = kwargs.get("size_value", None)
         orders = kwargs.get("orders", None)
         num_generations = kwargs.get("num_generations", 50)
@@ -126,6 +127,7 @@ def handle_manual_config(request, **kwargs):
         tuning_value,
         first_date_only,
     )
+    
     if len(orders) <= 0:
         messages.error(request, "Error 404: No orders were found. Please try again.")
         return
@@ -137,6 +139,13 @@ def handle_auto_config(request, **kwargs):
     again = cache.get("try_again", 0)
     out_range = 3 + again
     orders, size = auto_size_filter_logic(request)
+    # Pass all necessary variables to the wrapped function
+    kwargs.update({
+        "orders": orders,
+        "size_value": size,
+        "num_generations": 50,  # or another value as needed
+        "out_range": out_range
+    })
     return kwargs
 
 

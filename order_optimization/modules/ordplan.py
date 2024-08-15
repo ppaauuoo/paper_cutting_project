@@ -53,8 +53,8 @@ class ORD:
         deadlines = ordplan["กำหนดส่ง"].unique()
         while len(ordplan) <= deadline_range and len(deadlines) <= self.deadline_scope:
             deadline = deadlines[self.deadline_scope]
-            ordplan = ordplan[ordplan["กำหนดส่ง"] <= deadline].sort_values("กำหนดส่ง").reset_index(drop=True)
-            self.deadline_scope += 1
+            ordplan = ordplan[self.ordplan["กำหนดส่ง"] <= deadline].sort_values("กำหนดส่ง").reset_index(drop=True)
+            self.deadline_scope = self.deadline_scope+1
             self.filter_diff_order()
         self.ordplan = ordplan
     
@@ -62,7 +62,7 @@ class ORD:
         ordplan = self.ordplan
         ordplan["กว้างผลิต"] = round(ordplan["กว้างผลิต"] / MM_TO_INCH, 2)
         ordplan["ยาวผลิต"] = round(ordplan["ยาวผลิต"] / MM_TO_INCH, 2)
-        ordplan["กำหนดส่ง"] = pd.to_datetime(ordplan["กำหนดส่ง"]).dt.strftime('%m/%d/%y')
+        ordplan["กำหนดส่ง"] = pd.to_datetime(ordplan["กำหนดส่ง"], format='%m/%d/%y').dt.strftime('%m/%d/%y')
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
         self.ordplan = ordplan
 
@@ -101,3 +101,5 @@ class ORD:
         init_order = ordplan[ordplan['เลขที่ใบสั่งขาย'] == self.filler] #use filler as init instead
         self.ordplan = ordplan[ordplan['เลขที่ใบสั่งขาย'] != self.filler] #remove dupe filler
         return init_order
+
+
