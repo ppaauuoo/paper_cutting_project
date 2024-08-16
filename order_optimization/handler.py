@@ -27,7 +27,10 @@ MIN_TRIM = 1
 
 def handle_optimization(func):
     def wrapper(request, *args, **kwargs):
-        kwargs = func(args)
+        kwargs = func(request)
+        if not kwargs:
+            return messages.error(request, "Error 404: No orders were found. Please try again.")
+
         size_value = kwargs.get("size_value", None)
         orders = kwargs.get("orders", None)
         num_generations = kwargs.get("num_generations", 50)
@@ -112,14 +115,17 @@ def handle_satisfied_retry(wrapper, request, results, *args, **kwargs):
 
 @handle_optimization
 def handle_manual_config(request, **kwargs):
+    # Extract values from the request
     file_id = request.POST.get("file_id")
-    size_value = int(request.POST.get("size_value"))
+    size_value = int(request.POST.get("size_value", 0))
     deadline_toggle = -1 if request.POST.get("deadline_toggle") == "true" else 0
-    filter_value = int(request.POST.get("filter_value"))
-    tuning_value = int(request.POST.get("tuning_value"))
-    num_generations = int(request.POST.get("num_generations"))
-    out_range = int(request.POST.get("out_range"))
+    filter_value = int(request.POST.get("filter_value", 0))
+    tuning_value = int(request.POST.get("tuning_value", 0))
+    num_generations = int(request.POST.get("num_generations", 0))
+    out_range = int(request.POST.get("out_range", 0))
     first_date_only = request.POST.get("first_date_only")
+
+    # Fetch orders using the extracted parameters
     orders = get_orders(
         request,
         file_id,
@@ -129,10 +135,19 @@ def handle_manual_config(request, **kwargs):
         tuning_value,
         first_date_only,
     )
-    
-    if len(orders) <= 0:
-        messages.error(request, "Error 404: No orders were found. Please try again.")
-        return
+
+    # Check if any orders were found
+    if orders.empty:
+        return None  # Return kwargs even if no orders are found
+
+    # Update kwargs with the found orders
+    kwargs.update({
+        "orders": orders,
+        "size_value": size_value,
+        "num_generations": num_generations,
+        "out_range": out_range,
+    })
+
     return kwargs
 
 
@@ -165,7 +180,7 @@ def auto_size_filter_logic(request):
             size,
             FILTER[-filter_index],
             tuning_value,
-            first_date_only=False,
+            first_date_only=True,
         )
         filter_index += 1
         if filter_index > len(FILTER):

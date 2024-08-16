@@ -103,7 +103,7 @@ class GA:
         for index, out in enumerate(solution):
             if out >= 1:
                 return index
-        raise ValueError("No valid solution found")
+        return 0
 
 
     def paper_out_logic(self, solution):
@@ -143,7 +143,6 @@ class GA:
 
         fitness_values = -self.PAPER_SIZE + output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
         self.paper_trim_logic(fitness_values)
-
         return fitness_values - self.penalty  # ลบด้วย penalty
 
     def on_gen(self, ga_instance):
