@@ -1,3 +1,4 @@
+from pandas import DataFrame
 from .modules.ordplan import ORD
 
 from django.shortcuts import get_object_or_404
@@ -17,8 +18,8 @@ CACHE_TIMEOUT = settings.CACHE_TIMEOUT
 #TODO
 def get_orders(
     request,
-    file_id: str,
-    size_value: float,
+    file_id: int,
+    size_value: float  = 0,
     deadline_scope: int = 0,
     filter_value: int = 16,
     tuning_values: int = 3,
@@ -26,7 +27,7 @@ def get_orders(
     common: bool = False,
     filler: int = 0,
     first_date_only: bool = False
-) -> Dict:
+) -> DataFrame:
     csv_file = get_csv_file(file_id)
     file_path = csv_file.file.path
     return ORD(
@@ -55,14 +56,13 @@ def get_selected_order(request)->Dict[str,int]|None:
 
 def get_genetic_algorithm(
     request,
-    orders: Dict,
+    orders: DataFrame,
     size_value: float,
     out_range: int = 3,
     num_generations: int = 50,
     show_output: bool = False,
 ) -> GA:
     cache.delete("optimization_progress")
-
     ga_instance = GA(
         orders,
         size=size_value,
@@ -71,7 +71,6 @@ def get_genetic_algorithm(
         showOutput=show_output,
         selector=get_selected_order(request)
     )
-
     ga_instance.get(set_progress=set_progress).run()
     return ga_instance
 

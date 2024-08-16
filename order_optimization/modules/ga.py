@@ -1,12 +1,15 @@
+from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
-from typing import Dict
+from typing import Dict, Any
+
+from icecream import ic
 
 MIN_TRIM = 1
 PENALTY_VALUE=1000
 class GA:
-    def __init__(self, orders: Dict, size: float, num_generations: int, out_range: int,showOutput:bool = False, save_solutions:bool = False, showZero: bool = False, selector: Dict[str,int]|None = None)->None:
+    def __init__(self, orders: DataFrame, size: float = 66, num_generations: int = 50, out_range: int = 6,showOutput:bool = False, save_solutions:bool = False, showZero: bool = False, selector: Dict[str,int]|None = None)->None:
         self.orders = orders
         self.PAPER_SIZE = size
         self.showOutput = showOutput
@@ -134,7 +137,7 @@ class GA:
         self.least_order_logic(solution)
 
         self.paper_out_logic(solution)
-
+        
         output = numpy.sum(solution * self.orders["กว้างผลิต"])  # ผลรวมของตัดกว้างทั้งหมด
         self.paper_size_logic(output)
 
