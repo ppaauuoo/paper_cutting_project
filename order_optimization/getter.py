@@ -26,7 +26,7 @@ def get_orders(
     common: bool = False,
     filler: int = 0,
     first_date_only: bool = False
-) -> ORD:
+) -> Dict:
     csv_file = get_csv_file(file_id)
     file_path = csv_file.file.path
     return ORD(
@@ -42,7 +42,7 @@ def get_orders(
         first_date_only=first_date_only
     ).get()
 
-def get_selected_order(request)->Dict|None:
+def get_selected_order(request)->Dict[str,int]|None:
     selector_id = request.POST.get("selector_id")
     if not selector_id: return None
         
@@ -55,7 +55,7 @@ def get_selected_order(request)->Dict|None:
 
 def get_genetic_algorithm(
     request,
-    orders: ORD,
+    orders: Dict,
     size_value: float,
     out_range: int = 3,
     num_generations: int = 50,

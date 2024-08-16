@@ -1,4 +1,6 @@
+from order_optimization.modules import ga
 from .modules.ordplan import ORD
+from .modules.ga import GA
 
 from typing import Callable, Dict
 from django.contrib import messages
@@ -25,7 +27,7 @@ MIN_TRIM = 1
 
 def handle_optimization(func):
     def wrapper(request, *args, **kwargs):
-        kwargs = func(request)
+        kwargs = func(args)
         size_value = kwargs.get("size_value", None)
         orders = kwargs.get("orders", None)
         num_generations = kwargs.get("num_generations", 50)
@@ -178,19 +180,9 @@ def auto_size_filter_logic(request):
 
 
 def handle_common(request) -> Callable:
-    """
-    Handle common order optimization.
 
-    Args:
-        request: The HTTP request object.
-        action: The action to perform ('trim' or 'order').
-
-    Returns:
-        Dict: The updated results dictionary.
-    """
     results = cache.get("optimization_results")
     best_fitness = -results["trim"]
-    best_output: Optional[List[Dict]] = None
     best_index: Optional[int] = None
     file_id = request.POST.get("selected_file_id")
 
@@ -262,7 +254,7 @@ def handle_filler(request):
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
 
-def output_format(orders: ORD, init_out: int = 0) -> pd.DataFrame:
+def output_format(orders: Dict, init_out: int = 0) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "order_number": [orders["เลขที่ใบสั่งขาย"]],
@@ -277,7 +269,7 @@ def output_format(orders: ORD, init_out: int = 0) -> pd.DataFrame:
 
 
 def results_format(
-    ga_instance: object,
+    ga_instance: GA,
     output_data: dict,
     size_value: int,
     fitness_values: float,

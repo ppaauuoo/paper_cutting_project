@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import Dict
 
+from pandas import DataFrame
 MM_TO_INCH = 25.4
 DEADLINE_RANGE = 50
 COMMON_FILTER = [
@@ -8,7 +9,7 @@ COMMON_FILTER = [
                 "กว้างผลิต", "ยาวผลิต", "ทับเส้นซ้าย", "ทับเส้นกลาง", "ทับเส้นขวา", "ชนิดส่วนประกอบ",
             ]
 class ORD:
-    def __init__(self, path: str, deadline_scope: int = 0, size: float = 66, tuning_values: int = 3, filter_value: int = 16, filter: bool = True, common: bool = False, filler: int =0,selector: Dict = None,first_date_only:bool = False) -> None:
+    def __init__(self, path: str, deadline_scope: int = 0, size: float = 66, tuning_values: int = 3, filter_value: int = 16, filter: bool = True, common: bool = False, filler: int =0,selector: Dict[str,int]|None = None,first_date_only:bool = False) -> None:
         self.ordplan = pd.read_excel(path, engine='openpyxl')
         self.deadline_scope = deadline_scope
         self.filter = filter
@@ -19,8 +20,9 @@ class ORD:
         self.filler=filler
         self.selector=selector
         self.first_date_only=first_date_only
+        self.build()
     
-    def get(self) -> Dict:
+    def build(self) -> None:
         ordplan = self.ordplan
         self.format_data()
 
@@ -34,10 +36,10 @@ class ORD:
         self.filter_common_order()
         
         self.set_selected_order()
-
-
         self.ordplan = ordplan.reset_index(drop=True)
-        return self.ordplan
+
+    def get(self) -> Dict:
+        return self.ordplan.to_dict()
 
 
     def set_first_date(self):

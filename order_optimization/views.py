@@ -79,7 +79,7 @@ def file_selector_view(request):
 
     csv_file = get_csv_file(file_id)
     file_path = csv_file.file.path
-    df = (ORD(path=file_path).get()).to_dict('records')
+    df = (ORD(path=file_path).get())
     cache.set(cache_key, df, CACHE_TIMEOUT)
     return JsonResponse({'file_selector': df})
 

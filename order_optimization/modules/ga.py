@@ -1,13 +1,12 @@
 import pygad
 import numpy
 import pandas as pd
-from .ordplan import ORD
 from typing import Dict
 
 MIN_TRIM = 1
 PENALTY_VALUE=1000
 class GA:
-    def __init__(self, orders: ORD, size: float, num_generations: int, out_range: int,showOutput:bool = False, save_solutions:bool = False, showZero: bool = False, selector: Dict = None)->None:
+    def __init__(self, orders: Dict, size: float, num_generations: int, out_range: int,showOutput:bool = False, save_solutions:bool = False, showZero: bool = False, selector: Dict[str,int]|None = None)->None:
         self.orders = orders
         self.PAPER_SIZE = size
         self.showOutput = showOutput
@@ -101,7 +100,8 @@ class GA:
         for index, out in enumerate(solution):
             if out >= 1:
                 return index
-        
+        raise ValueError("No valid solution found")
+
 
     def paper_out_logic(self, solution):
         if sum(solution) > 6: #out รวมเกิน 6 = penalty
