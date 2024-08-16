@@ -15,7 +15,7 @@ from django.conf import settings
 CACHE_TIMEOUT = settings.CACHE_TIMEOUT 
 
 
-#TODO
+
 def get_orders(
     request,
     file_id: int,
