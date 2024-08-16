@@ -10,7 +10,7 @@ import pandas as pd
 
 from typing import Callable, Dict, List, Optional
 
-from .getter import get_orders, get_outputs, get_genetic_algorithm
+from .getter import get_orders, get_outputs, get_optimizer
 
 from django.conf import settings
 
@@ -36,15 +36,15 @@ def handle_optimization(func):
         num_generations = kwargs.get("num_generations", 50)
         out_range = kwargs.get("out_range", 6)
 
-        ga_instance = get_genetic_algorithm(
+        optimizer_instance = get_optimizer(
             request, orders, size_value, out_range, num_generations
         )
-        fitness_values, output_data = get_outputs(ga_instance)
+        fitness_values, output_data = get_outputs(optimizer_instance)
 
         init_order_number, foll_order_number = handle_orders_logic(output_data)
 
         results = results_format(
-            ga_instance,
+            optimizer_instance,
             output_data,
             size_value,
             fitness_values,
@@ -207,12 +207,12 @@ def handle_common(request) -> Callable:
         orders = get_orders(
             request, file_id, size_value, deadline_scope=-1, filter=False, common=True
         )
-        ga_instance = get_genetic_algorithm(
+        optimizer_instance = get_optimizer(
             request, orders, size_value, show_output=True
         )
 
-        if abs(ga_instance.fitness_values) < abs(best_fitness):
-            best_fitness, best_output = get_outputs(ga_instance)
+        if abs(optimizer_instance.fitness_values) < abs(best_fitness):
+            best_fitness, best_output = get_outputs(optimizer_instance)
             best_index = i
 
     if best_index is not None:
@@ -284,7 +284,7 @@ def output_format(orders: Dict, init_out: int = 0) -> pd.DataFrame:
 
 
 def results_format(
-    ga_instance: GA,
+    optimizer_instance: GA,
     output_data: dict,
     size_value: int,
     fitness_values: float,
@@ -293,7 +293,7 @@ def results_format(
 ) -> Dict:
     return {
         "output": output_data,
-        "roll": ga_instance.PAPER_SIZE,
+        "roll": optimizer_instance.PAPER_SIZE,
         "fitness": size_value + fitness_values,
         "trim": abs(fitness_values),
         "init_order_number": init_order_number,

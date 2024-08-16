@@ -10,6 +10,7 @@ MIN_TRIM = 1
 PENALTY_VALUE = 1000
 
 
+
 class GA:
     def __init__(
         self,

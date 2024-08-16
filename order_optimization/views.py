@@ -10,7 +10,6 @@ from django.http import JsonResponse
 
 from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_saving
 from .getter import get_csv_file, get_orders
-from .modules.ordplan import ORD
 
 from django.conf import settings
 
