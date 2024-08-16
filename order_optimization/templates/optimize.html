@@ -25,6 +25,12 @@
     <form method="post">
         {% csrf_token %}
         <div class="form-group mb-3">
+            <div class="date-picker">
+                <label for="date">Date:</label>
+                <input type="date" id="date" name="date">
+            </div>
+        </div>
+        <div class="form-group mb-3">
             <label for="file_id" class="form-label">Select File:</label>
             <select id="file_id" name="file_id" class="form-select" required>
                 {% for file in csv_files %}
@@ -113,6 +119,14 @@
             <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#filePreviewModal" onclick="filePreview(event)">
                 <span class="btn-text">View Preview</span>
             </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#savedOrdersModal" onclick="savedOrders(event)">
+                <span class="btn-text">View Saved Orders</span>
+            </button>
+            {% if results %}
+            <button class="btn btn-success" type="submit" name="save">
+                <span class="btn-text">Save</span>
+            </button>
+            {% endif  %}
 
             
         </div>
@@ -164,6 +178,42 @@
             </div>
         </div>
 
+        {% comment %} Saved File {% endcomment %}
+        <div class="modal fade" id="savedOrdersModal" tabindex="-1" aria-labelledby="savedOrdersModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-fullscreen">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="savedOrdersModalLabel">Saved Orders</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form onsubmit="return false;">
+                            <div id="savedOrdersDiv" class="table-responsive">
+                                <table id="savedOrdersTable" class="table table-striped table-hover">
+                                    <thead class="text-center">
+                                        <tr>
+                                            <th class="text-center">ใบมีด</th>
+                                            <th class="text-center">กำหนดส่ง</th>
+                                            <th class="text-center">เลขที่ใบสั่งขาย</th>
+                                            <th class="text-center">ชนิดส่วนประกอบ</th>
+                                            <th class="text-center">จำนวนสั่งขาย</th>
+                                            <th class="text-center">ตัดกว้าง</th>
+                                            <th class="text-center">ตัดยาว</th>
+                                            <th class="text-center">ประเภทตัดเส้น</th>
+                                            <th class="text-center">out</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody >
+                                    </tbody> 
+                                </table>
+                            </div>
+                        </form>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </form>
 
@@ -401,6 +451,27 @@
             });
     }
     
+    function savedOrders(event) {
+        event.preventDefault(); // Prevent the default button click behavior
+        document.getElementById('savedOrdersDiv').style.display = 'none';
+        
+        // Get the file_id from the button or any other appropriate source
+        const fileId = document.getElementById('file_id').value;
+
+        // Make the AJAX request to the Django backend
+        fetch(`/optimized_orders/`)
+            .then(response => response.json())
+            .then(data => {
+                // Update the modal content with the file savedOrders data
+                document.getElementById('savedOrdersDiv').style.display = 'flex';
+                updateSavedOrdersModal(data.optimized_orders);
+            })
+            .catch(error => {
+                console.error('Error fetching file savedOrders:', error);
+                // Handle the error, e.g., display an error message to the user
+            });
+    }
+
     function updateFilePreviewModal(filePreviewData) {
         // Update the modal content with the file preview data
         // This will depend on your HTML structure and how you want to display the data
@@ -422,6 +493,36 @@
                 </td>
             `;
             tableBody.appendChild(row);
+        });
+    }
+
+    function updateSavedOrdersModal(savedOrdersData) {
+        const tableBody = document.querySelector('#savedOrdersModal .modal-body tbody');
+        tableBody.innerHTML = '';
+    
+        // Loop through each order list in the outer array
+        savedOrdersData.forEach((orderList) => {
+            // Check if orderList is an array
+            if (Array.isArray(orderList)) {
+                // Loop through each item in the inner array
+                orderList.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="text-center">${index + 1}</td> <!-- Group Number -->
+                        <td class="text-center">${item.deadline}</td>
+                        <td class="text-center">${item.order_number}</td>
+                        <td class="text-center">${item.order_type}</td>
+                        <td class="text-center">${item.num_orders}</td>
+                        <td class="text-center">${item.cut_width}</td>
+                        <td class="text-center">${item.cut_len}</td>
+                        <td class="text-center">${item.type}</td>
+                        <td class="text-center">${item.out}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } else {
+                console.error('Expected an array but got:', orderList);
+            }
         });
     }
 
@@ -514,6 +615,8 @@
         }
     });
 
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').value = today;
 
 </script>
 {% endblock %}
