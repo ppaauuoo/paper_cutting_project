@@ -2,7 +2,7 @@ from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
-from typing import Dict, Any
+from typing import Callable, Dict, Any
 
 from icecream import ic
 
@@ -210,6 +210,23 @@ class GA(ModelInterface):
         print("Trim :", abs(self.fitness_values))
         print("\n")
 
-    def get(self, set_progress: callable= None):
+    @property
+    def output(self) -> DataFrame:
+        return self.output
+    
+    @property
+    def fitness_values(self) -> float:
+        return self.fitness_values
+
+    @property
+    def PAPER_SIZE(self) -> float:
+        return self.PAPER_SIZE
+
+    @PAPER_SIZE.setter
+    def PAPER_SIZE(self, size: float):
+        self.PAPER_SIZE = size
+    
+    @property
+    def run(self,set_progress:Callable|None=None) -> Callable:
         self.set_progress = set_progress
-        return self.model
+        return self.model.run()

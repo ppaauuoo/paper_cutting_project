@@ -20,7 +20,7 @@ CACHE_TIMEOUT = settings.CACHE_TIMEOUT
 
 def get_orders(
     request,
-    file_id: int,
+    file_id: str,
     size_value: float = 0,
     deadline_scope: int = 0,
     filter_value: int = 16,
@@ -78,7 +78,7 @@ def get_optimizer(
         ),
         set_progress=set_progress,
     )
-    optimizer_instance.get().run()
+    optimizer_instance.run()
     return optimizer_instance
 
 
@@ -90,7 +90,7 @@ def get_csv_file(file_id: str) -> CSVFile:
     return get_object_or_404(CSVFile, id=file_id)
 
 
-def get_outputs(optimizer_instance: GA) -> Tuple[float, List[Dict]]:
+def get_outputs(optimizer_instance: ModelContainer) -> Tuple[float, List[Dict]]:
     fitness_values = optimizer_instance.fitness_values
     output_data = optimizer_instance.output.to_dict("records")
     return fitness_values, output_data

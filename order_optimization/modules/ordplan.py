@@ -5,6 +5,8 @@ from icecream import ic
 
 from pandas import DataFrame
 
+from order_optimization.container import ProviderInterface
+
 MM_TO_INCH = 25.4
 
 COMMON_FILTER = [
@@ -24,7 +26,7 @@ COMMON_FILTER = [
 ]
 
 
-class ORD:
+class ORD(ProviderInterface):
     def __init__(
         self,
         path: str,
