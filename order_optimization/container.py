@@ -1,20 +1,29 @@
-from typing import Dict, List
+from abc import ABC, abstractmethod
+from typing import Callable, Dict, List
 
 from pandas import DataFrame
 
 
+class ModelInterface(ABC):
+    @abstractmethod
+    async def run(self) -> None:
+        pass
+
+    @abstractmethod
+    def get(self, set_progress: Callable) -> object:
+        pass
+
 class ModelContainer:
     def __init__(
         self,
-        model: object ,
-        set_progress: callable
+        model: ModelInterface ,
+        set_progress: Callable
     ):
         self.model = model
         self.set_progress = set_progress
     
-
     async def run (self) -> None:
-        await self.model.run
+        await self.model.run()
 
     def get(self) -> object:
         return self.model.get(self.set_progress)

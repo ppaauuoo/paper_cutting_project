@@ -6,12 +6,14 @@ from typing import Dict, Any
 
 from icecream import ic
 
+from order_optimization.container import ModelInterface
+
 MIN_TRIM = 1
 PENALTY_VALUE = 1000
 
 
 
-class GA:
+class GA(ModelInterface):
     def __init__(
         self,
         orders: DataFrame,
@@ -208,6 +210,6 @@ class GA:
         print("Trim :", abs(self.fitness_values))
         print("\n")
 
-    def get(self, set_progress):
+    def get(self, set_progress: callable= None):
         self.set_progress = set_progress
         return self.model
