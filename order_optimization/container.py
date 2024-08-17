@@ -10,18 +10,18 @@ class ModelInterface(ABC):
     def run(self, set_progress: Callable) -> None:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def output(self) -> DataFrame:
         pass
 
-    @abstractmethod 
     @property
+    @abstractmethod
     def fitness_values(self) -> float:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def PAPER_SIZE(self) -> float:
         pass
 
