@@ -24,6 +24,7 @@ class GA(ModelInterface):
         save_solutions: bool = False,
         showZero: bool = False,
         selector: Dict[str, int] | None = None,
+        set_progress: Callable | None = None
     ) -> None:
         self.orders = orders
         if orders.empty:
@@ -53,6 +54,7 @@ class GA(ModelInterface):
         self.mutation_percent_genes = 10
         self.gene_type = int
         self.current_generation = 0
+        self.set_progress = set_progress
 
         self.model = pygad.GA(
             num_generations=self.num_generations,
@@ -238,6 +240,5 @@ class GA(ModelInterface):
         self._paper_size  = size
     
     @property
-    def run(self,set_progress:Callable|None=None) -> Callable:
-        self.set_progress = set_progress
+    def run(self) -> Callable:
         return self.model.run

@@ -34,7 +34,7 @@ class ORD(ProviderInterface):
         size: float = 66,
         tuning_values: int = 3,
         filter_value: int = 16,
-        filter: bool = True,
+        _filter_diff: bool = True,
         common: bool = False,
         filler: int = 0,
         selector: Dict[str, int] | None = None,
@@ -44,7 +44,7 @@ class ORD(ProviderInterface):
     ) -> None:
         self.ordplan = pd.read_excel(path, engine="openpyxl")
         self.deadline_scope = deadline_scope
-        self.filter = filter
+        self._filter_diff = _filter_diff
         self.common = common
         self.size = size
         self.tuning_values = tuning_values
@@ -84,24 +84,23 @@ class ORD(ProviderInterface):
     def expand_deadline_scope(self):
         if self.deadline_scope < 0:
             return
-        ic()
-        ordplan = None
+
         deadline_range = self.deadline_range
         deadlines = self.ordplan["กำหนดส่ง"].unique()
-
+        
         for deadline in deadlines:
-            ic(deadline)
-            ic(self.ordplan["กำหนดส่ง"][0])
             deadline = pd.to_datetime(deadline, format='%m/%d/%y')
             ordplan = (
                 self.ordplan[self.ordplan["กำหนดส่ง"] <= deadline]
                 .sort_values("กำหนดส่ง")
                 .reset_index(drop=True)
             )
-            self.filter_diff_order()
+            ic(len(ordplan)) 
+            ordplan = self.filter_diff_order(ordplan)
+            ic(len(ordplan)) 
             if len(ordplan) >= deadline_range: break
         self.ordplan = ordplan
-        ic(ordplan)
+        
         return
 
     def format_data(self):
@@ -112,21 +111,29 @@ class ORD(ProviderInterface):
             ordplan["กำหนดส่ง"], format="%m/%d/%y"
         )
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
+                
+        ordplan = ordplan[ordplan["ยาวผลิต"] != 0] # drop len = 0
+
         self.ordplan = ordplan
 
-    def filter_diff_order(self):
-        if not self.filter:
-            return
-        ordplan = self.ordplan
+
+    def filter_diff_order(self,ordplan: DataFrame|None = None) -> DataFrame|None:
+        if not self._filter_diff:
+            return ordplan
+        if ordplan is None:
+            ordplan = self.ordplan
+
         selected_values = self.size / self.tuning_values
         ordplan["diff"] = ordplan["กว้างผลิต"].apply(
             lambda x: abs(selected_values - x)
         )  # add diff col
-        self.ordplan = (
+        ordplan = (
             ordplan[ordplan["diff"] < self.filter_value]
             .sort_values(by="กว้างผลิต")
             .reset_index(drop=True)
         )  # filter out diff
+
+        return ordplan
 
     def set_selected_order(self):
         if not self.selector:

@@ -15,20 +15,22 @@ from dataclasses import dataclass
 
 from django.conf import settings
 
+from icecream import ic
+
 CACHE_TIMEOUT = settings.CACHE_TIMEOUT
 
 
 def get_orders(
     request,
     file_id: str,
-    size_value: float = 0,
+    size_value: float = 66,
     deadline_scope: int = 0,
     filter_value: int = 16,
     tuning_values: int = 3,
-    filter: bool = True,
+    filter_diff: bool = True,
     common: bool = False,
     filler: int = 0,
-    first_date_only: bool = False,
+    first_date_only: bool= False,
 ) -> DataFrame:
     csv_file = get_csv_file(file_id)
     file_path = csv_file.file.path
@@ -36,7 +38,7 @@ def get_orders(
         provider=ORD(
             path=file_path,
             deadline_scope=deadline_scope,
-            filter=filter,
+            _filter_diff=filter_diff,
             filter_value=filter_value,
             size=size_value,
             tuning_values=tuning_values,
@@ -75,8 +77,9 @@ def get_optimizer(
             num_generations=num_generations,
             showOutput=show_output,
             selector=get_selected_order(request),
+            set_progress=set_progress,
         ),
-        set_progress=set_progress,
+        
     )
     optimizer_instance.run()
     return optimizer_instance
