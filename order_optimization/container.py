@@ -7,7 +7,7 @@ from pandas import DataFrame
 class ModelInterface(ABC):
 
     @abstractmethod
-    def run(self, set_progress: Callable) -> None:
+    def run(self) -> None:
         pass
 
     @property
@@ -29,13 +29,11 @@ class ModelContainer:
     def __init__(
         self,
         model: ModelInterface ,
-        set_progress: Callable
     ):
         self.model = model
-        self.set_progress = set_progress
     
     def run (self) -> None:
-        self.model.run(self.set_progress)
+        self.model.run()
     @property
     def fitness_values(self) -> float:
         return self.model.fitness_values

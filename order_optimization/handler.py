@@ -14,6 +14,8 @@ from .getter import get_orders, get_outputs, get_optimizer
 
 from django.conf import settings
 
+from icecream import ic
+
 ROLL_PAPER = settings.ROLL_PAPER
 FILTER = settings.FILTER
 OUT_RANGE = settings.OUT_RANGE
@@ -29,6 +31,7 @@ def handle_optimization(func):
     def wrapper(request, *args, **kwargs):
         kwargs = func(request)
         if not kwargs:
+            ic()
             return messages.error(request, "Error 404: No orders were found. Please try again.")
 
         size_value = kwargs.get("size_value", None)
@@ -127,13 +130,13 @@ def handle_manual_config(request, **kwargs):
 
     # Fetch orders using the extracted parameters
     orders = get_orders(
-        request,
-        file_id,
-        size_value,
-        deadline_toggle,
-        filter_value,
-        tuning_value,
-        first_date_only,
+        request=request,
+        file_id=file_id,
+        size_value=size_value,
+        deadline_scope=deadline_toggle,
+        filter_value=filter_value,
+        tuning_values=tuning_value,
+        first_date_only=first_date_only,
     )
 
     # Check if any orders were found
@@ -205,7 +208,7 @@ def handle_common(request) -> Callable:
 
         size_value = (item["cut_width"] * item["out"]) + results["trim"]
         orders = get_orders(
-            request, file_id, size_value, deadline_scope=-1, filter=False, common=True
+            request, file_id, size_value, deadline_scope=-1, filter_diff=False, common=True
         )
         optimizer_instance = get_optimizer(
             request, orders, size_value, show_output=True
@@ -251,7 +254,7 @@ def handle_filler(request):
         file_id,
         size_value,
         tuning_values=1,
-        filter=False,
+        filter_diff=False,
         common=True,
         filler=init_order,
     )

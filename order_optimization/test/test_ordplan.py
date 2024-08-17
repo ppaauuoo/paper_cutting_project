@@ -42,19 +42,19 @@ def test_format_data(test_xlsx_file):
 
 @pytest.mark.django_db
 def test_filter_diff_order_small(test_xlsx_file):
-    ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=1, no_build=True)
-    ord.filter_diff_order()
-    assert len(ord.ordplan) == 4
+    ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=1,no_build=True)
+    plan = ord.filter_diff_order(ord.ordplan)
+    assert len(plan) == 4
 
 @pytest.mark.django_db
 def test_filter_diff_order_large(test_xlsx_file):
     ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=16,no_build=True)
-    ord.filter_diff_order()
-    assert len(ord.ordplan) == 6
+    plan = ord.filter_diff_order(ord.ordplan)
+    assert len(plan) == 6
 
 @pytest.mark.django_db
 def test_first_date(test_xlsx_file):
-    ord = ORD(test_xlsx_file, size=66,  first_date_only=True,no_build=True)
+    ord = ORD(test_xlsx_file, size=66,  first_date_only=True,no_build=True, _filter_diff=False)
     ord.format_data()
     ord.set_first_date()
     assert len(ord.ordplan) == 2
@@ -84,7 +84,7 @@ def test_filler_common_order(test_xlsx_file):
 
 @pytest.mark.django_db
 def test_expand_deadline_scope(test_xlsx_file):
-    ord = ORD(test_xlsx_file, filter=False, no_build=True,deadline_range=3)
+    ord = ORD(test_xlsx_file, _filter_diff=False, no_build=True,deadline_range=3)
     ord.format_data()
     ord.expand_deadline_scope()
     assert len(ord.ordplan) == 3
@@ -94,7 +94,7 @@ def test_expand_deadline_scope(test_xlsx_file):
 
 @pytest.mark.django_db
 def test_expand_deadline_scope_nolimit(test_xlsx_file):
-    ord = ORD(test_xlsx_file, filter=False, no_build=True,)
+    ord = ORD(test_xlsx_file, _filter_diff=False, no_build=True,)
     ord.format_data()
     ord.expand_deadline_scope()
     assert len(ord.ordplan) == 6
@@ -102,7 +102,7 @@ def test_expand_deadline_scope_nolimit(test_xlsx_file):
 
 @pytest.mark.django_db
 def test_no_rules(test_xlsx_file):
-    ord = ORD(test_xlsx_file, filter=False, no_build=True, deadline_scope=-1)
+    ord = ORD(test_xlsx_file, _filter_diff=False, no_build=True, deadline_scope=-1)
     ord.format_data()
     ord.expand_deadline_scope()
     assert len(ord.ordplan) == 6
