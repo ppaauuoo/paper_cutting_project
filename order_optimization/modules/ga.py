@@ -2,16 +2,18 @@ from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
-from typing import Dict, Any
+from typing import Callable, Dict, Any
 
 from icecream import ic
+
+from order_optimization.container import ModelInterface
 
 MIN_TRIM = 1
 PENALTY_VALUE = 1000
 
 
 
-class GA:
+class GA(ModelInterface):
     def __init__(
         self,
         orders: DataFrame,
@@ -24,9 +26,15 @@ class GA:
         selector: Dict[str, int] | None = None,
     ) -> None:
         self.orders = orders
-        self.PAPER_SIZE = size
+        if orders.empty:
+            raise ValueError("Orders is empty!")
+        self._paper_size  = size
         self.selector = selector
         
+        self._penalty = 0 
+        self._penalty_value = PENALTY_VALUE
+
+
         self.showOutput = showOutput
         self.save_solutions = save_solutions
         self.showZero = showZero
@@ -82,10 +90,10 @@ class GA:
                                 "X",
                                 "Y",
                             ]:  # Changed OR to AND condition
-                                self.penalty += self.penalty_value
+                                self._penalty += self._penalty_value
                         case 2:
                             if orders["ประเภททับเส้น"][index] == "X":
-                                self.penalty += self.penalty_value
+                                self._penalty += self._penalty_value
 
     def least_order_logic(self, solution):
         init_order = None
@@ -95,7 +103,7 @@ class GA:
 
         for index, out in enumerate(solution):
             if out >= 1 and orders["จำนวนสั่งขาย"][index] < init_order:
-                self.penalty += self.penalty_value
+                self._penalty += self._penalty_value
 
     def get_first_solution(self, solution) -> int:
         for index, out in enumerate(solution):
@@ -104,30 +112,27 @@ class GA:
         return 0
 
     def paper_out_logic(self, solution):
-        if sum(solution) > 6:  # out รวมเกิน 6 = penalty
-            self.penalty += self.penalty_value * sum(solution)  # ยิ่งเกิน ยิ่ง penaltyเยอะ
+        if sum(solution) > 6:  # out รวมเกิน 6 = _penalty
+            self._penalty += self._penalty_value * sum(solution)  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
         order_length = 0
         for index, out in enumerate(solution):
             if out >= 1:
                 order_length += 1
         if order_length > 2:
-            self.penalty += self.penalty_value * order_length  # ยิ่งเกิน ยิ่ง penaltyเยอะ
+            self._penalty += self._penalty_value * order_length  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
 
-    def paper_size_logic(self, output):
-        if output > self.PAPER_SIZE:  # ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น penalty
-            self.penalty += self.penalty_value * (
-                output - self.PAPER_SIZE
-            )  # ยิ่งเกิน ยิ่ง penaltyเยอะ
+    def paper_size_logic(self, _output):
+        if _output > self._paper_size :  # ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น _penalty
+            self._penalty += self._penalty_value * (
+                _output - self._paper_size 
+            )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
 
-    def paper_trim_logic(self, fitness_values):
-        if abs(fitness_values) <= MIN_TRIM:  # ถ้าผลรวมมีค่าน้อยกว่า penalty > เงื่อนไขบริษัท
-            self.penalty += self.penalty_value * abs(
-                fitness_values
-            )  # ยิ่งเกิน ยิ่ง penaltyเยอะ
+    def paper_trim_logic(self, _fitness_values):
+        if abs(_fitness_values) <= MIN_TRIM:  # ถ้าผลรวมมีค่าน้อยกว่า _penalty > เงื่อนไขบริษัท
+            self._penalty += self._penalty_value
 
     def fitness_function(self, ga_instance, solution, solution_idx):
-        self.penalty = 0
-        self.penalty_value = PENALTY_VALUE
+        self._penalty = 0
 
         if self.selector:
             solution[0] = self.selector["out"]
@@ -138,12 +143,12 @@ class GA:
 
         self.paper_out_logic(solution)
 
-        output = numpy.sum(solution * self.orders["กว้างผลิต"])  # ผลรวมของตัดกว้างทั้งหมด
-        self.paper_size_logic(output)
+        _output = numpy.sum(solution * self.orders["กว้างผลิต"])  # ผลรวมของตัดกว้างทั้งหมด
+        self.paper_size_logic(_output)
 
-        fitness_values = -self.PAPER_SIZE + output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
-        self.paper_trim_logic(fitness_values)
-        return fitness_values - self.penalty  # ลบด้วย penalty
+        _fitness_values = -self._paper_size  + _output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
+        self.paper_trim_logic(_fitness_values)
+        return _fitness_values - self._penalty  # ลบด้วย _penalty
 
     def on_gen(self, ga_instance):
 
@@ -156,7 +161,7 @@ class GA:
 
         solution = ga_instance.best_solution()[0]
 
-        output = pd.DataFrame(
+        _output = pd.DataFrame(
             {
                 "order_number": orders["เลขที่ใบสั่งขาย"],
                 "num_orders": orders["จำนวนสั่งขาย"],
@@ -179,17 +184,17 @@ class GA:
         )
 
         if not self.showZero:
-            output = output[output["out"] >= 1]
-        output = output.reset_index(drop=True)
+            _output = _output[_output["out"] >= 1]
+        _output = _output.reset_index(drop=True)
 
-        self.fitness_values = ga_instance.best_solution()[1]
-        self.output = output
+        self._fitness_values = ga_instance.best_solution()[1]
+        self._output = _output
 
         if self.showOutput:
-            self.show(ga_instance, output)
+            self.show(ga_instance, _output)
 
-    def show(self, ga_instance, output):
-        PAPER_SIZE = self.PAPER_SIZE
+    def show(self, ga_instance, _output):
+        _paper_size  = self._paper_size 
         print("Generation : ", ga_instance.generations_completed)
         print("Solution :")
 
@@ -201,13 +206,38 @@ class GA:
             "display.colheader_justify",
             "left",
         ):
-            print(output.to_string(index=False))
+            print(_output.to_string(index=False))
 
-        print("Roll :", PAPER_SIZE)
-        print("Used :", PAPER_SIZE + self.fitness_values)
-        print("Trim :", abs(self.fitness_values))
+        print("Roll :", _paper_size )
+        print("Used :", _paper_size  + self._fitness_values)
+        print("Trim :", abs(self._fitness_values))
         print("\n")
 
-    def get(self, set_progress):
+    @property
+    def output(self) -> DataFrame:
+        return self._output
+    
+    @property
+    def fitness_values(self) -> float:
+        return self._fitness_values
+
+    @property
+    def penalty(self) -> int:
+        return self._penalty
+    
+    @penalty.setter
+    def penalty(self, penalty:int) -> None:
+        self._penalty = penalty
+
+    @property
+    def PAPER_SIZE(self) -> float:
+        return self._paper_size 
+
+    @PAPER_SIZE.setter
+    def PAPER_SIZE (self, size: float):
+        self._paper_size  = size
+    
+    @property
+    def run(self,set_progress:Callable|None=None) -> Callable:
         self.set_progress = set_progress
-        return self.model
+        return self.model.run
