@@ -52,10 +52,6 @@ def test_filter_diff_order_large(test_xlsx_file):
     ord.filter_diff_order()
     assert len(ord.ordplan) == 6
 
-
-
-
-
 @pytest.mark.django_db
 def test_first_date(test_xlsx_file):
     ord = ORD(test_xlsx_file, size=66,  first_date_only=True,no_build=True)
