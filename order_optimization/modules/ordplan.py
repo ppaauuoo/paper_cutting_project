@@ -53,20 +53,17 @@ class ORD(ProviderInterface):
         self.selector = selector
         self.first_date_only = first_date_only
         self.deadline_range = deadline_range
+        self.lookup_amount = 0
         if not no_build: self.build()
 
 
     def build(self) -> None:
         self.format_data()
         if self.first_date_only:
-            self.set_first_date()
+            self.set_first_date()            
         else:
             self.expand_deadline_scope()
-
-        self.filter_diff_order()
-
         self.filter_common_order()
-
         self.set_selected_order()
 
 
@@ -74,15 +71,20 @@ class ORD(ProviderInterface):
         self.ordplan["กำหนดส่ง"] = self.ordplan["กำหนดส่ง"].dt.strftime("%m/%d/%y")
         return self.ordplan
 
+
     def set_first_date(self):
         ordplan = self.ordplan
         deadline = ordplan["กำหนดส่ง"].iloc[0]
-        self.ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline].reset_index(
+        ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline].reset_index(
             drop=True
         )  # filter only fist deadline
-
+        self.lookup_amount = len(ordplan)
+        self.ordplan = self.filter_diff_order(ordplan)
+       
     def expand_deadline_scope(self):
         if self.deadline_scope < 0:
+            self.lookup_amount = len(self.ordplan)
+            self.ordplan = self.filter_diff_order(self.ordplan)
             return
 
         deadline_range = self.deadline_range
@@ -95,12 +97,10 @@ class ORD(ProviderInterface):
                 .sort_values("กำหนดส่ง")
                 .reset_index(drop=True)
             )
-            ic(len(ordplan)) 
+            self.lookup_amount = len(ordplan)
             ordplan = self.filter_diff_order(ordplan)
-            ic(len(ordplan)) 
             if len(ordplan) >= deadline_range: break
         self.ordplan = ordplan
-        
         return
 
     def format_data(self):
