@@ -9,8 +9,7 @@ from django.contrib.auth import login, authenticate
 from django.http import JsonResponse
 
 from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_saving
-from .getter import get_csv_file
-from .modules.ordplan import ORD
+from .getter import get_csv_file, get_orders
 
 from django.conf import settings
 
@@ -77,9 +76,7 @@ def file_selector_view(request):
     if df:
         return JsonResponse({'file_selector': df})
 
-    csv_file = get_csv_file(file_id)
-    file_path = csv_file.file.path
-    df = (ORD(path=file_path).get()).to_dict('records')
+    df = get_orders(request, file_id, filter=False).to_dict(orient='records')
     cache.set(cache_key, df, CACHE_TIMEOUT)
     return JsonResponse({'file_selector': df})
 

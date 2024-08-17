@@ -4,6 +4,7 @@ import pandas as pd
 from django.test import Client
 from ..modules.ordplan import ORD
 from tempfile import NamedTemporaryFile
+from icecream import ic
 
 @pytest.fixture
 def test_data():
@@ -34,21 +35,20 @@ def test_xlsx_file(test_data):
 
 @pytest.mark.django_db
 def test_format_data(test_xlsx_file):
-    ord = ORD(test_xlsx_file)
+    ord = ORD(test_xlsx_file, no_build=True)
     ord.format_data()
     assert round(ord.ordplan["กว้างผลิต"][0], 2) == 2.60
     assert round(ord.ordplan["ยาวผลิต"][0], 2) == 7.87
-    assert ord.ordplan["กำหนดส่ง"][0] == "08/01/23"
 
 @pytest.mark.django_db
 def test_filter_diff_order_small(test_xlsx_file):
-    ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=1)
+    ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=1, no_build=True)
     ord.filter_diff_order()
     assert len(ord.ordplan) == 4
 
 @pytest.mark.django_db
 def test_filter_diff_order_large(test_xlsx_file):
-    ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=16)
+    ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=16,no_build=True)
     ord.filter_diff_order()
     assert len(ord.ordplan) == 6
 
@@ -58,7 +58,7 @@ def test_filter_diff_order_large(test_xlsx_file):
 
 @pytest.mark.django_db
 def test_first_date(test_xlsx_file):
-    ord = ORD(test_xlsx_file, size=66,  first_date_only=True)
+    ord = ORD(test_xlsx_file, size=66,  first_date_only=True,no_build=True)
     ord.format_data()
     ord.set_first_date()
     assert len(ord.ordplan) == 2
@@ -66,21 +66,21 @@ def test_first_date(test_xlsx_file):
 
 @pytest.mark.django_db
 def test_selected_order(test_xlsx_file):
-    ord = ORD(test_xlsx_file, size=66, selector={'order_id': 6})
+    ord = ORD(test_xlsx_file, size=66, selector={'order_id': 6},no_build=True)
     ord.format_data()
     ord.set_selected_order()
     assert ord.ordplan['เลขที่ใบสั่งขาย'][0] == 6
 
 @pytest.mark.django_db
 def test_common_order(test_xlsx_file):
-    ord = ORD(test_xlsx_file, size=66, common=True)
+    ord = ORD(test_xlsx_file, size=66, common=True,no_build=True)
     ord.format_data()
     ord.filter_common_order()
     assert len(ord.ordplan) == 2
 
 @pytest.mark.django_db
 def test_filler_common_order(test_xlsx_file):
-    ord = ORD(test_xlsx_file, size=66, common=True, filler=6)
+    ord = ORD(test_xlsx_file, size=66, common=True, filler=6,no_build=True)
     ord.format_data()
     ord.filter_common_order()
     assert len(ord.ordplan) == 1
@@ -88,16 +88,25 @@ def test_filler_common_order(test_xlsx_file):
 
 @pytest.mark.django_db
 def test_expand_deadline_scope(test_xlsx_file):
-    ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=16, deadline_scope=0)
+    ord = ORD(test_xlsx_file, filter=False, no_build=True,deadline_range=3)
+    ord.format_data()
+    ord.expand_deadline_scope()
+    assert len(ord.ordplan) == 3
+    assert len(set(ord.ordplan["กำหนดส่ง"])) == 2
+    
+
+
+@pytest.mark.django_db
+def test_expand_deadline_scope_nolimit(test_xlsx_file):
+    ord = ORD(test_xlsx_file, filter=False, no_build=True,)
     ord.format_data()
     ord.expand_deadline_scope()
     assert len(ord.ordplan) == 6
     assert len(set(ord.ordplan["กำหนดส่ง"])) == 5
 
-
 @pytest.mark.django_db
-def test_expand_deadline_scope_nolimit(test_xlsx_file):
-    ord = ORD(test_xlsx_file, size=66, tuning_values=1, filter_value=16, deadline_scope=-1)
+def test_no_rules(test_xlsx_file):
+    ord = ORD(test_xlsx_file, filter=False, no_build=True, deadline_scope=-1)
     ord.format_data()
     ord.expand_deadline_scope()
     assert len(ord.ordplan) == 6

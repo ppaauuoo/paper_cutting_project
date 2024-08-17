@@ -1,49 +1,50 @@
+from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
-from .ordplan import ORD
-from typing import Dict
+from typing import Dict, Any
+
+from icecream import ic
 
 MIN_TRIM = 1
-PENALTY_VALUE=1000
+PENALTY_VALUE = 1000
+
+
+
 class GA:
-    def __init__(self, orders: ORD, size: float, num_generations: int, out_range: int,showOutput:bool = False, save_solutions:bool = False, showZero: bool = False, selector: Dict = None)->None:
+    def __init__(
+        self,
+        orders: DataFrame,
+        size: float = 66,
+        num_generations: int = 50,
+        out_range: int = 6,
+        showOutput: bool = False,
+        save_solutions: bool = False,
+        showZero: bool = False,
+        selector: Dict[str, int] | None = None,
+    ) -> None:
         self.orders = orders
         self.PAPER_SIZE = size
+        self.selector = selector
+        
         self.showOutput = showOutput
         self.save_solutions = save_solutions
         self.showZero = showZero
-        self.selector = selector
-
         self.num_generations = num_generations
-        # num_parents_mating = len(orders)
-        # self.num_parents_mating = int((orders['จำนวนสั่งขาย'].median()/100 + size/100)/2)
-        self.num_parents_mating = 60
 
-        # sol_per_pop = len(orders)*2
-        # self.sol_per_pop =  int(orders['จำนวนสั่งขาย'].median()/100 + size/100)
+        self.num_parents_mating = 60
         self.sol_per_pop = 120
         self.num_genes = len(self.orders)
 
         self.init_range_low = 0
         self.init_range_high = out_range
-        # self.init_range_high = abs(int(orders['จำนวนสั่งขาย'].median()/100 + size/100 - len(orders)*tuning_parameters))
 
         self.parent_selection_type = "tournament"
-        # rws (for roulette wheel selection)
-        # rank (for rank selection)
-        # tournament (for tournament selection) - the best
-        # sus (chat suggestion, stochastic_universal_selection)
-
-        # crossover_type = "two_points"
-        self.crossover_type = "uniform"  # - the best
-        # crossover_type = "single_point"
-
+        self.crossover_type = "uniform"
         self.mutation_type = "random"
         self.mutation_percent_genes = 10
-        # mutation_type = "adaptive"
-        # mutation_percent_genes = (10,20)
         self.gene_type = int
+        self.current_generation = 0
 
         self.model = pygad.GA(
             num_generations=self.num_generations,
@@ -59,75 +60,77 @@ class GA:
             mutation_type=self.mutation_type,
             mutation_percent_genes=self.mutation_percent_genes,
             on_generation=self.on_gen,
-            save_solutions=self.save_solutions
+            save_solutions=self.save_solutions,
         )
 
-        self.current_generation = 0
         
     def paper_type_logic(self, solution):
         init_type = None
         orders = self.orders
-        match orders['ประเภททับเส้น'][self.get_first_solution(solution)]:
+        match orders["ประเภททับเส้น"][self.get_first_solution(solution)]:
             case "X":
                 init_type = 1
             case "N", "W":
                 init_type = 2
-
 
         if init_type is not None:
             for index, out in enumerate(solution):
                 if out >= 1:
                     match init_type:
                         case 1:
-                            if orders['ประเภททับเส้น'][index] not in ["X", "Y"]:  # Changed OR to AND condition
+                            if orders["ประเภททับเส้น"][index] not in [
+                                "X",
+                                "Y",
+                            ]:  # Changed OR to AND condition
                                 self.penalty += self.penalty_value
                         case 2:
-                            if orders['ประเภททับเส้น'][index] == "X":
+                            if orders["ประเภททับเส้น"][index] == "X":
                                 self.penalty += self.penalty_value
-
 
     def least_order_logic(self, solution):
         init_order = None
         orders = self.orders
-        
-        init_order = orders['จำนวนสั่งขาย'][self.get_first_solution(solution)]
+
+        init_order = orders["จำนวนสั่งขาย"][self.get_first_solution(solution)]
 
         for index, out in enumerate(solution):
-            if out >= 1 and orders['จำนวนสั่งขาย'][index] < init_order:
+            if out >= 1 and orders["จำนวนสั่งขาย"][index] < init_order:
                 self.penalty += self.penalty_value
 
-
-    def get_first_solution(self, solution)->int:
+    def get_first_solution(self, solution) -> int:
         for index, out in enumerate(solution):
             if out >= 1:
                 return index
-        
+        return 0
 
     def paper_out_logic(self, solution):
-        if sum(solution) > 6: #out รวมเกิน 6 = penalty
-            self.penalty += self.penalty_value*sum(solution) #ยิ่งเกิน ยิ่ง penaltyเยอะ
+        if sum(solution) > 6:  # out รวมเกิน 6 = penalty
+            self.penalty += self.penalty_value * sum(solution)  # ยิ่งเกิน ยิ่ง penaltyเยอะ
         order_length = 0
         for index, out in enumerate(solution):
             if out >= 1:
-                order_length+=1
+                order_length += 1
         if order_length > 2:
-            self.penalty += self.penalty_value*order_length #ยิ่งเกิน ยิ่ง penaltyเยอะ
+            self.penalty += self.penalty_value * order_length  # ยิ่งเกิน ยิ่ง penaltyเยอะ
 
-    def paper_size_logic(self,output):
+    def paper_size_logic(self, output):
         if output > self.PAPER_SIZE:  # ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น penalty
-            self.penalty += self.penalty_value*(output-self.PAPER_SIZE) #ยิ่งเกิน ยิ่ง penaltyเยอะ
+            self.penalty += self.penalty_value * (
+                output - self.PAPER_SIZE
+            )  # ยิ่งเกิน ยิ่ง penaltyเยอะ
 
-    def paper_trim_logic(self,fitness_values):
+    def paper_trim_logic(self, fitness_values):
         if abs(fitness_values) <= MIN_TRIM:  # ถ้าผลรวมมีค่าน้อยกว่า penalty > เงื่อนไขบริษัท
-            self.penalty += self.penalty_value*abs(fitness_values) #ยิ่งเกิน ยิ่ง penaltyเยอะ
+            self.penalty += self.penalty_value * abs(
+                fitness_values
+            )  # ยิ่งเกิน ยิ่ง penaltyเยอะ
 
     def fitness_function(self, ga_instance, solution, solution_idx):
         self.penalty = 0
         self.penalty_value = PENALTY_VALUE
 
         if self.selector:
-            solution[0]=self.selector['out']
-
+            solution[0] = self.selector["out"]
 
         self.paper_type_logic(solution)
 
@@ -140,15 +143,14 @@ class GA:
 
         fitness_values = -self.PAPER_SIZE + output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
         self.paper_trim_logic(fitness_values)
-
         return fitness_values - self.penalty  # ลบด้วย penalty
 
     def on_gen(self, ga_instance):
 
         self.current_generation += 1
         if self.set_progress:
-                progress = (self.current_generation / self.num_generations) * 100
-                self.set_progress(progress)
+            progress = (self.current_generation / self.num_generations) * 100
+            self.set_progress(progress)
 
         orders = self.orders
 
@@ -207,5 +209,5 @@ class GA:
         print("\n")
 
     def get(self, set_progress):
-        self.set_progress= set_progress
+        self.set_progress = set_progress
         return self.model

@@ -1,4 +1,6 @@
+from order_optimization.modules import ga
 from .modules.ordplan import ORD
+from .modules.ga import GA
 
 from typing import Callable, Dict
 from django.contrib import messages
@@ -8,7 +10,7 @@ import pandas as pd
 
 from typing import Callable, Dict, List, Optional
 
-from .getter import get_orders, get_outputs, get_genetic_algorithm
+from .getter import get_orders, get_outputs, get_optimizer
 
 from django.conf import settings
 
@@ -26,20 +28,23 @@ MIN_TRIM = 1
 def handle_optimization(func):
     def wrapper(request, *args, **kwargs):
         kwargs = func(request)
+        if not kwargs:
+            return messages.error(request, "Error 404: No orders were found. Please try again.")
+
         size_value = kwargs.get("size_value", None)
         orders = kwargs.get("orders", None)
         num_generations = kwargs.get("num_generations", 50)
         out_range = kwargs.get("out_range", 6)
 
-        ga_instance = get_genetic_algorithm(
+        optimizer_instance = get_optimizer(
             request, orders, size_value, out_range, num_generations
         )
-        fitness_values, output_data = get_outputs(ga_instance)
+        fitness_values, output_data = get_outputs(optimizer_instance)
 
         init_order_number, foll_order_number = handle_orders_logic(output_data)
 
         results = results_format(
-            ga_instance,
+            optimizer_instance,
             output_data,
             size_value,
             fitness_values,
@@ -110,14 +115,17 @@ def handle_satisfied_retry(wrapper, request, results, *args, **kwargs):
 
 @handle_optimization
 def handle_manual_config(request, **kwargs):
+    # Extract values from the request
     file_id = request.POST.get("file_id")
-    size_value = int(request.POST.get("size_value"))
+    size_value = int(request.POST.get("size_value", 0))
     deadline_toggle = -1 if request.POST.get("deadline_toggle") == "true" else 0
-    filter_value = int(request.POST.get("filter_value"))
-    tuning_value = int(request.POST.get("tuning_value"))
-    num_generations = int(request.POST.get("num_generations"))
-    out_range = int(request.POST.get("out_range"))
+    filter_value = int(request.POST.get("filter_value", 0))
+    tuning_value = int(request.POST.get("tuning_value", 0))
+    num_generations = int(request.POST.get("num_generations", 0))
+    out_range = int(request.POST.get("out_range", 0))
     first_date_only = request.POST.get("first_date_only")
+
+    # Fetch orders using the extracted parameters
     orders = get_orders(
         request,
         file_id,
@@ -127,10 +135,19 @@ def handle_manual_config(request, **kwargs):
         tuning_value,
         first_date_only,
     )
-    
-    if len(orders) <= 0:
-        messages.error(request, "Error 404: No orders were found. Please try again.")
-        return
+
+    # Check if any orders were found
+    if orders.empty:
+        return None  # Return kwargs even if no orders are found
+
+    # Update kwargs with the found orders
+    kwargs.update({
+        "orders": orders,
+        "size_value": size_value,
+        "num_generations": num_generations,
+        "out_range": out_range,
+    })
+
     return kwargs
 
 
@@ -163,7 +180,7 @@ def auto_size_filter_logic(request):
             size,
             FILTER[-filter_index],
             tuning_value,
-            first_date_only=False,
+            first_date_only=True,
         )
         filter_index += 1
         if filter_index > len(FILTER):
@@ -178,19 +195,9 @@ def auto_size_filter_logic(request):
 
 
 def handle_common(request) -> Callable:
-    """
-    Handle common order optimization.
 
-    Args:
-        request: The HTTP request object.
-        action: The action to perform ('trim' or 'order').
-
-    Returns:
-        Dict: The updated results dictionary.
-    """
     results = cache.get("optimization_results")
     best_fitness = -results["trim"]
-    best_output: Optional[List[Dict]] = None
     best_index: Optional[int] = None
     file_id = request.POST.get("selected_file_id")
 
@@ -200,12 +207,12 @@ def handle_common(request) -> Callable:
         orders = get_orders(
             request, file_id, size_value, deadline_scope=-1, filter=False, common=True
         )
-        ga_instance = get_genetic_algorithm(
+        optimizer_instance = get_optimizer(
             request, orders, size_value, show_output=True
         )
 
-        if abs(ga_instance.fitness_values) < abs(best_fitness):
-            best_fitness, best_output = get_outputs(ga_instance)
+        if abs(optimizer_instance.fitness_values) < abs(best_fitness):
+            best_fitness, best_output = get_outputs(optimizer_instance)
             best_index = i
 
     if best_index is not None:
@@ -262,7 +269,7 @@ def handle_filler(request):
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
 
-def output_format(orders: ORD, init_out: int = 0) -> pd.DataFrame:
+def output_format(orders: Dict, init_out: int = 0) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "order_number": [orders["เลขที่ใบสั่งขาย"]],
@@ -277,7 +284,7 @@ def output_format(orders: ORD, init_out: int = 0) -> pd.DataFrame:
 
 
 def results_format(
-    ga_instance: object,
+    optimizer_instance: GA,
     output_data: dict,
     size_value: int,
     fitness_values: float,
@@ -286,7 +293,7 @@ def results_format(
 ) -> Dict:
     return {
         "output": output_data,
-        "roll": ga_instance.PAPER_SIZE,
+        "roll": optimizer_instance.PAPER_SIZE,
         "fitness": size_value + fitness_values,
         "trim": abs(fitness_values),
         "init_order_number": init_order_number,
