@@ -304,11 +304,28 @@ def results_format(
     }
 
 
-def handle_saving(request):
-    saved_list = cache.get("optimized_orders_view", [])
+from .models import OptimizedOrder
+
+def handle_saving():
     data = cache.get("optimization_results", [])
-
     cache.delete("optimization_results")
-    saved_list.append(data["output"])  # Append the entire data list
+    format_data = []
+    blade1 = []
+    blade2 = []
+    for item in data["output"]:
+        match item['blade']:
+            case 1:
+                blade1.append(item)
+            case 2:
+                blade2.append(item)
 
-    cache.set("optimized_orders_view", saved_list, CACHE_TIMEOUT)
+    format_data.append(blade1)
+    format_data.append(blade2)
+
+    optimized_order = OptimizedOrder(output=format_data)
+    optimized_order.save()
+
+
+def handle_reset():
+    OptimizedOrder.objects.all().delete()
+

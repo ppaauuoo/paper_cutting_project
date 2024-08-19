@@ -1,14 +1,14 @@
 from django.core.cache import cache
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import CSVFile
+from .models import CSVFile, OptimizedOrder
 from .forms import CSVFileForm, LoginForm
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 from django.http import JsonResponse
 
-from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_saving
+from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_reset, handle_saving
 from .getter import get_csv_file, get_orders
 
 from django.conf import settings
@@ -18,6 +18,8 @@ FILTER = settings.FILTER
 OUT_RANGE = settings.OUT_RANGE 
 TUNING_VALUE = settings.TUNING_VALUE 
 CACHE_TIMEOUT = settings.CACHE_TIMEOUT 
+
+from icecream import ic
 
 
 @login_required
@@ -37,7 +39,9 @@ def order_optimizer_view(request):
             case {"common_order": _}:
                 handle_filler(request)
             case {"save": _}:
-                handle_saving(request)
+                handle_saving()
+            case {"reset": _}:
+                handle_reset()
 
     cache.delete("optimization_progress")  # Clear previous progress
     csv_files = CSVFile.objects.all()
@@ -76,7 +80,7 @@ def file_selector_view(request):
     if df:
         return JsonResponse({'file_selector': df})
 
-    df = get_orders(request, file_id, filter=False).to_dict(orient='records')
+    df = get_orders(request, file_id, filter_diff=False).to_dict(orient='records')
     cache.set(cache_key, df, CACHE_TIMEOUT)
     return JsonResponse({'file_selector': df})
 
@@ -99,4 +103,6 @@ def progress_view(request):
     return JsonResponse({'progress': cache.get("optimization_progress", 0)})
 
 def optimized_orders_view(request):
-    return JsonResponse({'optimized_orders': cache.get("optimized_orders_view")})
+    saved_list = OptimizedOrder.objects.all()
+    saved_list_data = [order.output for order in saved_list]
+    return JsonResponse({'optimized_orders': saved_list_data})
