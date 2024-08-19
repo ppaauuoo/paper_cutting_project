@@ -1,7 +1,7 @@
 from django.core.cache import cache
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import CSVFile
+from .models import CSVFile, OptimizedOrder
 from .forms import CSVFileForm, LoginForm
 
 from django.contrib.auth.decorators import login_required
@@ -18,6 +18,8 @@ FILTER = settings.FILTER
 OUT_RANGE = settings.OUT_RANGE 
 TUNING_VALUE = settings.TUNING_VALUE 
 CACHE_TIMEOUT = settings.CACHE_TIMEOUT 
+
+from icecream import ic
 
 
 @login_required
@@ -99,4 +101,7 @@ def progress_view(request):
     return JsonResponse({'progress': cache.get("optimization_progress", 0)})
 
 def optimized_orders_view(request):
-    return JsonResponse({'optimized_orders': cache.get("optimized_orders_view")})
+    saved_list = OptimizedOrder.objects.all()
+    saved_list_data = [order.output for order in saved_list]
+    ic(saved_list_data)
+    return JsonResponse({'optimized_orders': saved_list_data})
