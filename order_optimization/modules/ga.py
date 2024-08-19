@@ -164,7 +164,8 @@ class GA(ModelInterface):
         solution = ga_instance.best_solution()[0]
 
         _output = pd.DataFrame(
-            {
+            {   
+                "blade": orders.index+1,
                 "order_number": orders["เลขที่ใบสั่งขาย"],
                 "num_orders": orders["จำนวนสั่งขาย"],
                 "order_type": orders["ชนิดส่วนประกอบ"],
@@ -188,6 +189,15 @@ class GA(ModelInterface):
         if not self.showZero:
             _output = _output[_output["out"] >= 1]
         _output = _output.reset_index(drop=True)
+
+        blade = []
+        for idx in _output.index:
+            blade.append({"blade": idx + 1})
+        blade = pd.DataFrame(blade)
+
+        
+        _output = pd.concat([_output, blade], axis=1)
+
 
         self._fitness_values = ga_instance.best_solution()[1]
         self._output = _output

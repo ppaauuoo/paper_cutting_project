@@ -306,10 +306,26 @@ def results_format(
 
 from .models import OptimizedOrder
 
-def handle_saving(request):
+def handle_saving():
     data = cache.get("optimization_results", [])
     cache.delete("optimization_results")
-    optimized_order = OptimizedOrder(output=data["output"])
+    format_data = []
+    blade1 = []
+    blade2 = []
+    for item in data["output"]:
+        match item['blade']:
+            case 1:
+                blade1.append(item)
+            case 2:
+                blade2.append(item)
+
+    format_data.append(blade1)
+    format_data.append(blade2)
+
+    optimized_order = OptimizedOrder(output=format_data)
     optimized_order.save()
 
+
+def handle_reset():
+    OptimizedOrder.objects.all().delete()
 

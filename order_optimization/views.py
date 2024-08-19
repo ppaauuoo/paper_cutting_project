@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 from django.http import JsonResponse
 
-from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_saving
+from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_reset, handle_saving
 from .getter import get_csv_file, get_orders
 
 from django.conf import settings
@@ -39,7 +39,9 @@ def order_optimizer_view(request):
             case {"common_order": _}:
                 handle_filler(request)
             case {"save": _}:
-                handle_saving(request)
+                handle_saving()
+            case {"reset": _}:
+                handle_reset()
 
     cache.delete("optimization_progress")  # Clear previous progress
     csv_files = CSVFile.objects.all()
@@ -78,7 +80,7 @@ def file_selector_view(request):
     if df:
         return JsonResponse({'file_selector': df})
 
-    df = get_orders(request, file_id, filter=False).to_dict(orient='records')
+    df = get_orders(request, file_id, filter_diff=False).to_dict(orient='records')
     cache.set(cache_key, df, CACHE_TIMEOUT)
     return JsonResponse({'file_selector': df})
 
