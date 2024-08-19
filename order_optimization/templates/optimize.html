@@ -117,10 +117,77 @@
             <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#csvFilesModal">
                 <span class="btn-text">View Files List</span>
             </button>
-            <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#filePreviewModal" onclick="filePreview(event)">
-                <span class="btn-text">View Preview</span>
-            </button>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#savedOrdersModal" onclick="savedOrders(event)">
+            <div x-data="PreviewData">
+                <button type="button" x-on:click="fetchPreviewData" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#filePreviewModal">
+                    <span class="btn-text">View Preview</span>
+                </button>
+
+            <!-- File Preview Modal -->
+            <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-fullscreen">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="filePreviewModalLabel">Preview</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group mb-3">
+                                <label for="selector_out" class="form-label">Out for selected:</label>
+                                <select id="selector_out" name="selector_out" class="form-select" required>
+                                    {% for out in '1234'|make_list %}
+                                        <option value="{{ out }}" {% if out|stringformat:"s"  == request.POST.selector_out %}selected{% endif %}>{{ out }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <form onsubmit="return false;">
+                                <input type="text" id="previewSearchInput" placeholder="Search...">
+                                <div id="previewDiv" class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                        <tr>
+                                            <th class="text-center" style="cursor: pointer;" @click="sort('กำหนดส่ง')">กำหนดส่ง</th>
+                                            <th class="text-center" style="cursor: pointer;" @click="sort('เลขที่ใบสั่งขาย')">เลขที่ใบสั่งขาย</th>
+                                            <th class="text-center" >ชนิดส่วนประกอบ</th>
+                                            <th class="text-center" style="cursor: pointer;" @click="sort('จำนวนสั่งขาย')">จำนวนสั่งขาย</th>
+                                            <th class="text-center" style="cursor: pointer;" @click="sort('ตัดกว้าง')">ตัดกว้าง</th>
+                                            <th class="text-center" style="cursor: pointer;" @click="sort('ตัดยาว')">ตัดยาว</th>
+                                            <th class="text-center" >ประเภททับเส้น</th>
+                                            <th class="text-center" >เลือก</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody id="previewTable"> 
+                                        <template x-if="!data">
+                                            <tr><td colspan="9"><i>Loading...</i></td></tr>
+                                        </template>
+                                        <template x-for="(item, index) in data" :key="index">
+                                            <tr>
+                                                <td class="text-center" x-text="item.กำหนดส่ง"></td>
+                                                <td class="text-center" x-text="item.เลขที่ใบสั่งขาย"></td>
+                                                <td class="text-center" x-text="item.ชนิดส่วนประกอบ"></td>
+                                                <td class="text-center" x-text="item.จำนวนสั่งขาย"></td>
+                                                <td class="text-center" x-text="item.กว้างผลิต"></td>
+                                                <td class="text-center" x-text="item.ยาวผลิต"></td>
+                                                <td class="text-center" x-text="item.ประเภททับเส้น"></td>
+                                                <td class="text-center">
+                                                    <input type="radio" id="${item.เลขที่ใบสั่งขาย}" name="selector_id" value="${item.เลขที่ใบสั่งขาย}" class="large-radio">
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </form>
+
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+
+
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#savedOrdersModal">
                 <span class="btn-text">View Saved Orders</span>
             </button>
             <button class="btn btn-danger" type="submit" name="reset">
@@ -136,51 +203,6 @@
         </div>
 
 
-        <!-- File Preview Modal -->
-        <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-fullscreen">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="filePreviewModalLabel">Preview</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group mb-3">
-                            <label for="selector_out" class="form-label">Out for selected:</label>
-                            <select id="selector_out" name="selector_out" class="form-select" required>
-                                {% for out in '1234'|make_list %}
-                                    <option value="{{ out }}" {% if out|stringformat:"s"  == request.POST.selector_out %}selected{% endif %}>{{ out }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <form onsubmit="return false;">
-                            <input type="text" id="previewSearchInput" placeholder="Search...">
-                            <h5 id="previewLoading">Loading...</h5>
-                            <div id="previewDiv" class="table-responsive">
-                                <table id="previewTable" class="table table-striped table-hover">
-                                    <thead class="text-center">
-                                        <tr>
-                                            <th class="text-center">กำหนดส่ง</th>
-                                            <th class="text-center">เลขที่ใบสั่งขาย</th>
-                                            <th class="text-center">ชนิดส่วนประกอบ</th>
-                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(3)">จำนวนสั่งขาย</th>
-                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(4)">ตัดกว้าง</th>
-                                            <th class="text-center" style="cursor: pointer;" onclick="sortTable(5)">ตัดยาว</th>
-                                            <th class="text-center">ประเภทตัดเส้น</th>
-                                            <th class="text-center">เลือก</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody >
-                                    </tbody> 
-                                </table>
-                            </div>
-                        </form>
-
-
-                    </div>
-                </div>
-            </div>
-        </div>
 
         {% comment %} Saved File {% endcomment %}
         <div class="modal fade" id="savedOrdersModal" tabindex="-1" aria-labelledby="savedOrdersModalLabel" aria-hidden="true">
@@ -195,15 +217,15 @@
                             <table id="dataTable" x-data="SavedData" class="table table-striped table-hover">
                                 <thead>
                                   <tr>
-                                    <th class="text-center" style="cursor: pointer;">ใบมีด</th>
-                                    <th class="text-center" style="cursor: pointer;" >กำหนดส่ง</th>
-                                    <th class="text-center" style="cursor: pointer;" >เลขที่ใบสั่งขาย</th>
-                                    <th class="text-center" style="cursor: pointer;">ชนิดส่วนประกอบ</th>
-                                    <th class="text-center" style="cursor: pointer;" >จำนวนสั่งขาย</th>
-                                    <th class="text-center" style="cursor: pointer;" >ตัดกว้าง</th>
-                                    <th class="text-center" style="cursor: pointer;" >ตัดยาว</th>
-                                    <th class="text-center" style="cursor: pointer;">ประเภทตัดเส้น</th>
-                                    <th class="text-center" style="cursor: pointer;">out</th>
+                                    <th class="text-center">ใบมีด</th>
+                                    <th class="text-center">กำหนดส่ง</th>
+                                    <th class="text-center">เลขที่ใบสั่งขาย</th>
+                                    <th class="text-center">ชนิดส่วนประกอบ</th>
+                                    <th class="text-center">จำนวนสั่งขาย</th>
+                                    <th class="text-center">ตัดกว้าง</th>
+                                    <th class="text-center">ตัดยาว</th>
+                                    <th class="text-center">ประเภทตัดเส้น</th>
+                                    <th class="text-center">out</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -379,58 +401,6 @@
 
 {% block extra_scripts %}
 <script>
-
-    let progressInterval;
-    function sortTable(n) {
-        var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-        table = document.getElementById("previewTable");
-        switching = true;
-        // Set the sorting direction to ascending:
-        dir = "asc";
-        
-        // Remove arrows from all headers
-        var headers = table.getElementsByTagName("TH");
-        for (i = 0; i < headers.length; i++) {
-            headers[i].innerHTML = headers[i].innerHTML.replace(/[▲▼]/, "");
-        }
-        
-        // Add arrow to the clicked header
-        headers[n].innerHTML += dir === "asc" ? " ▲" : " ▼";
-    
-        while (switching) {
-            switching = false;
-            rows = table.rows;
-            for (i = 1; i < (rows.length - 1); i++) {
-                shouldSwitch = false;
-                x = rows[i].getElementsByTagName("TD")[n];
-                y = rows[i + 1].getElementsByTagName("TD")[n];
-                if (dir == "asc") {
-                    if (Number(x.innerHTML) > Number(y.innerHTML)) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                } else if (dir == "desc") {
-                    if (Number(x.innerHTML) < Number(y.innerHTML)) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                }
-            }
-            if (shouldSwitch) {
-                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                switching = true;
-                switchcount++;
-            } else {
-                if (switchcount == 0 && dir == "asc") {
-                    dir = "desc";
-                    switching = true;
-                    // Change arrow to down when switching to descending
-                    headers[n].innerHTML = headers[n].innerHTML.replace("▲", "▼");
-                }
-            }
-        }
-    }
-
     function updateProgress() {
         fetch('/progress/')
             .then(response => response.json())
@@ -448,54 +418,7 @@
             .catch(error => console.error('Error fetching progress:', error));
     }
 
-    function filePreview(event) {
-        event.preventDefault(); // Prevent the default button click behavior
-        document.getElementById('previewLoading').style.display = 'flex';
-        document.getElementById('previewDiv').style.display = 'none';
-        
-        // Get the file_id from the button or any other appropriate source
-        const fileId = document.getElementById('file_id').value;
 
-        // Make the AJAX request to the Django backend
-        fetch(`/file_selector/?file_id=${fileId}`)
-            .then(response => response.json())
-            .then(data => {
-                // Update the modal content with the file preview data
-                document.getElementById('previewLoading').style.display = 'none';
-                document.getElementById('previewDiv').style.display = 'flex';
-                updateFilePreviewModal(data.file_selector);
-            })
-            .catch(error => {
-                console.error('Error fetching file preview:', error);
-                // Handle the error, e.g., display an error message to the user
-            });
-    }
-    
-
-
-    function updateFilePreviewModal(filePreviewData) {
-        // Update the modal content with the file preview data
-        // This will depend on your HTML structure and how you want to display the data
-        const tableBody = document.querySelector('#filePreviewModal .modal-body tbody');
-        tableBody.innerHTML = '';
-    
-        filePreviewData.forEach(item => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="text-center">${item.กำหนดส่ง}</td>
-                <td class="text-center">${item.เลขที่ใบสั่งขาย}</td>
-                <td class="text-center">${item.ชนิดส่วนประกอบ}</td>                
-                <td class="text-center">${item.จำนวนสั่งขาย}</td>
-                <td class="text-center">${item.กว้างผลิต}</td>
-                <td class="text-center">${item.ยาวผลิต}</td>
-                <td class="text-center">${item.ประเภททับเส้น}</td>
-                <td class="text-center">
-                    <input type="radio" id="${item.เลขที่ใบสั่งขาย}" name="selector_id" value="${item.เลขที่ใบสั่งขาย}" class="large-radio">
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-    }
 
     function updateSelectedOrder() {
         const selectedRadio = document.querySelector('input[name="selector_id"]:checked');
@@ -517,6 +440,46 @@
 
     }
 
+
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const submitter = e.submitter;
+        
+        switch(submitter.name){
+            case 'optimize':
+                optimizerLoader('optimizeBtn')
+            case 'auto':
+                optimizerLoader('autoBtn')
+        }
+        updateSelectedOrder()
+        // Submit the form
+        this.submit();
+    });
+
+    window.addEventListener('load', function() {
+        // Remove the overlay when the page is fully loaded
+        document.getElementById('overlay').style.display = 'none';
+    });
+
+
+    document.getElementById('num_generations').oninput = function() {
+        document.getElementById('slider_output').textContent = this.value;
+    };  
+
+    window.addEventListener('unload', function() {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
+    });
+
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').value = today;
+
+</script>
+
+
+{% comment %} Preview Data Script {% endcomment %}
+<script type="text/javascript">
+    //search 
     document.addEventListener('DOMContentLoaded', function() {
         var searchInput = document.getElementById('previewSearchInput');
         var previewTable = document.getElementById('previewTable');
@@ -554,44 +517,38 @@
       
     })
 
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const submitter = e.submitter;
-        
-        switch(submitter.name){
-            case 'optimize':
-                optimizerLoader('optimizeBtn')
-            case 'auto':
-                optimizerLoader('autoBtn')
-        }
-
-    
-        updateSelectedOrder()
-        // Submit the form
-        this.submit();
+    //init table
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('PreviewData', () => ({
+            data: null,
+            sortCol: null,
+            sortAsc: false,
+            async fetchPreviewData() {
+                console.log('loading...')
+                try {
+                    let fileId = document.getElementById('file_id').value;
+                    console.log(fileId)
+                    const response = await fetch(`/file_selector/?file_id=${fileId}`);
+                    const res = await response.json();
+                    this.data = res['file_selector']
+                    console.log(this.data)
+                } catch (error) {
+                    console.error('Error fetching file savedOrders:', error);
+                    // Handle the error, e.g., display an error message to the user
+                }
+            },
+            sort(field) {
+                this.sortAsc = this.sortCol === field ? !this.sortAsc : true;
+                this.sortCol = field;
+                this.data.sort((a, b) => {
+                    if (a[field] > b[field]) return this.sortAsc ? 1 : -1;
+                    if (a[field] < b[field]) return this.sortAsc ? -1 : 1;
+                    return 0;
+                });
+            }
+        }));
     });
-
-    window.addEventListener('load', function() {
-        // Remove the overlay when the page is fully loaded
-        document.getElementById('overlay').style.display = 'none';
-    });
-
-
-    document.getElementById('num_generations').oninput = function() {
-        document.getElementById('slider_output').textContent = this.value;
-    };  
-
-    window.addEventListener('unload', function() {
-        if (progressInterval) {
-            clearInterval(progressInterval);
-        }
-    });
-
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date').value = today;
-
 </script>
-
-
 
 {% comment %} View Saved Data Script {% endcomment %}
 <script type="text/javascript">

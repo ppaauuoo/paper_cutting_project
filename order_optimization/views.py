@@ -105,5 +105,4 @@ def progress_view(request):
 def optimized_orders_view(request):
     saved_list = OptimizedOrder.objects.all()
     saved_list_data = [order.output for order in saved_list]
-    ic(saved_list_data)
     return JsonResponse({'optimized_orders': saved_list_data})
