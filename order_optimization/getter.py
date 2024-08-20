@@ -1,4 +1,5 @@
 from pandas import DataFrame
+import pandas as pd
 
 from order_optimization.container import ModelContainer, OrderContainer
 from .modules.ordplan import ORD
@@ -20,6 +21,18 @@ from icecream import ic
 CACHE_TIMEOUT = settings.CACHE_TIMEOUT
 
 
+def get_orders_cache(file_id:str) -> DataFrame:
+    csv_file = get_csv_file(file_id)
+    file_path = csv_file.file.path
+    
+    orders = cache.get(f'order_cache_{file_id}', None)
+
+    if orders is None:
+        orders = pd.read_excel(file_path, engine="openpyxl")
+        cache.set(f'order_cache_{file_id}',orders,CACHE_TIMEOUT)
+
+    return orders
+
 def get_orders(
     request,
     file_id: str,
@@ -32,11 +45,13 @@ def get_orders(
     filler: int = 0,
     first_date_only: bool= False,
 ) -> DataFrame:
-    csv_file = get_csv_file(file_id)
-    file_path = csv_file.file.path
+
+    orders: DataFrame = get_orders_cache(file_id)
+
+
     return OrderContainer(
         provider=ORD(
-            path=file_path,
+            orders= orders,
             deadline_scope=deadline_scope,
             _filter_diff=filter_diff,
             filter_value=filter_value,
@@ -48,6 +63,8 @@ def get_orders(
             first_date_only=first_date_only,
         )
     ).get()
+
+
 
 
 def get_selected_order(request) -> Dict[str, int] | None:

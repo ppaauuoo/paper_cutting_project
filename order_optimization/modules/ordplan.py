@@ -29,7 +29,7 @@ COMMON_FILTER = [
 class ORD(ProviderInterface):
     def __init__(
         self,
-        path: str,
+        orders: DataFrame,
         deadline_scope: int = 0,
         size: float = 66,
         tuning_values: int = 3,
@@ -42,7 +42,9 @@ class ORD(ProviderInterface):
         no_build: bool = False,
         deadline_range:int = 50
     ) -> None:
-        self.ordplan = pd.read_excel(path, engine="openpyxl")
+        if orders is None:
+            raise ValueError("Orders is empty!")
+        self.ordplan: DataFrame = orders
         self.deadline_scope = deadline_scope
         self._filter_diff = _filter_diff
         self.common = common
@@ -140,19 +142,19 @@ class ORD(ProviderInterface):
             return
         self.selected_order = self.ordplan[
             self.ordplan["เลขที่ใบสั่งขาย"] == self.selector["order_id"]
-        ]  # get selected order
+        ]  # get selected orders
         ordplan = self.ordplan[
             self.ordplan["เลขที่ใบสั่งขาย"] != self.selector["order_id"]
-        ]  # filter out selected order
+        ]  # filter out selected orders
         self.ordplan = pd.concat(
             [self.selected_order, ordplan], ignore_index=True
-        )  # add selected order to the top row for GA
+        )  # add selected orders to the top row for GA
 
     def filter_common_order(self):
         if not self.common:
             return
         ordplan = self.ordplan
-        init_order = self.ordplan.iloc[0]  # use first order as init
+        init_order = self.ordplan.iloc[0]  # use first orders as init
 
         init_order = self.set_filler_order(init_order)
 

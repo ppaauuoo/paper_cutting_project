@@ -27,7 +27,7 @@ class GA(ModelInterface):
         set_progress: Callable | None = None
     ) -> None:
         self.orders = orders
-        if orders.empty:
+        if orders is None:
             raise ValueError("Orders is empty!")
         self._paper_size  = size
         self.selector = selector
@@ -190,20 +190,24 @@ class GA(ModelInterface):
             _output = _output[_output["out"] >= 1]
         _output = _output.reset_index(drop=True)
 
-        blade = []
-        for idx in _output.index:
-            blade.append({"blade": idx + 1})
-        blade = pd.DataFrame(blade)
-
-        
-        _output = pd.concat([_output, blade], axis=1)
-
+        ic(_output)
+        _output = self.blade_logic(_output)
 
         self._fitness_values = ga_instance.best_solution()[1]
         self._output = _output
 
         if self.showOutput:
             self.show(ga_instance, _output)
+
+    def blade_logic(self,output: DataFrame) -> DataFrame:
+        blade = []
+        for idx in output.index:
+            blade.append({"blade": idx + 1})
+        blade = pd.DataFrame(blade)
+        
+        output = pd.concat([output, blade], axis=1)
+
+        return output
 
     def show(self, ga_instance, _output):
         _paper_size  = self._paper_size 
