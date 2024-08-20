@@ -39,6 +39,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'livereload',
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'order_optimization',
+
 ]
 
 MIDDLEWARE = [
@@ -56,6 +58,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'livereload.middleware.LiveReloadScript',
 ]
 
 ROOT_URLCONF = "ordplan_project.urls"
@@ -140,3 +143,5 @@ AUTHENTICATION_BACKENDS = [
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'

@@ -3,3 +3,5 @@ pandas
 pygad
 ortools
 openpyxl
+pytest
+pytest-django

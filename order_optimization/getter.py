@@ -1,9 +1,12 @@
+from pandas import DataFrame
+
+from order_optimization.container import ModelContainer, OrderContainer
 from .modules.ordplan import ORD
 
 from django.shortcuts import get_object_or_404
 
 from .models import CSVFile
-  
+
 from typing import Dict, List, Tuple
 from .modules.ga import GA
 from django.core.cache import cache
@@ -11,85 +14,86 @@ from django.core.cache import cache
 from dataclasses import dataclass
 
 from django.conf import settings
-CACHE_TIMEOUT = settings.CACHE_TIMEOUT 
 
-@dataclass
-class OrdersConfig:
-    file_id: str
-    size_value: float
-    deadline_scope: int = 0
-    filter_value: int = 16
-    tuning_values: int = 3
-    filter: bool = True
-    common: bool = False
-    filler: int = 0
-    first_date_only: bool = False
+from icecream import ic
 
-def get_orders(request, config: OrdersConfig) -> ORD:
-    csv_file = get_csv_file(config.file_id)
-    config.file_path = csv_file.file.path
-    return get_ord(config, request)
+CACHE_TIMEOUT = settings.CACHE_TIMEOUT
 
-def get_selected_order(request)->Dict|None:
+
+def get_orders(
+    request,
+    file_id: str,
+    size_value: float = 66,
+    deadline_scope: int = 0,
+    filter_value: int = 16,
+    tuning_values: int = 3,
+    filter_diff: bool = True,
+    common: bool = False,
+    filler: int = 0,
+    first_date_only: bool= False,
+) -> DataFrame:
+    csv_file = get_csv_file(file_id)
+    file_path = csv_file.file.path
+    return OrderContainer(
+        provider=ORD(
+            path=file_path,
+            deadline_scope=deadline_scope,
+            _filter_diff=filter_diff,
+            filter_value=filter_value,
+            size=size_value,
+            tuning_values=tuning_values,
+            common=common,
+            filler=filler,
+            selector=get_selected_order(request),
+            first_date_only=first_date_only,
+        )
+    ).get()
+
+
+def get_selected_order(request) -> Dict[str, int] | None:
     selector_id = request.POST.get("selector_id")
-    if not selector_id: return None
-        
+    if not selector_id:
+        return None
+
     selector_id = int(selector_id)
     selector_out = int(request.POST.get("selector_out"))
-    return {
-        "order_id": selector_id,
-        "out": selector_out
-    }
-@dataclass
-class GeneticAlgorithmConfig:
-    orders: ORD
-    size_value: float
-    out_range: int = 3
-    num_generations: int = 50
-    show_output: bool = False
-    selector: callable = get_selected_order
+    return {"order_id": selector_id, "out": selector_out}
 
-def get_genetic_algorithm(request, config: GeneticAlgorithmConfig) -> GA:
+
+def get_optimizer(
+    request,
+    orders: DataFrame,
+    size_value: float,
+    out_range: int = 3,
+    num_generations: int = 50,
+    show_output: bool = False,
+) -> ModelContainer:
     cache.delete("optimization_progress")
-
-    ga_instance = GA(
-        config.orders,
-        size=config.size_value,
-        out_range=config.out_range,
-        num_generations=config.num_generations,
-        showOutput=config.show_output,
-        selector=config.selector(request)
+    optimizer_instance = ModelContainer(
+        model=GA(
+            orders,
+            size=size_value,
+            out_range=out_range,
+            num_generations=num_generations,
+            showOutput=show_output,
+            selector=get_selected_order(request),
+            set_progress=set_progress,
+        ),
+        
     )
-
-    ga_instance.get(set_progress=set_progress).run()
-    return ga_instance
-
-
-
-
+    optimizer_instance.run()
+    return optimizer_instance
 
 
 def set_progress(progress) -> None:
     cache.set("optimization_progress", progress, CACHE_TIMEOUT)
 
+
 def get_csv_file(file_id: str) -> CSVFile:
     return get_object_or_404(CSVFile, id=file_id)
 
-def get_ord(config: OrdersConfig, request) -> ORD:
-    return ORD(
-        path=config.file_path,
-        deadline_scope=config.deadline_scope,
-        filter=config.filter,
-        filter_value=config.filter_value,
-        size=config.size_value,
-        tuning_values=config.tuning_values,
-        common=config.common,
-        filler=config.filler,
-        selector=get_selected_order(request),
-        first_date_only=config.first_date_only
-    ).get()
 
-def get_outputs(ga_instance: GA) -> Tuple[float, List[Dict]]:
-    fitness_values = ga_instance.fitness_values
-    output_data = ga_instance.output.to_dict("records")
+def get_outputs(optimizer_instance: ModelContainer) -> Tuple[float, List[Dict]]:
+    fitness_values = optimizer_instance.fitness_values
+    output_data = optimizer_instance.output.to_dict("records")
     return fitness_values, output_data
