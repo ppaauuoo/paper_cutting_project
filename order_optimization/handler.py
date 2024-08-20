@@ -1,8 +1,10 @@
+from pandas import Series
+from order_optimization.container import ModelContainer
 from order_optimization.modules import ga
 from .modules.ordplan import ORD
 from .modules.ga import GA
 
-from typing import Callable, Dict
+from typing import Any, Callable, Dict
 from django.contrib import messages
 from django.core.cache import cache
 
@@ -85,13 +87,20 @@ def handle_orders_logic(output_data):
     init_len = output_data[0]["cut_len"]
     init_out = output_data[0]["out"]
     init_num_orders = output_data[0]["num_orders"]
-
-    foll_order_len = init_len
-    if len(output_data) > 1:
-        foll_order_len = output_data[1]["cut_len"]
-
     init_order_number = round(init_num_orders / init_out)
-    foll_order_number = round(init_len * init_order_number / foll_order_len)
+
+    foll_order_len: List[int]= []
+    foll_out: List[int] = []
+
+    foll_order_len[0] = init_len
+    if len(output_data) > 1:
+        for index, order in enumerate(output_data, start=1):
+            foll_order_len[index] = order["cut_len"]
+            foll_out[index] = order["out"] 
+
+
+    foll_order_number = round((init_len * init_num_orders) / (foll_order_len[0] * init_out))
+    # foll_order_number = foll_order_number[index]/foll_out[index]
     return (init_order_number, foll_order_number)
 
 
@@ -278,7 +287,7 @@ def handle_filler(request):
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
 
-def output_format(orders: Dict, init_out: int = 0) -> pd.DataFrame:
+def output_format(orders: Series[Any], init_out: int = 0) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "order_number": [orders["order_number"]],
@@ -293,13 +302,13 @@ def output_format(orders: Dict, init_out: int = 0) -> pd.DataFrame:
 
 
 def results_format(
-    optimizer_instance: GA,
-    output_data: dict,
+    optimizer_instance: ModelContainer,
+    output_data: List[Dict[str,Any]],
     size_value: int,
     fitness_values: float,
     init_order_number: int,
     foll_order_number: int,
-) -> Dict:
+) -> Dict[str,Any]:
     return {
         "output": output_data,
         "roll": optimizer_instance.PAPER_SIZE,
