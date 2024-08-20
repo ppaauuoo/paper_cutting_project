@@ -106,7 +106,6 @@ class ORD(ProviderInterface):
 
     def format_data(self):
         ordplan = self.ordplan
-        ic(ordplan)
         ordplan["width"] = round(ordplan["width"] / MM_TO_INCH, 2)
         ordplan["length"] = round(ordplan["length"] / MM_TO_INCH, 2)
         ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%y")

@@ -44,7 +44,7 @@ def get_orders_cache(file_id: str) -> DataFrame:
             # Save orders to the database
             order_instances = []
             for _, row in data.iterrows():
-                due_date: datetime = pd.to_datetime(row["กำหนดส่ง"], format="%m/%d/%y")
+                due_date = pd.to_datetime(row["กำหนดส่ง"], format="%m/%d/%y")
                 due_date = timezone.make_aware(due_date, timezone.get_current_timezone())
 
                 order_instance = OrderList(

@@ -313,33 +313,46 @@ def results_format(
 from .models import OptimizedOrder, OrderList
 
 def handle_saving(request):
-    file_id = request.POST.get("file_id")
     data = cache.get("optimization_results", None)
+    cache.delete("optimization_results")
     if data is None:
         raise ValueError("Output is empty!")
     
+    handle_order_exhaustion(data)
+
+    format_data = database_format(data)
+
+    optimized_order = OptimizedOrder(output=format_data)
+    optimized_order.save()
+
+
+def handle_order_exhaustion(data: Dict[str,List[Dict[str,int]]])->None:
     output_data = data['output']
 
-    id = output_data[0]['order_number']
-    quantity = OrderList.objects.filter(order_number=id).all()
-    ic(quantity)
+    for index, order  in enumerate(output_data):
+        id = order['order_number']
+        filtered_order = OrderList.objects.filter(order_number=id).first()
+        new_value = order['foll_order_number'] - filtered_order.quantity
+        if index == 0:
+            new_value = 0
+        filtered_order.quantity = new_value
+        filtered_order.save()
+        filtered_order.quantity
 
-    # cache.delete("optimization_results")
-    # format_data = []
-    # blade1 = []
-    # blade2 = []
-    # for item in data["output"]:
-    #     match item['blade']:
-    #         case 1:
-    #             blade1.append(item)
-    #         case 2:
-    #             blade2.append(item)
+def database_format(data: Dict[str,List[Dict[str,int]]])->List[List[Dict[str,int]]]:
+    format_data = []
+    blade1 = []
+    blade2 = []
+    for item in data["output"]:
+        match item['blade']:
+            case 1:
+                blade1.append(item)
+            case 2:
+                blade2.append(item)
 
-    # format_data.append(blade1)
-    # format_data.append(blade2)
-
-    # optimized_order = OptimizedOrder(output=format_data)
-    # optimized_order.save()
+    format_data.append(blade1)
+    format_data.append(blade2)
+    return format_data
 
 
 def handle_reset():
