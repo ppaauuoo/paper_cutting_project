@@ -2,7 +2,7 @@ from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, List
 
 from icecream import ic
 
@@ -190,7 +190,7 @@ class GA(ModelInterface):
             _output = _output[_output["out"] >= 1]
         _output = _output.reset_index(drop=True)
 
-        ic(_output)
+
         _output = self.blade_logic(_output)
 
         self._fitness_values = ga_instance.best_solution()[1]
@@ -200,12 +200,13 @@ class GA(ModelInterface):
             self.show(ga_instance, _output)
 
     def blade_logic(self,output: DataFrame) -> DataFrame:
-        blade = []
+        blade_list: List[Dict[str,int]] = []
         for idx in output.index:
-            blade.append({"blade": idx + 1})
-        blade = pd.DataFrame(blade)
+            blade_list.append({"blade": idx + 1})
+
+        blade_df = pd.DataFrame(blade_list)
         
-        output = pd.concat([output, blade], axis=1)
+        output = pd.concat([output, blade_df], axis=1)
 
         return output
 

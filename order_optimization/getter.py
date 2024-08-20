@@ -6,7 +6,7 @@ from .modules.ordplan import ORD
 
 from django.shortcuts import get_object_or_404
 
-from .models import CSVFile
+from .models import CSVFile, OrderList
 
 from typing import Dict, List, Tuple
 from .modules.ga import GA
@@ -20,16 +20,54 @@ from icecream import ic
 
 CACHE_TIMEOUT = settings.CACHE_TIMEOUT
 
-
-def get_orders_cache(file_id:str) -> DataFrame:
+def get_orders_cache(file_id: str) -> DataFrame:
     csv_file = get_csv_file(file_id)
     file_path = csv_file.file.path
     
     orders = cache.get(f'order_cache_{file_id}', None)
 
     if orders is None:
-        orders = pd.read_excel(file_path, engine="openpyxl")
-        cache.set(f'order_cache_{file_id}',orders,CACHE_TIMEOUT)
+        # Check if orders are already saved in the database
+        try:
+            order_records = OrderList.objects.filter(file=csv_file)
+            if order_records.exists():
+                orders = pd.DataFrame(list(order_records.values()))
+            else:
+                raise OrderList.DoesNotExist
+        except OrderList.DoesNotExist:
+            orders = pd.read_excel(file_path, engine="openpyxl")
+            
+            # Save orders to the database
+            order_instances = []
+            for _, row in orders.iterrows():
+                order_instance = OrderList(
+                    file=csv_file,
+                    กำหนดส่ง=row['กำหนดส่ง'],
+                    แผ่นหน้า=row['แผ่นหน้า'],
+                    ลอน_C=row['ลอน C'],
+                    แผ่นกลาง=row['แผ่นกลาง'],
+                    ลอน_B=row['ลอน B'],
+                    แผ่นหลัง=row['แผ่นหลัง'],
+                    จน_ชั้น=row['จน.ชั้น'],
+                    กว้างผลิต=row['กว้างผลิต'],
+                    ยาวผลิต=row['ยาวผลิต'],
+                    ทับเส้นซ้าย=row['ทับเส้นซ้าย'],
+                    ทับเส้นกลาง=row['ทับเส้นกลาง'],
+                    ทับเส้นขวา=row['ทับเส้นขวา'],
+                    เลขที่ใบสั่งขาย=row['เลขที่ใบสั่งขาย'],
+                    ชนิดส่วนประกอบ=row['ชนิดส่วนประกอบ'],
+                    จำนวนสั่งขาย=row['จำนวนสั่งขาย'],
+                    จำนวนสั่งผลิต=row['จำนวนสั่งผลิต'],
+                    ประเภททับเส้น=row['ประเภททับเส้น'], 
+                    สถานะใบสั่ง=row['สถานะใบสั่ง'],
+                    เปอร์เซ็นต์ที่เกิน=row['% ที่เกิน']
+                )
+                order_instances.append(order_instance)
+            
+            OrderList.objects.bulk_create(order_instances)
+        
+        # Cache the orders
+        cache.set(f'order_cache_{file_id}', orders, CACHE_TIMEOUT)
 
     return orders
 

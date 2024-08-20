@@ -310,7 +310,7 @@ def results_format(
     }
 
 
-from .models import OptimizedOrder
+from .models import OptimizedOrder, OrderList
 
 def handle_saving(request):
     file_id = request.POST.get("file_id")
@@ -340,5 +340,6 @@ def handle_saving(request):
 
 def handle_reset():
     cache.clear()
+    OrderList.objects.all().delete()
     OptimizedOrder.objects.all().delete()
 
