@@ -13,22 +13,22 @@ import numpy as np
 def test_data() -> DataFrame:
     return pd.DataFrame(
         {
-            "เลขที่ใบสั่งขาย": [1, 2, 3, 4, 5],
-            "จำนวนสั่งขาย": [100, 200, 1500, 500, 250],
-            "ชนิดส่วนประกอบ": ["A", "B", "C", "D", "E"],
-            "กว้างผลิต": [66.04, 66.04, 66.04, 66.04, 80],
-            "ยาวผลิต": [200.0, 200.0, 200.0, 200.0, 200.0],
-            "ประเภททับเส้น": ["X", "N", "W", "X", "Y"],
-            "กำหนดส่ง": ["08/01/23", "08/01/23", "08/05/23", "08/10/23", "08/15/23"],
-            "แผ่นหน้า": ["P1", "P2", "P3", "P4", "P5"],
-            "ลอน C": ["C1", "C2", "C3", "C4", "C5"],
-            "แผ่นกลาง": ["M1", "M2", "M3", "M4", "M5"],
-            "ลอน B": ["B1", "B2", "B3", "B4", "B5"],
-            "แผ่นหลัง": ["B1", "B2", "B3", "B4", "B5"],
-            "จน.ชั้น": [1, 2, 3, 1, 2],
-            "ทับเส้นซ้าย": [0, 1, 0, 1, 0],
-            "ทับเส้นกลาง": [1, 0, 1, 0, 1],
-            "ทับเส้นขวา": [0, 1, 0, 1, 0],
+            "order_number": [1, 2, 3, 4, 5],
+            "quantity": [100, 200, 1500, 500, 250],
+            "component_type": ["A", "B", "C", "D", "E"],
+            "width": [66.04, 66.04, 66.04, 66.04, 80],
+            "length": [200.0, 200.0, 200.0, 200.0, 200.0],
+            "edge_type": ["X", "N", "W", "X", "Y"],
+            "due_date": ["08/01/23", "08/01/23", "08/05/23", "08/10/23", "08/15/23"],
+            "front_sheet": ["P1", "P2", "P3", "P4", "P5"],
+            "c_wave": ["C1", "C2", "C3", "C4", "C5"],
+            "middle_sheet": ["M1", "M2", "M3", "M4", "M5"],
+            "b_wave": ["B1", "B2", "B3", "B4", "B5"],
+            "back_sheet": ["B1", "B2", "B3", "B4", "B5"],
+            "level": [1, 2, 3, 1, 2],
+            "left_edge_cut": [0, 1, 0, 1, 0],
+            "middle_edge_cut": [1, 0, 1, 0, 1],
+            "right_edge_cut": [0, 1, 0, 1, 0],
         }
     )
 
@@ -60,7 +60,7 @@ def test_logic_wrong(mocker):
     import pandas as pd
 
     # Mock orders DataFrame
-    orders_data = {"ประเภททับเส้น": ["X", "N", "Y"], "กว้างผลิต": [10, 10, 45],"จำนวนสั่งขาย": [1000, 200, 3000],}
+    orders_data = {"edge_type": ["X", "N", "Y"], "width": [10, 10, 45],"quantity": [1000, 200, 3000],}
     orders_df = pd.DataFrame(orders_data)
 
     # Mock solution
@@ -96,7 +96,7 @@ def test_logic_wrong(mocker):
     assert ga_instance.penalty == 10000
 
     ga_instance.penalty = 0
-    output = np.sum(solution * orders_df["กว้างผลิต"])  # ผลรวมของตัดกว้างทั้งหมด
+    output = np.sum(solution * orders_df["width"])  # ผลรวมของตัดกว้างทั้งหมด
     ga_instance.paper_size_logic(output)
     assert output == 105
     assert ga_instance.penalty == 5000
@@ -113,7 +113,7 @@ def test_logic_optimal(mocker):
     import pandas as pd
 
     # Mock orders DataFrame
-    orders_data = {"ประเภททับเส้น": ["X", "X", "Y"], "กว้างผลิต": [10, 10, 30],"จำนวนสั่งขาย": [200, 2000, 3000],}
+    orders_data = {"edge_type": ["X", "X", "Y"], "width": [10, 10, 30],"quantity": [200, 2000, 3000],}
     orders_df = pd.DataFrame(orders_data)
 
     # Mock solution
@@ -149,7 +149,7 @@ def test_logic_optimal(mocker):
     assert ga_instance.penalty == 0
 
     ga_instance.penalty = 0
-    output = np.sum(solution * orders_df["กว้างผลิต"])  # ผลรวมของตัดกว้างทั้งหมด
+    output = np.sum(solution * orders_df["width"])  # ผลรวมของตัดกว้างทั้งหมด
     ga_instance.paper_size_logic(output)
     assert output == 60
     assert ga_instance.penalty == 0

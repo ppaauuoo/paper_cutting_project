@@ -11,7 +11,7 @@ MM_TO_INCH = 25.4
 
 COMMON_FILTER = [
     "front_sheet",
-    "c_beam",
+    "c_wave",
     "middle_sheet",
     "b_wave",
     "back_sheet",
@@ -116,11 +116,11 @@ class ORD(ProviderInterface):
 
         self.ordplan = ordplan
 
-    def filter_diff_order(self, ordplan: DataFrame | None = None) -> DataFrame | None:
+    def filter_diff_order(self, ordplan: DataFrame) -> DataFrame:
         if not self._filter_diff:
             return ordplan
         if ordplan is None:
-            ordplan = self.ordplan
+            raise ValueError("Order is empty!")
 
         selected_values = self.size / self.tuning_values
         ordplan["diff"] = ordplan["width"].apply(
