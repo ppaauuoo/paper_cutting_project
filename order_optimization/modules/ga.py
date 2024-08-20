@@ -77,7 +77,7 @@ class GA(ModelInterface):
     def paper_type_logic(self, solution):
         init_type = None
         orders = self.orders
-        match orders["ประเภททับเส้น"][self.get_first_solution(solution)]:
+        match orders["edge_type"][self.get_first_solution(solution)]:
             case "X":
                 init_type = 1
             case "N", "W":
@@ -88,23 +88,23 @@ class GA(ModelInterface):
                 if out >= 1:
                     match init_type:
                         case 1:
-                            if orders["ประเภททับเส้น"][index] not in [
+                            if orders["edge_type"][index] not in [
                                 "X",
                                 "Y",
                             ]:  # Changed OR to AND condition
                                 self._penalty += self._penalty_value
                         case 2:
-                            if orders["ประเภททับเส้น"][index] == "X":
+                            if orders["edge_type"][index] == "X":
                                 self._penalty += self._penalty_value
 
     def least_order_logic(self, solution):
         init_order = None
         orders = self.orders
 
-        init_order = orders["จำนวนสั่งขาย"][self.get_first_solution(solution)]
+        init_order = orders["quantity"][self.get_first_solution(solution)]
 
         for index, out in enumerate(solution):
-            if out >= 1 and orders["จำนวนสั่งขาย"][index] < init_order:
+            if out >= 1 and orders["quantity"][index] < init_order:
                 self._penalty += self._penalty_value
 
     def get_first_solution(self, solution) -> int:
@@ -145,7 +145,7 @@ class GA(ModelInterface):
 
         self.paper_out_logic(solution)
 
-        _output = numpy.sum(solution * self.orders["กว้างผลิต"])  # ผลรวมของตัดกว้างทั้งหมด
+        _output = numpy.sum(solution * self.orders["width"])  # ผลรวมของตัดกว้างทั้งหมด
         self.paper_size_logic(_output)
 
         _fitness_values = -self._paper_size  + _output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
@@ -166,22 +166,22 @@ class GA(ModelInterface):
         _output = pd.DataFrame(
             {   
                 "blade": orders.index+1,
-                "order_number": orders["เลขที่ใบสั่งขาย"],
-                "num_orders": orders["จำนวนสั่งขาย"],
-                "order_type": orders["ชนิดส่วนประกอบ"],
-                "cut_width": orders["กว้างผลิต"],
-                "cut_len": orders["ยาวผลิต"],
-                "type": orders["ประเภททับเส้น"],
-                "deadline": orders["กำหนดส่ง"],
-                "front_sheet": orders["แผ่นหน้า"],
-                "c_wave": orders["ลอน C"],
-                "middle_sheet": orders["แผ่นกลาง"],
-                "b_wave": orders["ลอน B"],
-                "back_sheet": orders["แผ่นหลัง"],
-                "num_layers": orders["จน.ชั้น"],
-                "left_line": orders["ทับเส้นซ้าย"],
-                "center_line": orders["ทับเส้นกลาง"],
-                "right_line": orders["ทับเส้นขวา"],
+                "order_number": orders["order_number"],
+                "num_orders": orders["quantity"],
+                "order_type": orders["component_type"],
+                "cut_width": orders["width"],
+                "cut_len": orders["length"],
+                "type": orders["edge_type"],
+                "deadline": orders["due_date"],
+                "front_sheet": orders["front_sheet"],
+                "c_wave": orders["c_wave"],
+                "middle_sheet": orders["middle_sheet"],
+                "b_wave": orders["b_wave"],
+                "back_sheet": orders["back_sheet"],
+                "num_layers": orders["level"],
+                "left_line": orders["left_edge_cut"],
+                "center_line": orders["middle_edge_cut"],
+                "right_line": orders["right_edge_cut"],
                 "out": solution,
             }
         )

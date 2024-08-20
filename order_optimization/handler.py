@@ -269,7 +269,7 @@ def handle_filler(request):
         orders is not None 
         and i < len(orders)
         and results["foll_order_number"]
-        > results["output"][1]["num_orders"] + orders["จำนวนสั่งขาย"][i]
+        > results["output"][1]["num_orders"] + orders["quantity"][i]
     ):
         i += 1
 
@@ -281,12 +281,12 @@ def handle_filler(request):
 def output_format(orders: Dict, init_out: int = 0) -> pd.DataFrame:
     return pd.DataFrame(
         {
-            "order_number": [orders["เลขที่ใบสั่งขาย"]],
-            "num_orders": [orders["จำนวนสั่งขาย"]],
-            "cut_width": [orders["กว้างผลิต"]],
-            "cut_len": [orders["ยาวผลิต"]],
-            "type": [orders["ประเภททับเส้น"]],
-            "deadline": [orders["กำหนดส่ง"]],
+            "order_number": [orders["order_number"]],
+            "num_orders": [orders["quantity"]],
+            "cut_width": [orders["width"]],
+            "cut_len": [orders["length"]],
+            "type": [orders["edge_type"]],
+            "deadline": [orders["due_date"]],
             "out": [init_out],
         }
     )
@@ -314,28 +314,32 @@ from .models import OptimizedOrder, OrderList
 
 def handle_saving(request):
     file_id = request.POST.get("file_id")
-    order = get_orders_cache(file_id)
     data = cache.get("optimization_results", None)
+    if data is None:
+        raise ValueError("Output is empty!")
+    
+    output_data = data['output']
 
-    print(order)
-    print(data)
+    id = output_data[0]['order_number']
+    quantity = OrderList.objects.filter(order_number=id).all()
+    ic(quantity)
 
-    cache.delete("optimization_results")
-    format_data = []
-    blade1 = []
-    blade2 = []
-    for item in data["output"]:
-        match item['blade']:
-            case 1:
-                blade1.append(item)
-            case 2:
-                blade2.append(item)
+    # cache.delete("optimization_results")
+    # format_data = []
+    # blade1 = []
+    # blade2 = []
+    # for item in data["output"]:
+    #     match item['blade']:
+    #         case 1:
+    #             blade1.append(item)
+    #         case 2:
+    #             blade2.append(item)
 
-    format_data.append(blade1)
-    format_data.append(blade2)
+    # format_data.append(blade1)
+    # format_data.append(blade2)
 
-    optimized_order = OptimizedOrder(output=format_data)
-    optimized_order.save()
+    # optimized_order = OptimizedOrder(output=format_data)
+    # optimized_order.save()
 
 
 def handle_reset():

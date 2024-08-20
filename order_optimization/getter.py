@@ -1,3 +1,5 @@
+import datetime
+from django.utils import timezone
 from pandas import DataFrame
 import pandas as pd
 
@@ -20,11 +22,12 @@ from icecream import ic
 
 CACHE_TIMEOUT = settings.CACHE_TIMEOUT
 
+
 def get_orders_cache(file_id: str) -> DataFrame:
     csv_file = get_csv_file(file_id)
     file_path = csv_file.file.path
-    
-    orders = cache.get(f'order_cache_{file_id}', None)
+
+    orders = cache.get(f"order_cache_{file_id}", None)
 
     if orders is None:
         # Check if orders are already saved in the database
@@ -32,44 +35,51 @@ def get_orders_cache(file_id: str) -> DataFrame:
             order_records = OrderList.objects.filter(file=csv_file)
             if order_records.exists():
                 orders = pd.DataFrame(list(order_records.values()))
+                orders["due_date"] = orders["due_date"].dt.strftime("%m/%d/%y")
             else:
                 raise OrderList.DoesNotExist
         except OrderList.DoesNotExist:
-            orders = pd.read_excel(file_path, engine="openpyxl")
-            
+            data = pd.read_excel(file_path, engine="openpyxl")
+
             # Save orders to the database
             order_instances = []
-            for _, row in orders.iterrows():
+            for _, row in data.iterrows():
+                due_date: datetime = pd.to_datetime(row["กำหนดส่ง"], format="%m/%d/%y")
+                due_date = timezone.make_aware(due_date, timezone.get_current_timezone())
+
                 order_instance = OrderList(
                     file=csv_file,
-                    กำหนดส่ง=row['กำหนดส่ง'],
-                    แผ่นหน้า=row['แผ่นหน้า'],
-                    ลอน_C=row['ลอน C'],
-                    แผ่นกลาง=row['แผ่นกลาง'],
-                    ลอน_B=row['ลอน B'],
-                    แผ่นหลัง=row['แผ่นหลัง'],
-                    จน_ชั้น=row['จน.ชั้น'],
-                    กว้างผลิต=row['กว้างผลิต'],
-                    ยาวผลิต=row['ยาวผลิต'],
-                    ทับเส้นซ้าย=row['ทับเส้นซ้าย'],
-                    ทับเส้นกลาง=row['ทับเส้นกลาง'],
-                    ทับเส้นขวา=row['ทับเส้นขวา'],
-                    เลขที่ใบสั่งขาย=row['เลขที่ใบสั่งขาย'],
-                    ชนิดส่วนประกอบ=row['ชนิดส่วนประกอบ'],
-                    จำนวนสั่งขาย=row['จำนวนสั่งขาย'],
-                    จำนวนสั่งผลิต=row['จำนวนสั่งผลิต'],
-                    ประเภททับเส้น=row['ประเภททับเส้น'], 
-                    สถานะใบสั่ง=row['สถานะใบสั่ง'],
-                    เปอร์เซ็นต์ที่เกิน=row['% ที่เกิน']
+                    due_date=due_date,
+                    front_sheet=row["แผ่นหน้า"],
+                    c_wave=row["ลอน C"],
+                    middle_sheet=row["แผ่นกลาง"],
+                    b_wave=row["ลอน B"],
+                    back_sheet=row["แผ่นหลัง"],
+                    level=row["จน.ชั้น"],
+                    width=row["กว้างผลิต"],
+                    length=row["ยาวผลิต"],
+                    left_edge_cut=row["ทับเส้นซ้าย"],
+                    middle_edge_cut=row["ทับเส้นกลาง"],
+                    right_edge_cut=row["ทับเส้นขวา"],
+                    order_number=row["เลขที่ใบสั่งขาย"],
+                    component_type=row["ชนิดส่วนประกอบ"],
+                    quantity=row["จำนวนสั่งขาย"],
+                    production_quantity=row["จำนวนสั่งผลิต"],
+                    edge_type=row["ประเภททับเส้น"],
+                    order_status=row["สถานะใบสั่ง"],
+                    excess_percentage=row["% ที่เกิน"],
                 )
                 order_instances.append(order_instance)
-            
+
             OrderList.objects.bulk_create(order_instances)
-        
+            orders = pd.DataFrame(list(order_records.values()))
+            orders["due_date"] = orders["due_date"].dt.strftime("%m/%d/%y")
+
         # Cache the orders
-        cache.set(f'order_cache_{file_id}', orders, CACHE_TIMEOUT)
+        cache.set(f"order_cache_{file_id}", orders, CACHE_TIMEOUT)
 
     return orders
+
 
 def get_orders(
     request,
@@ -81,15 +91,14 @@ def get_orders(
     filter_diff: bool = True,
     common: bool = False,
     filler: int = 0,
-    first_date_only: bool= False,
+    first_date_only: bool = False,
 ) -> DataFrame:
 
     orders: DataFrame = get_orders_cache(file_id)
 
-
     return OrderContainer(
         provider=ORD(
-            orders= orders,
+            orders=orders,
             deadline_scope=deadline_scope,
             _filter_diff=filter_diff,
             filter_value=filter_value,
@@ -101,8 +110,6 @@ def get_orders(
             first_date_only=first_date_only,
         )
     ).get()
-
-
 
 
 def get_selected_order(request) -> Dict[str, int] | None:
@@ -134,7 +141,6 @@ def get_optimizer(
             selector=get_selected_order(request),
             set_progress=set_progress,
         ),
-        
     )
     optimizer_instance.run()
     return optimizer_instance
