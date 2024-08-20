@@ -161,15 +161,15 @@
                                         </template>
                                         <template x-for="(item, index) in data" :key="index">
                                             <tr>
-                                                <td class="text-center" x-text="item.กำหนดส่ง"></td>
-                                                <td class="text-center" x-text="item.เลขที่ใบสั่งขาย"></td>
-                                                <td class="text-center" x-text="item.ชนิดส่วนประกอบ"></td>
-                                                <td class="text-center" x-text="item.จำนวนสั่งขาย"></td>
-                                                <td class="text-center" x-text="item.กว้างผลิต"></td>
-                                                <td class="text-center" x-text="item.ยาวผลิต"></td>
-                                                <td class="text-center" x-text="item.ประเภททับเส้น"></td>
+                                                <td class="text-center" x-text="item.due_date"></td>
+                                                <td class="text-center" x-text="item.order_number"></td>
+                                                <td class="text-center" x-text="item.component_type"></td>
+                                                <td class="text-center" x-text="item.quantity"></td>
+                                                <td class="text-center" x-text="item.width"></td>
+                                                <td class="text-center" x-text="item.length"></td>
+                                                <td class="text-center" x-text="item.edge_type"></td>
                                                 <td class="text-center">
-                                                    <input type="radio" id="${item.เลขที่ใบสั่งขาย}" name="selector_id" value="${item.เลขที่ใบสั่งขาย}" class="large-radio">
+                                                    <input type="radio" id="${item.order_number}" name="selector_id" value="${item.order_number}" class="large-radio">
                                                 </td>
                                             </tr>
                                         </template>

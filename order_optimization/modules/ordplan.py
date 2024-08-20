@@ -10,26 +10,26 @@ from order_optimization.container import ProviderInterface
 MM_TO_INCH = 25.4
 
 COMMON_FILTER = [
-    "แผ่นหน้า",
-    "ลอน C",
-    "แผ่นกลาง",
-    "ลอน B",
-    "แผ่นหลัง",
-    "จน.ชั้น",
-    "ประเภททับเส้น",
-    "กว้างผลิต",
-    "ยาวผลิต",
-    "ทับเส้นซ้าย",
-    "ทับเส้นกลาง",
-    "ทับเส้นขวา",
-    "ชนิดส่วนประกอบ",
+    "front_sheet",
+    "c_beam",
+    "middle_sheet",
+    "b_wave",
+    "back_sheet",
+    "level",
+    "edge_type",
+    "width",
+    "length",
+    "left_edge_cut",
+    "middle_edge_cut",
+    "right_edge_cut",
+    "component_type",
 ]
 
 
 class ORD(ProviderInterface):
     def __init__(
         self,
-        path: str,
+        orders: DataFrame,
         deadline_scope: int = 0,
         size: float = 66,
         tuning_values: int = 3,
@@ -40,9 +40,11 @@ class ORD(ProviderInterface):
         selector: Dict[str, int] | None = None,
         first_date_only: bool = False,
         no_build: bool = False,
-        deadline_range:int = 50
+        deadline_range: int = 50,
     ) -> None:
-        self.ordplan = pd.read_excel(path, engine="openpyxl")
+        if orders is None:
+            raise ValueError("Orders is empty!")
+        self.ordplan: DataFrame = orders
         self.deadline_scope = deadline_scope
         self._filter_diff = _filter_diff
         self.common = common
@@ -54,33 +56,31 @@ class ORD(ProviderInterface):
         self.first_date_only = first_date_only
         self.deadline_range = deadline_range
         self.lookup_amount = 0
-        if not no_build: self.build()
-
+        if not no_build:
+            self.build()
 
     def build(self) -> None:
         self.format_data()
         if self.first_date_only:
-            self.set_first_date()            
+            self.set_first_date()
         else:
             self.expand_deadline_scope()
         self.filter_common_order()
         self.set_selected_order()
 
-
     def get(self) -> DataFrame:
-        self.ordplan["กำหนดส่ง"] = self.ordplan["กำหนดส่ง"].dt.strftime("%m/%d/%y")
+        self.ordplan["due_date"] = self.ordplan["due_date"].dt.strftime("%m/%d/%y")
         return self.ordplan
-
 
     def set_first_date(self):
         ordplan = self.ordplan
-        deadline = ordplan["กำหนดส่ง"].iloc[0]
-        ordplan = ordplan[ordplan["กำหนดส่ง"] == deadline].reset_index(
+        deadline = ordplan["due_date"].iloc[0]
+        ordplan = ordplan[ordplan["due_date"] == deadline].reset_index(
             drop=True
         )  # filter only fist deadline
         self.lookup_amount = len(ordplan)
         self.ordplan = self.filter_diff_order(ordplan)
-       
+
     def expand_deadline_scope(self):
         if self.deadline_scope < 0:
             self.lookup_amount = len(self.ordplan)
@@ -88,48 +88,47 @@ class ORD(ProviderInterface):
             return
 
         deadline_range = self.deadline_range
-        deadlines = self.ordplan["กำหนดส่ง"].unique()
-        
+        deadlines = self.ordplan["due_date"].unique()
+
         for deadline in deadlines:
-            deadline = pd.to_datetime(deadline, format='%m/%d/%y')
+            deadline = pd.to_datetime(deadline, format="%m/%d/%y")
             ordplan = (
-                self.ordplan[self.ordplan["กำหนดส่ง"] <= deadline]
-                .sort_values("กำหนดส่ง")
+                self.ordplan[self.ordplan["due_date"] <= deadline]
+                .sort_values("due_date")
                 .reset_index(drop=True)
             )
             self.lookup_amount = len(ordplan)
             ordplan = self.filter_diff_order(ordplan)
-            if len(ordplan) >= deadline_range: break
+            if len(ordplan) >= deadline_range:
+                break
         self.ordplan = ordplan
         return
 
     def format_data(self):
         ordplan = self.ordplan
-        ordplan["กว้างผลิต"] = round(ordplan["กว้างผลิต"] / MM_TO_INCH, 2)
-        ordplan["ยาวผลิต"] = round(ordplan["ยาวผลิต"] / MM_TO_INCH, 2)
-        ordplan["กำหนดส่ง"] = pd.to_datetime(
-            ordplan["กำหนดส่ง"], format="%m/%d/%y"
-        )
+        ordplan["width"] = round(ordplan["width"] / MM_TO_INCH, 2)
+        ordplan["length"] = round(ordplan["length"] / MM_TO_INCH, 2)
+        ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%y")
+
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
-                
-        ordplan = ordplan[ordplan["ยาวผลิต"] != 0] # drop len = 0
+
+        ordplan = ordplan[ordplan["length"] != 0]  # drop len = 0
 
         self.ordplan = ordplan
 
-
-    def filter_diff_order(self,ordplan: DataFrame|None = None) -> DataFrame|None:
+    def filter_diff_order(self, ordplan: DataFrame | None = None) -> DataFrame | None:
         if not self._filter_diff:
             return ordplan
         if ordplan is None:
             ordplan = self.ordplan
 
         selected_values = self.size / self.tuning_values
-        ordplan["diff"] = ordplan["กว้างผลิต"].apply(
+        ordplan["diff"] = ordplan["width"].apply(
             lambda x: abs(selected_values - x)
         )  # add diff col
         ordplan = (
             ordplan[ordplan["diff"] < self.filter_value]
-            .sort_values(by="กว้างผลิต")
+            .sort_values(by="width")
             .reset_index(drop=True)
         )  # filter out diff
 
@@ -139,20 +138,20 @@ class ORD(ProviderInterface):
         if not self.selector:
             return
         self.selected_order = self.ordplan[
-            self.ordplan["เลขที่ใบสั่งขาย"] == self.selector["order_id"]
-        ]  # get selected order
+            self.ordplan["order_number"] == self.selector["order_id"]
+        ]  # get selected orders
         ordplan = self.ordplan[
-            self.ordplan["เลขที่ใบสั่งขาย"] != self.selector["order_id"]
-        ]  # filter out selected order
+            self.ordplan["order_number"] != self.selector["order_id"]
+        ]  # filter out selected orders
         self.ordplan = pd.concat(
             [self.selected_order, ordplan], ignore_index=True
-        )  # add selected order to the top row for GA
+        )  # add selected orders to the top row for GA
 
     def filter_common_order(self):
         if not self.common:
             return
         ordplan = self.ordplan
-        init_order = self.ordplan.iloc[0]  # use first order as init
+        init_order = self.ordplan.iloc[0]  # use first orders as init
 
         init_order = self.set_filler_order(init_order)
 
@@ -167,9 +166,9 @@ class ORD(ProviderInterface):
             return init_order
         ordplan = self.ordplan
         init_order = ordplan[
-            ordplan["เลขที่ใบสั่งขาย"] == self.filler
+            ordplan["order_number"] == self.filler
         ]  # use filler as init instead
         self.ordplan = ordplan[
-            ordplan["เลขที่ใบสั่งขาย"] != self.filler
+            ordplan["order_number"] != self.filler
         ]  # remove dupe filler
         return init_order

@@ -39,7 +39,7 @@ def order_optimizer_view(request):
             case {"common_order": _}:
                 handle_filler(request)
             case {"save": _}:
-                handle_saving()
+                handle_saving(request)
             case {"reset": _}:
                 handle_reset()
 

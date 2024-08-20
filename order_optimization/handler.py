@@ -10,7 +10,7 @@ import pandas as pd
 
 from typing import Callable, Dict, List, Optional
 
-from .getter import get_orders, get_outputs, get_optimizer
+from .getter import get_orders, get_orders_cache, get_outputs, get_optimizer
 
 from django.conf import settings
 
@@ -31,11 +31,13 @@ def handle_optimization(func):
     def wrapper(request, *args, **kwargs):
         kwargs = func(request)
         if not kwargs:
-            ic()
             return messages.error(request, "Error 404: No orders were found. Please try again.")
 
-        size_value = kwargs.get("size_value", None)
+        size_value = kwargs.get("size_value", 66)
         orders = kwargs.get("orders", None)
+        
+        if orders is None:
+            raise ValueError("Orders is empty!")
         num_generations = kwargs.get("num_generations", 50)
         out_range = kwargs.get("out_range", 6)
 
@@ -140,8 +142,8 @@ def handle_manual_config(request, **kwargs):
     )
 
     # Check if any orders were found
-    if orders.empty:
-        return None  # Return kwargs even if no orders are found
+    if orders is None:
+        raise ValueError("Orders is empty!")
 
     # Update kwargs with the found orders
     kwargs.update({
@@ -160,6 +162,9 @@ def handle_auto_config(request, **kwargs):
     out_range = 3 + again
     orders, size = auto_size_filter_logic(request)
     # Pass all necessary variables to the wrapped function
+    if orders is None:
+        raise ValueError("Orders is empty!")
+        
     kwargs.update({
         "orders": orders,
         "size_value": size,
@@ -172,11 +177,11 @@ def handle_auto_config(request, **kwargs):
 def auto_size_filter_logic(request):
     filter_index = 0
     roll_index = 8
-    orders = cache.get("auto_order", [])
+    orders = cache.get("auto_order", None)
     size = cache.get("order_size", ROLL_PAPER[roll_index])
     file_id = request.POST.get("file_id")
     tuning_value = TUNING_VALUE[1]
-    while len(orders) <= 0:
+    while orders is None or len(orders) <= 0:
         orders = get_orders(
             request,
             file_id,
@@ -193,7 +198,7 @@ def auto_size_filter_logic(request):
 
     cache.set("auto_order", orders, CACHE_TIMEOUT)
     cache.set("order_size", size, CACHE_TIMEOUT)
-
+    
     return (orders, size)
 
 
@@ -261,9 +266,10 @@ def handle_filler(request):
 
     i = 0
     while (
-        i < len(orders)
+        orders is not None 
+        and i < len(orders)
         and results["foll_order_number"]
-        > results["output"][1]["num_orders"] + orders["จำนวนสั่งขาย"][i]
+        > results["output"][1]["num_orders"] + orders["quantity"][i]
     ):
         i += 1
 
@@ -275,12 +281,12 @@ def handle_filler(request):
 def output_format(orders: Dict, init_out: int = 0) -> pd.DataFrame:
     return pd.DataFrame(
         {
-            "order_number": [orders["เลขที่ใบสั่งขาย"]],
-            "num_orders": [orders["จำนวนสั่งขาย"]],
-            "cut_width": [orders["กว้างผลิต"]],
-            "cut_len": [orders["ยาวผลิต"]],
-            "type": [orders["ประเภททับเส้น"]],
-            "deadline": [orders["กำหนดส่ง"]],
+            "order_number": [orders["order_number"]],
+            "num_orders": [orders["quantity"]],
+            "cut_width": [orders["width"]],
+            "cut_len": [orders["length"]],
+            "type": [orders["edge_type"]],
+            "deadline": [orders["due_date"]],
             "out": [init_out],
         }
     )
@@ -304,11 +310,36 @@ def results_format(
     }
 
 
-from .models import OptimizedOrder
+from .models import OptimizedOrder, OrderList
 
-def handle_saving():
-    data = cache.get("optimization_results", [])
+def handle_saving(request):
+    data = cache.get("optimization_results", None)
     cache.delete("optimization_results")
+    if data is None:
+        raise ValueError("Output is empty!")
+    
+    handle_order_exhaustion(data)
+
+    format_data = database_format(data)
+
+    optimized_order = OptimizedOrder(output=format_data)
+    optimized_order.save()
+
+
+def handle_order_exhaustion(data: Dict[str,List[Dict[str,int]]])->None:
+    output_data = data['output']
+
+    for index, order  in enumerate(output_data):
+        id = order['order_number']
+        filtered_order = OrderList.objects.filter(order_number=id).first()
+        new_value = order['foll_order_number'] - filtered_order.quantity
+        if index == 0:
+            new_value = 0
+        filtered_order.quantity = new_value
+        filtered_order.save()
+        filtered_order.quantity
+
+def database_format(data: Dict[str,List[Dict[str,int]]])->List[List[Dict[str,int]]]:
     format_data = []
     blade1 = []
     blade2 = []
@@ -321,11 +352,11 @@ def handle_saving():
 
     format_data.append(blade1)
     format_data.append(blade2)
-
-    optimized_order = OptimizedOrder(output=format_data)
-    optimized_order.save()
+    return format_data
 
 
 def handle_reset():
+    cache.clear()
+    OrderList.objects.all().delete()
     OptimizedOrder.objects.all().delete()
 
