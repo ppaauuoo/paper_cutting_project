@@ -1,0 +1,6 @@
+<div id="progress-container" hx-get="/progress" hx-trigger="every 2s" hx-target="#progress-container" hx-swap="outerHTML">
+  <p>Current Progress: {{ progress }}%</p>
+  <div class="progress">
+    <div id="progress-bar" class="progress-bar" role="progressbar" style="width: {{ progress }}%;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+  </div>
+</div>

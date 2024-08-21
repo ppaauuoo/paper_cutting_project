@@ -6,7 +6,7 @@ from .forms import CSVFileForm, LoginForm
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 
 from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_reset, handle_saving
 from .getter import get_csv_file, get_orders
@@ -88,7 +88,11 @@ def login_view(request):
     return render(request, "login.html", {"form": form})
 
 def progress_view(request):
-    return JsonResponse({'progress': cache.get("optimization_progress", 0)})
+    progress = cache.get("optimization_progress", 0)
+    context = {
+        'progress': round(progress, 2),
+    }
+    render(request, 'progress_bar.html', context)
 
 def optimized_orders_view(request):
     saved_list = OptimizedOrder.objects.all()
