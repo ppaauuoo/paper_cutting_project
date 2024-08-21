@@ -90,7 +90,7 @@ def login_view(request):
 def progress_view(request):
     progress = cache.get("optimization_progress", 0)
     context = {
-        'progress': round(progress, 2),
+        'progress': round(progress, 3),
     }
     return render(request, 'progress_bar.html', context)
 
