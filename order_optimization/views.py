@@ -92,7 +92,7 @@ def progress_view(request):
     context = {
         'progress': round(progress, 2),
     }
-    render(request, 'progress_bar.html', context)
+    return render(request, 'progress_bar.html', context)
 
 def optimized_orders_view(request):
     saved_list = OptimizedOrder.objects.all()
