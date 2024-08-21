@@ -1,9 +1,11 @@
-<div id="overlay">
-  <h1>Loading</h1>
-  <div id="progress-container" hx-get="/progress" hx-trigger="load" hx-target="#progress-container" hx-swap="outerHTML" hx-stop="true">
-    <p>Current Progress: {{ progress }}%</p>
-    <div class="progress">
-      <div id="progress-bar" class="progress-bar" role="progressbar" style="width: {{ progress }}%;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+<div x-data="{ isLoading: false }">
+  <div id="overlay" x-show="isLoading">
+    <h1>Loading</h1>
+    <div id="progress-container" hx-get="/progress" hx-trigger="load" hx-target="#progress-container" hx-swap="outerHTML">
+      <p>Current Progress: {{ progress }}%</p>
+      <div class="progress">
+        <div id="progress-bar" class="progress-bar" role="progressbar" style="width: {{ progress }}%;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
     </div>
   </div>
 </div>

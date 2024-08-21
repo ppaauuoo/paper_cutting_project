@@ -18,33 +18,6 @@
 
 {% block extra_scripts %}
 <script>
-    function updateProgress() {
-        fetch('/progress/')
-            .then(response => response.json())
-            .then(data => {
-                const progress = data.progress;
-                document.getElementById('progress-bar').style.width = `${progress}%`;
-                document.getElementById('progress-bar').setAttribute('aria-valuenow', progress);
-                
-                // If progress is 100%, stop updating
-                if (progress >= 100) {
-                    clearInterval(progressInterval);
-                    console.log('Progress complete, stopped updating');
-                }
-            })
-            .catch(error => console.error('Error fetching progress:', error));
-    }
-
-
-
-    function updateSelectedOrder() {
-        const selectedRadio = document.querySelector('input[name="selector_id"]:checked');
-        if (selectedRadio) {
-            document.getElementById('slider_output').value = selectedRadio.value;
-        }
-        return null; // Return null if nothing is selected
-    }
-
     function optimizerLoader(btnId){
         const btn = document.getElementById(btnId);
         btn.classList.add('disabled');
@@ -52,9 +25,6 @@
         btn.querySelector('.spinner-border').classList.remove('d-none');
         document.getElementById('overlay').style.display = 'flex';
         document.body.style.overflow = 'hidden';
-        // Start progress updates
-        progressInterval = setInterval(updateProgress, 2000); // Update every 2 second for more responsive feedback
-
     }
 
 
@@ -67,25 +37,8 @@
             case 'auto':
                 optimizerLoader('autoBtn')
         }
-        updateSelectedOrder()
         // Submit the form
         this.submit();
-    });
-
-    window.addEventListener('load', function() {
-        // Remove the overlay when the page is fully loaded
-        document.getElementById('overlay').style.display = 'none';
-    });
-
-
-    document.getElementById('num_generations').oninput = function() {
-        document.getElementById('slider_output').textContent = this.value;
-    };  
-
-    window.addEventListener('unload', function() {
-        if (progressInterval) {
-            clearInterval(progressInterval);
-        }
     });
 
     const today = new Date().toISOString().split('T')[0];

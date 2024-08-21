@@ -60,10 +60,10 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="form-group mb-3">
+        <div x-data="{num_generations: 50}"class="form-group mb-3">
             <label for="num_generations" class="form-label">Number of Generations :</label>
-            <output for="num_generations" id="slider_output">50</output>
-            <input type="range" id="num_generations" name="num_generations" min="20" max="100" value="50" class="form-range" required>
+            <output x-text="num_generations" for="num_generations" id="slider_output"></output>
+            <input x-model="num_generations" type="range" id="num_generations" name="num_generations" min="20" max="100" class="form-range" required>
         </div>
         <div class="form-group mb-3">
             <span class="text-danger">
