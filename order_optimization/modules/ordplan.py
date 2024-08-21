@@ -7,6 +7,10 @@ from pandas import DataFrame
 
 from order_optimization.container import ProviderInterface
 
+from dataclasses import dataclass
+from pandas import DataFrame
+from typing import Dict
+
 MM_TO_INCH = 25.4
 
 COMMON_FILTER = [
@@ -26,38 +30,29 @@ COMMON_FILTER = [
 ]
 
 
+@dataclass
 class ORD(ProviderInterface):
-    def __init__(
-        self,
-        orders: DataFrame,
-        deadline_scope: int = 0,
-        size: float = 66,
-        tuning_values: int = 3,
-        filter_value: int = 16,
-        _filter_diff: bool = True,
-        common: bool = False,
-        filler: int = 0,
-        selector: Dict[str, int] | None = None,
-        first_date_only: bool = False,
-        no_build: bool = False,
-        deadline_range: int = 50,
-    ) -> None:
-        if orders is None:
+    orders: DataFrame
+    deadline_scope: int = 0
+    size: float = 66
+    tuning_values: int = 3
+    filter_value: int = 16
+    _filter_diff: bool = True
+    common: bool = False
+    filler: int = 0
+    selector: Dict[str, int] | None = None
+    first_date_only: bool = False
+    no_build: bool = False
+    deadline_range: int = 50
+    lookup_amount: int = 0
+
+    def __post_init__(self):
+        if self.orders is None:
             raise ValueError("Orders is empty!")
-        self.ordplan: DataFrame = orders
-        self.deadline_scope = deadline_scope
-        self._filter_diff = _filter_diff
-        self.common = common
-        self.size = size
-        self.tuning_values = tuning_values
-        self.filter_value = filter_value
-        self.filler = filler
-        self.selector = selector
-        self.first_date_only = first_date_only
-        self.deadline_range = deadline_range
-        self.lookup_amount = 0
-        if not no_build:
+        self.ordplan: DataFrame = self.orders
+        if not self.no_build:
             self.build()
+
 
     def build(self) -> None:
         self.format_data()

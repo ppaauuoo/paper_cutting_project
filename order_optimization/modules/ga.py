@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pandas import DataFrame
 import pygad
 import numpy
@@ -12,63 +13,39 @@ MIN_TRIM = 1
 PENALTY_VALUE = 1000
 
 
-
+@dataclass
 class GA(ModelInterface):
-    def __init__(
-        self,
-        orders: DataFrame,
-        size: float = 66,
-        num_generations: int = 50,
-        out_range: int = 6,
-        showOutput: bool = False,
-        save_solutions: bool = False,
-        showZero: bool = False,
-        selector: Dict[str, int] | None = None,
-        set_progress: Callable | None = None
-    ) -> None:
-        self.orders = orders
-        if orders is None:
+    orders: DataFrame
+    size: float = 66
+    num_generations: int = 50
+    out_range: int = 6
+    showOutput: bool = False
+    save_solutions: bool = False
+    showZero: bool = False
+    selector: Dict[str, int] | None = None
+    set_progress: Callable | None = None
+    current_generation: int = 0
+    _penalty:int = 0 
+    _penalty_value:int = PENALTY_VALUE
+
+    def __post_init__(self):
+        if self.orders is None:
             raise ValueError("Orders is empty!")
-        self._paper_size  = size
-        self.selector = selector
-        
-        self._penalty = 0 
-        self._penalty_value = PENALTY_VALUE
-
-
-        self.showOutput = showOutput
-        self.save_solutions = save_solutions
-        self.showZero = showZero
-        self.num_generations = num_generations
-
-        self.num_parents_mating = 60
-        self.sol_per_pop = 120
-        self.num_genes = len(self.orders)
-
-        self.init_range_low = 0
-        self.init_range_high = out_range
-
-        self.parent_selection_type = "tournament"
-        self.crossover_type = "uniform"
-        self.mutation_type = "random"
-        self.mutation_percent_genes = 10
-        self.gene_type = int
-        self.current_generation = 0
-        self.set_progress = set_progress
+        self._paper_size  = self.size
 
         self.model = pygad.GA(
             num_generations=self.num_generations,
-            num_parents_mating=self.num_parents_mating,
+            num_parents_mating=60,
             fitness_func=self.fitness_function,
-            sol_per_pop=self.sol_per_pop,
-            num_genes=self.num_genes,
-            parent_selection_type=self.parent_selection_type,
-            gene_type=self.gene_type,
-            init_range_low=self.init_range_low,
-            init_range_high=self.init_range_high,
-            crossover_type=self.crossover_type,
-            mutation_type=self.mutation_type,
-            mutation_percent_genes=self.mutation_percent_genes,
+            sol_per_pop=120,
+            num_genes=len(self.orders),
+            parent_selection_type="tournament",
+            gene_type=int,
+            init_range_low=0,
+            init_range_high=self.out_range,
+            crossover_type="uniform",
+            mutation_type="random",
+            mutation_percent_genes=10,
             on_generation=self.on_gen,
             save_solutions=self.save_solutions,
         )
@@ -107,7 +84,8 @@ class GA(ModelInterface):
             if out >= 1 and orders["quantity"][index] < init_order:
                 self._penalty += self._penalty_value
 
-    def get_first_solution(self, solution) -> int:
+    @staticmethod
+    def get_first_solution(solution) -> int:
         for index, out in enumerate(solution):
             if out >= 1:
                 return index
@@ -199,7 +177,8 @@ class GA(ModelInterface):
         if self.showOutput:
             self.show(ga_instance, _output)
 
-    def blade_logic(self,output: DataFrame) -> DataFrame:
+    @staticmethod
+    def blade_logic(output: DataFrame) -> DataFrame:
         blade_list: List[Dict[str,int]] = []
         for idx in output.index:
             blade_list.append({"blade": idx + 1})

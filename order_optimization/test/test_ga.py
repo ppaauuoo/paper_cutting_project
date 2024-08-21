@@ -39,7 +39,7 @@ def test_initialization_with_default_parameters(test_data):
     assert ga_instance.orders.equals(test_data)
     assert ga_instance.PAPER_SIZE == 66
     assert ga_instance.num_generations == 50
-    assert ga_instance.init_range_high == 6
+    assert ga_instance.out_range == 6
     assert ga_instance.showOutput is False
     assert ga_instance.save_solutions is False
     assert ga_instance.showZero is False
