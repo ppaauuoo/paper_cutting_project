@@ -72,18 +72,6 @@ def file_deletion_view(request):
     csv_file.delete()
     messages.success(request, "File deleted successfully.")
 
-def file_selector_view(request):
-    file_id = request.GET.get("file_id")
-    cache_key = f"file_selector_{file_id}"
-    df = cache.get(cache_key)
-
-    if df:
-        return JsonResponse({'file_selector': df})
-
-    df = get_orders(request, file_id, filter_diff=False).to_dict(orient='records')
-    cache.set(cache_key, df, CACHE_TIMEOUT)
-    return JsonResponse({'file_selector': df})
-
 def login_view(request):
     if request.method != "POST":
         return render(request, "login.html", {"form": LoginForm()})
@@ -105,4 +93,41 @@ def progress_view(request):
 def optimized_orders_view(request):
     saved_list = OptimizedOrder.objects.all()
     saved_list_data = [order.output for order in saved_list]
-    return JsonResponse({'optimized_orders': saved_list_data})
+    return render(request, 'saved_orders_table.html', {'data': saved_list_data})
+
+def preview_data(request):
+    file_id = request.GET.get("file_id")
+    cache_key = f"file_selector_{file_id}"
+    df = cache.get(cache_key)
+
+    # if df:
+    #     return render(request, 'preview_table.html', {'data': df})
+    df = get_orders(request, file_id, filter_diff=False).to_dict(orient='records')
+    cache.set(cache_key, df, CACHE_TIMEOUT)
+    return render(request, 'preview_table.html', {'preview_data': df})
+
+def search_preview_data(request):
+    search_term = request.GET.get('previewSearchInput')
+    file_id = request.GET.get("file_id")
+    cache_key = f"file_selector_{file_id}"
+    data_dict = cache.get(cache_key)
+
+    if search_term:
+        # Filter the dictionary
+        filtered_dict = {key: value for key, value in data_dict.items() 
+                         if any(search_term in str(v).lower() for v in value.values())}
+    else:
+        filtered_dict = data_dict
+
+    return render(request, 'preview_table.html', {'data': filtered_dict})
+
+def test(request):
+    csv_files = CSVFile.objects.all()
+    context = {
+        "csv_files": csv_files,
+    }
+    return render(request, 'test.html',context)
+
+def test_data(request):
+    
+    return render(request, 'test_table.html')

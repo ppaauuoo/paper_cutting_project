@@ -4,14 +4,15 @@ from pandas import DataFrame
 import pandas as pd
 
 from order_optimization.container import ModelContainer, OrderContainer
-from .modules.ordplan import ORD
+from modules.ordplan import ORD
+from modules.ga import GA
 
 from django.shortcuts import get_object_or_404
 
 from .models import CSVFile, OrderList
 
 from typing import Dict, List, Tuple
-from .modules.ga import GA
+
 from django.core.cache import cache
 
 from dataclasses import dataclass
@@ -35,7 +36,9 @@ def get_orders_cache(file_id: str) -> DataFrame:
             order_records = OrderList.objects.filter(file=csv_file)
             if order_records.exists():
                 orders = pd.DataFrame(list(order_records.values()))
-                orders["due_date"] = orders["due_date"].dt.strftime("%m/%d/%y")
+                for column in orders.columns:
+                    if pd.api.types.is_datetime64_any_dtype(orders[column]):
+                        orders[column] = orders[column].dt.strftime("%m/%d/%y")
             else:
                 raise OrderList.DoesNotExist
         except OrderList.DoesNotExist:
@@ -73,7 +76,9 @@ def get_orders_cache(file_id: str) -> DataFrame:
 
             OrderList.objects.bulk_create(order_instances)
             orders = pd.DataFrame(list(order_records.values()))
-            orders["due_date"] = orders["due_date"].dt.strftime("%m/%d/%y")
+            for column in orders.columns:
+                if pd.api.types.is_datetime64_any_dtype(orders[column]):
+                    orders[column] = orders[column].dt.strftime("%m/%d/%y")
 
         # Cache the orders
         cache.set(f"order_cache_{file_id}", orders, CACHE_TIMEOUT)

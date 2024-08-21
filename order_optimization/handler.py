@@ -1,8 +1,5 @@
 from pandas import Series
 from order_optimization.container import ModelContainer
-from order_optimization.modules import ga
-from .modules.ordplan import ORD
-from .modules.ga import GA
 
 from typing import Any, Callable, Dict
 from django.contrib import messages
@@ -92,11 +89,11 @@ def handle_orders_logic(output_data):
     foll_order_len: List[int]= []
     foll_out: List[int] = []
 
-    foll_order_len[0] = init_len
+    foll_order_len.append(init_len)
     if len(output_data) > 1:
         for index, order in enumerate(output_data, start=1):
-            foll_order_len[index] = order["cut_len"]
-            foll_out[index] = order["out"] 
+            foll_order_len.append(order["cut_len"])
+            foll_out.append(order["out"])
 
 
     foll_order_number = round((init_len * init_num_orders) / (foll_order_len[0] * init_out))
@@ -287,7 +284,7 @@ def handle_filler(request):
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
 
-def output_format(orders: Series[Any], init_out: int = 0) -> pd.DataFrame:
+def output_format(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "order_number": [orders["order_number"]],
@@ -341,9 +338,9 @@ def handle_order_exhaustion(data: Dict[str,List[Dict[str,int]]])->None:
     for index, order  in enumerate(output_data):
         id = order['order_number']
         filtered_order = OrderList.objects.filter(order_number=id).first()
-        new_value = order['foll_order_number'] - filtered_order.quantity
+        new_value = data['foll_order_number'] - filtered_order.quantity
         if index == 0:
-            new_value = 0
+            new_value = 0 
         filtered_order.quantity = new_value
         filtered_order.save()
         filtered_order.quantity

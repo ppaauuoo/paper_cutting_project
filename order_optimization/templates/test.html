@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Testing{% endblock %}
+
+{% block content %}
+
+    <h1>Fetching Table with HTMX</h1>
+    <div hx-include="this" >
+        <select id="file_id" name="file_id" class="form-select" required>
+            {% for file in csv_files %}
+                <option value="{{ file.id }}" {% if file.id|stringformat:"s" == request.POST.file_id %}selected{% endif %}>{{ file.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Button to trigger the data fetch -->
+    <button hx-get="/preview_data" hx-target="#data-table-body" hx-swap="innerHTML" hx-include="[name='file_id']" data-bs-toggle="modal" data-bs-target="#filePreviewModal">Fetch Data</button>
+    
+
+    <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filePreviewModalLabel">Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="data-table-body">
+                    </div>
+                
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+{% endblock %}
