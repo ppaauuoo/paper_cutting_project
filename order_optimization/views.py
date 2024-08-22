@@ -101,8 +101,9 @@ def preview_data(request):
     cache_key = f"file_selector_{file_id}"
     df = cache.get(cache_key)
 
-    # if df:
-    #     return render(request, 'preview_table.html', {'data': df})
+    if df:
+        return render(request, 'preview_table.html', {'preview_data': df})
+    
     df = get_orders(request, file_id, filter_diff=False).to_dict(orient='records')
     cache.set(cache_key, df, CACHE_TIMEOUT)
     return render(request, 'preview_table.html', {'preview_data': df})
