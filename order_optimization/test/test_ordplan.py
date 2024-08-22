@@ -2,7 +2,7 @@ import pytest
 import os
 import pandas as pd
 from django.test import Client
-from ..modules.ordplan import ORD
+from modules.ordplan import ORD
 from tempfile import NamedTemporaryFile
 from icecream import ic
 

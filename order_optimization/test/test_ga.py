@@ -3,7 +3,7 @@ import pytest
 import os
 import pandas as pd
 from django.test import Client
-from ..modules.ga import GA
+from modules.ga import GA
 from tempfile import NamedTemporaryFile
 from icecream import ic
 import numpy as np
@@ -56,8 +56,7 @@ def test_ga(test_data):
 
 @pytest.mark.django_db
 def test_logic_wrong(mocker):
-    from order_optimization.modules.ga import GA
-    import pandas as pd
+
 
     # Mock orders DataFrame
     orders_data = {"edge_type": ["X", "N", "Y"], "width": [10, 10, 45],"quantity": [1000, 200, 3000],}
@@ -109,8 +108,7 @@ def test_logic_wrong(mocker):
 
 @pytest.mark.django_db
 def test_logic_optimal(mocker):
-    from order_optimization.modules.ga import GA
-    import pandas as pd
+
 
     # Mock orders DataFrame
     orders_data = {"edge_type": ["X", "X", "Y"], "width": [10, 10, 30],"quantity": [200, 2000, 3000],}

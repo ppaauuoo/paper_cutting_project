@@ -1,0 +1,21 @@
+<template x-if="isLoading">
+  <div id="overlay" x-show="isLoading" x-effect="htmx.process(document.body)">
+    <h1>Loading</h1>
+    <div id="progress-container" 
+         hx-get="/progress" 
+         hx-trigger="every 2s"
+         hx-target="#progress-container" 
+         hx-swap="outerHTML"
+         hx-on::before-request="console.log('Request started')"
+         hx-on::after-request="console.log('Request completed')">
+      <p>Current Progress: {{ progress }}%</p>
+      <div class="progress">
+        <div id="progress-bar" class="progress-bar" role="progressbar" 
+             :style="`width: {{ progress }};`" 
+             :aria-valuenow="{{ progress }}" 
+             aria-valuemin="0" 
+             aria-valuemax="100"></div>
+      </div>
+    </div>
+  </div>
+</template>

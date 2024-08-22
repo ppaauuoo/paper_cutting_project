@@ -1,8 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, List
-
 from pandas import DataFrame
-
 
 class ModelInterface(ABC):
 

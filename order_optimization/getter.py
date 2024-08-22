@@ -1,22 +1,18 @@
-import datetime
-from django.utils import timezone
 from pandas import DataFrame
 import pandas as pd
 
-from order_optimization.container import ModelContainer, OrderContainer
-from .modules.ordplan import ORD
-
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.core.cache import cache
+from django.conf import settings
 
 from .models import CSVFile, OrderList
+from order_optimization.container import ModelContainer, OrderContainer
+from modules.ordplan import ORD
+from modules.ga import GA
 
 from typing import Dict, List, Tuple
-from .modules.ga import GA
-from django.core.cache import cache
-
 from dataclasses import dataclass
-
-from django.conf import settings
 
 from icecream import ic
 
@@ -35,7 +31,9 @@ def get_orders_cache(file_id: str) -> DataFrame:
             order_records = OrderList.objects.filter(file=csv_file)
             if order_records.exists():
                 orders = pd.DataFrame(list(order_records.values()))
-                orders["due_date"] = orders["due_date"].dt.strftime("%m/%d/%y")
+                for column in orders.columns:
+                    if pd.api.types.is_datetime64_any_dtype(orders[column]):
+                        orders[column] = orders[column].dt.strftime("%m/%d/%y")
             else:
                 raise OrderList.DoesNotExist
         except OrderList.DoesNotExist:
@@ -73,7 +71,9 @@ def get_orders_cache(file_id: str) -> DataFrame:
 
             OrderList.objects.bulk_create(order_instances)
             orders = pd.DataFrame(list(order_records.values()))
-            orders["due_date"] = orders["due_date"].dt.strftime("%m/%d/%y")
+            for column in orders.columns:
+                if pd.api.types.is_datetime64_any_dtype(orders[column]):
+                    orders[column] = orders[column].dt.strftime("%m/%d/%y")
 
         # Cache the orders
         cache.set(f"order_cache_{file_id}", orders, CACHE_TIMEOUT)
@@ -156,5 +156,5 @@ def get_csv_file(file_id: str) -> CSVFile:
 
 def get_outputs(optimizer_instance: ModelContainer) -> Tuple[float, List[Dict]]:
     fitness_values = optimizer_instance.fitness_values
-    output_data = optimizer_instance.output.to_dict("records")
+    output_data = optimizer_instance.output.drop_duplicates().to_dict("records")
     return fitness_values, output_data
