@@ -10,7 +10,7 @@ from order_optimization.container import ProviderInterface
 
 UNIT_CONVERTER = settings.UNIT_CONVERTER
 COMMON_FILTER = settings.COMMON_FILTER
-
+DEADLINE_RANGE = settings.DEADLINE_RANGE
 
 @dataclass
 class ORD(ProviderInterface):
@@ -25,7 +25,7 @@ class ORD(ProviderInterface):
     selector: Dict[str, int] | None = None
     first_date_only: bool = False
     no_build: bool = False
-    deadline_range: int = 50
+    deadline_range: int = DEADLINE_RANGE
     lookup_amount: int = 0
 
     def __post_init__(self):

@@ -24,11 +24,13 @@ def handle_optimization(func):
     def wrapper(request, *args, **kwargs):
         kwargs = func(request)
         if not kwargs:
-            return messages.error(request, "Error 404: No orders were found. Please try again.")
+            return messages.error(
+                request, "Error 404: No orders were found. Please try again."
+            )
 
         size_value = kwargs.get("size_value", 66)
         orders = kwargs.get("orders", None)
-        
+
         if orders is None:
             raise ValueError("Orders is empty!")
         num_generations = kwargs.get("num_generations", 50)
@@ -80,19 +82,20 @@ def handle_orders_logic(output_data):
     init_num_orders = output_data[0]["num_orders"]
     init_order_number = round(init_num_orders / init_out)
 
-    foll_order_len: List[int]= []
+    foll_order_len: List[int] = []
     foll_out: List[int] = []
 
-    foll_order_len.append(init_len)
-    if len(output_data) > 1:
-        for index, order in enumerate(output_data, start=1):
-            foll_order_len.append(order["cut_len"])
-            foll_out.append(order["out"])
+    for index, order in enumerate(output_data):
+        if index == 0 and len(output_data)>1:
+            continue
+        foll_order_len.append(ic(order["cut_len"]))
+        foll_out.append(order["out"])
 
-
-    foll_order_number = round((init_len * init_num_orders) / (foll_order_len[0] * init_out))
+    foll_order_number = round(
+        (init_len * init_num_orders) / (foll_order_len[0] * init_out)
+    )
     # foll_order_number = foll_order_number[index]/foll_out[index]
-    return (init_order_number, foll_order_number)
+    return (init_order_number, ic(foll_order_number))
 
 
 def handle_auto_retry(request):
@@ -146,12 +149,14 @@ def handle_manual_config(request, **kwargs):
         raise ValueError("Orders is empty!")
 
     # Update kwargs with the found orders
-    kwargs.update({
-        "orders": orders,
-        "size_value": size_value,
-        "num_generations": num_generations,
-        "out_range": out_range,
-    })
+    kwargs.update(
+        {
+            "orders": orders,
+            "size_value": size_value,
+            "num_generations": num_generations,
+            "out_range": out_range,
+        }
+    )
 
     return kwargs
 
@@ -164,13 +169,15 @@ def handle_auto_config(request, **kwargs):
     # Pass all necessary variables to the wrapped function
     if orders is None:
         raise ValueError("Orders is empty!")
-        
-    kwargs.update({
-        "orders": orders,
-        "size_value": size,
-        "num_generations": 50,  # or another value as needed
-        "out_range": out_range
-    })
+
+    kwargs.update(
+        {
+            "orders": orders,
+            "size_value": size,
+            "num_generations": 50,  # or another value as needed
+            "out_range": out_range,
+        }
+    )
     return kwargs
 
 
@@ -198,7 +205,7 @@ def auto_size_filter_logic(request):
 
     cache.set("auto_order", orders, CACHE_TIMEOUT)
     cache.set("order_size", size, CACHE_TIMEOUT)
-    
+
     return (orders, size)
 
 
@@ -213,7 +220,12 @@ def handle_common(request) -> Callable:
 
         size_value = (item["cut_width"] * item["out"]) + results["trim"]
         orders = get_orders(
-            request, file_id, size_value, deadline_scope=-1, filter_diff=False, common=True
+            request,
+            file_id,
+            size_value,
+            deadline_scope=-1,
+            filter_diff=False,
+            common=True,
         )
         optimizer_instance = get_optimizer(
             request, orders, size_value, show_output=True
@@ -266,7 +278,7 @@ def handle_filler(request):
 
     i = 0
     while (
-        orders is not None 
+        orders is not None
         and i < len(orders)
         and results["foll_order_number"]
         > results["output"][1]["num_orders"] + orders["quantity"][i]
@@ -294,12 +306,12 @@ def output_format(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
 
 def results_format(
     optimizer_instance: ModelContainer,
-    output_data: List[Dict[str,Any]],
+    output_data: List[Dict[str, Any]],
     size_value: int,
     fitness_values: float,
     init_order_number: int,
     foll_order_number: int,
-) -> Dict[str,Any]:
+) -> Dict[str, Any]:
     return {
         "output": output_data,
         "roll": optimizer_instance.PAPER_SIZE,
@@ -312,12 +324,17 @@ def results_format(
 
 from .models import OptimizedOrder, OrderList
 
+
 def handle_saving(request):
     data = cache.get("optimization_results", None)
-    cache.delete("optimization_results")
+    # file_id = request.GET.get("file_id")
+    # cache_key = f"file_selector_{file_id}"
+    # cache.delete(cache_key)
+    # cache.delete("optimization_results")
+    cache.clear()
     if data is None:
         raise ValueError("Output is empty!")
-    
+
     handle_order_exhaustion(data)
 
     format_data = database_format(data)
@@ -326,31 +343,33 @@ def handle_saving(request):
     optimized_order.save()
 
 
-def handle_order_exhaustion(data: Dict[str,List[Dict[str,int]]])->None:
-    output_data = data['output']
+def handle_order_exhaustion(data: Dict[str, List[Dict[str, int]]]) -> None:
+    output_data = data["output"]
 
-
-    for index, order  in enumerate(output_data):
-        id = order['order_number']
+    for index, order in enumerate(output_data):
+        id = order["order_number"]
         try:
             filtered_order = OrderList.objects.filter(order_number=id)[0]
         except IndexError:
             raise ValueError("Order Number Not Found!")
-        new_value = filtered_order.quantity - data['foll_order_number']
+        new_value = filtered_order.quantity - data["foll_order_number"]
         if index == 0:
-            new_value = 0 
+            new_value = 0
         if new_value < 0:
             raise ValueError("Second Order Number Exceed!")
         filtered_order.quantity = new_value
         filtered_order.save()
         filtered_order.quantity
 
-def database_format(data: Dict[str,List[Dict[str,int]]])->List[List[Dict[str,int]]]:
+
+def database_format(
+    data: Dict[str, List[Dict[str, int]]]
+) -> List[List[Dict[str, int]]]:
     format_data = []
     blade1 = []
     blade2 = []
     for item in data["output"]:
-        match item['blade']:
+        match item["blade"]:
             case 1:
                 blade1.append(item)
             case 2:
@@ -365,4 +384,3 @@ def handle_reset():
     cache.clear()
     OrderList.objects.all().delete()
     OptimizedOrder.objects.all().delete()
-
