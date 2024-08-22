@@ -329,12 +329,18 @@ def handle_saving(request):
 def handle_order_exhaustion(data: Dict[str,List[Dict[str,int]]])->None:
     output_data = data['output']
 
+
     for index, order  in enumerate(output_data):
         id = order['order_number']
-        filtered_order = OrderList.objects.filter(order_number=id).first()
-        new_value = data['foll_order_number'] - filtered_order.quantity
+        try:
+            filtered_order = OrderList.objects.filter(order_number=id)[0]
+        except IndexError:
+            raise ValueError("Order Number Not Found!")
+        new_value = filtered_order.quantity - data['foll_order_number']
         if index == 0:
             new_value = 0 
+        if new_value < 0:
+            raise ValueError("Second Order Number Exceed!")
         filtered_order.quantity = new_value
         filtered_order.save()
         filtered_order.quantity
