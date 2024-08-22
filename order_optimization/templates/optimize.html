@@ -4,12 +4,17 @@
 
 {% block content %}
 
-    {% include "loading_overlay.html" %}
-    {% include "user_greeting.html" %}
-    <h1 class="mb-4">Order Optimization</h1>
-    {% include "parameters_form.html" %}
-    {% include "files_management_modals.html" %}
+<div x-data="{ isLoading: false}">
+    <form method="post"  @submit="isLoading = true">
+        {% csrf_token %}
+        {% include "loading_overlay.html" %}
+        {% include "user_greeting.html" %}
+        <h1 class="mb-4">Order Optimization</h1>
+        {% include "parameters_form.html" %}
+        {% include "files_management_modals.html" %}
 
+    </form>
+</div>
     <!-- Results Section -->
     {% if results %}
         {% include "results.html" %}
@@ -17,34 +22,4 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script>
-    function optimizerLoader(btnId){
-        const btn = document.getElementById(btnId);
-        btn.classList.add('disabled');
-        btn.setAttribute('aria-disabled', 'true');
-        btn.querySelector('.spinner-border').classList.remove('d-none');
-        document.getElementById('overlay').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
-
-
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const submitter = e.submitter;
-        
-        switch(submitter.name){
-            case 'optimize':
-                optimizerLoader('optimizeBtn')
-            case 'auto':
-                optimizerLoader('autoBtn')
-        }
-        // Submit the form
-        this.submit();
-    });
-
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date').value = today;
-
-</script>
-
-
 {% endblock %}
