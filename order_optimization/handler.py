@@ -1,19 +1,13 @@
-from pandas import Series
-from order_optimization.container import ModelContainer
-
-from typing import Any, Callable, Dict
 from django.contrib import messages
 from django.core.cache import cache
-
-import pandas as pd
-
-from typing import Callable, Dict, List, Optional
-
-from .getter import get_orders, get_orders_cache, get_outputs, get_optimizer
-
 from django.conf import settings
 
+import pandas as pd
+from typing import Callable, Dict, List, Optional, Any
 from icecream import ic
+
+from .getter import get_orders, get_outputs, get_optimizer
+from order_optimization.container import ModelContainer
 
 ROLL_PAPER = settings.ROLL_PAPER
 FILTER = settings.FILTER
@@ -21,9 +15,9 @@ OUT_RANGE = settings.OUT_RANGE
 TUNING_VALUE = settings.TUNING_VALUE
 CACHE_TIMEOUT = settings.CACHE_TIMEOUT
 
-MAX_RETRY = 3
-MAX_TRIM = 3
-MIN_TRIM = 1
+MAX_RETRY = settings.MAX_RETRY
+MAX_TRIM = settings.MAX_TRIM
+MIN_TRIM = settings.MIN_TRIM
 
 
 def handle_optimization(func):

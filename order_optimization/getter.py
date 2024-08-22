@@ -1,23 +1,18 @@
-import datetime
-from django.utils import timezone
 from pandas import DataFrame
 import pandas as pd
 
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.core.cache import cache
+from django.conf import settings
+
+from .models import CSVFile, OrderList
 from order_optimization.container import ModelContainer, OrderContainer
 from modules.ordplan import ORD
 from modules.ga import GA
 
-from django.shortcuts import get_object_or_404
-
-from .models import CSVFile, OrderList
-
 from typing import Dict, List, Tuple
-
-from django.core.cache import cache
-
 from dataclasses import dataclass
-
-from django.conf import settings
 
 from icecream import ic
 
@@ -161,5 +156,5 @@ def get_csv_file(file_id: str) -> CSVFile:
 
 def get_outputs(optimizer_instance: ModelContainer) -> Tuple[float, List[Dict]]:
     fitness_values = optimizer_instance.fitness_values
-    output_data = optimizer_instance.output.to_dict("records")
+    output_data = optimizer_instance.output.drop_duplicates().to_dict("records")
     return fitness_values, output_data

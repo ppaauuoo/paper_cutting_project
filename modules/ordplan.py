@@ -1,33 +1,15 @@
+from django.conf import settings
+
 import pandas as pd
 from typing import Dict
-
 from icecream import ic
-
 from pandas import DataFrame
+from dataclasses import dataclass
 
 from order_optimization.container import ProviderInterface
 
-from dataclasses import dataclass
-from pandas import DataFrame
-from typing import Dict
-
-MM_TO_INCH = 25.4
-
-COMMON_FILTER = [
-    "front_sheet",
-    "c_wave",
-    "middle_sheet",
-    "b_wave",
-    "back_sheet",
-    "level",
-    "edge_type",
-    "width",
-    "length",
-    "left_edge_cut",
-    "middle_edge_cut",
-    "right_edge_cut",
-    "component_type",
-]
+UNIT_CONVERTER = settings.UNIT_CONVERTER
+COMMON_FILTER = settings.COMMON_FILTER
 
 
 @dataclass
@@ -104,8 +86,8 @@ class ORD(ProviderInterface):
 
     def format_data(self):
         ordplan = self.ordplan
-        ordplan["width"] = round(ordplan["width"] / MM_TO_INCH, 2)
-        ordplan["length"] = round(ordplan["length"] / MM_TO_INCH, 2)
+        ordplan["width"] = round(ordplan["width"] / UNIT_CONVERTER, 2)
+        ordplan["length"] = round(ordplan["length"] / UNIT_CONVERTER, 2)
         ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%y")
 
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA

@@ -1,16 +1,17 @@
+from django.conf import settings
+
 from dataclasses import dataclass
 from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
 from typing import Callable, Dict, Any, List
-
 from icecream import ic
 
 from order_optimization.container import ModelInterface
 
-MIN_TRIM = 1
-PENALTY_VALUE = 1000
+MIN_TRIM = settings.MIN_TRIM 
+PENALTY_VALUE = settings.PENALTY_VALUE 
 
 
 @dataclass

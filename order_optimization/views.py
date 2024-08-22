@@ -1,26 +1,22 @@
 from django.core.cache import cache
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import CSVFile, OptimizedOrder
-from .forms import CSVFileForm, LoginForm
-
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
-from django.http import HttpResponse, JsonResponse
+from django.conf import settings
 
+from .models import CSVFile, OptimizedOrder
+from .forms import CSVFileForm, LoginForm
 from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_reset, handle_saving
 from .getter import get_csv_file, get_orders
 
-from django.conf import settings
+from icecream import ic
 
 ROLL_PAPER = settings.ROLL_PAPER 
 FILTER = settings.FILTER 
 OUT_RANGE = settings.OUT_RANGE 
 TUNING_VALUE = settings.TUNING_VALUE 
 CACHE_TIMEOUT = settings.CACHE_TIMEOUT 
-
-from icecream import ic
-
 
 @login_required
 def order_optimizer_view(request):
@@ -56,6 +52,7 @@ def order_optimizer_view(request):
         "tuning_value": TUNING_VALUE,
         "csv_files": csv_files,
         "form": form,
+        "progress": 0
     }
     return render(request, "optimize.html", context)
 

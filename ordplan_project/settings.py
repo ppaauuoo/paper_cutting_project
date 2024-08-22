@@ -15,7 +15,26 @@ FILTER = [16,8,6,4,2]
 OUT_RANGE = [7,5,3]
 TUNING_VALUE = [3,2]
 CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
-
+MAX_RETRY = 3
+MAX_TRIM = 3
+MIN_TRIM = 1
+PENALTY_VALUE = 1000
+UNIT_CONVERTER = 25.4 #MM _TO_INCH
+COMMON_FILTER = [
+    "front_sheet",
+    "c_wave",
+    "middle_sheet",
+    "b_wave",
+    "back_sheet",
+    "level",
+    "edge_type",
+    "width",
+    "length",
+    "left_edge_cut",
+    "middle_edge_cut",
+    "right_edge_cut",
+    "component_type",
+]
 
 
 from pathlib import Path
