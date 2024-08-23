@@ -88,14 +88,14 @@ def handle_orders_logic(output_data):
     for index, order in enumerate(output_data):
         if index == 0 and len(output_data)>1:
             continue
-        foll_order_len.append(ic(order["cut_len"]))
+        foll_order_len.append(order["cut_len"])
         foll_out.append(order["out"])
 
     foll_order_number = round(
         (init_len * init_num_orders) / (foll_order_len[0] * init_out)
     )
     # foll_order_number = foll_order_number[index]/foll_out[index]
-    return (init_order_number, ic(foll_order_number))
+    return (init_order_number, foll_order_number)
 
 
 def handle_auto_retry(request):
@@ -174,7 +174,7 @@ def handle_auto_config(request, **kwargs):
         {
             "orders": orders,
             "size_value": size,
-            "num_generations": 50,  # or another value as needed
+            "num_generations": 50,
             "out_range": out_range,
         }
     )
@@ -195,7 +195,7 @@ def auto_size_filter_logic(request):
             size,
             FILTER[-filter_index],
             tuning_value,
-            first_date_only=True,
+            first_date_only=False,
         )
         filter_index += 1
         if filter_index > len(FILTER):
@@ -236,7 +236,7 @@ def handle_common(request) -> Callable:
             best_index = i
 
     if best_index is not None:
-        update_results(results, best_index, best_output, best_fitness, size_value)
+        results = update_results(results, best_index, best_output, best_fitness, size_value)
         messages.success(request, "Common order found.")
     else:
         messages.error(request, "No suitable common order found.")
@@ -249,8 +249,7 @@ def update_results(
     best_index: int,
     best_output: List[Dict],
     best_fitness: float,
-    size_value: float,
-) -> None:
+) -> Dict:
     results["output"].pop(best_index)  # remove the old order
     results["output"].extend(best_output)  # add the new one
 
@@ -258,6 +257,7 @@ def update_results(
         results["fitness"] += item["cut_width"] * item["out"]
 
     results["trim"] = abs(best_fitness)  # set new trim
+    return results
 
 
 def handle_filler(request):
@@ -321,26 +321,49 @@ def results_format(
         "foll_order_number": foll_order_number,
     }
 
-
-from .models import OptimizedOrder, OrderList
+from .models import OptimizationPlan, OrderList, PlanOrder
 
 
 def handle_saving(request):
     data = cache.get("optimization_results", None)
-    # file_id = request.GET.get("file_id")
-    # cache_key = f"file_selector_{file_id}"
-    # cache.delete(cache_key)
-    # cache.delete("optimization_results")
     cache.clear()
     if data is None:
         raise ValueError("Output is empty!")
 
     handle_order_exhaustion(data)
 
-    format_data = database_format(data)
-
-    optimized_order = OptimizedOrder(output=format_data)
+    optimized_order = database_format(data)
     optimized_order.save()
+
+def database_format(
+    data: Dict[str, List[Dict[str, int]]]
+) -> OptimizationPlan:
+
+    format_data = OptimizationPlan.objects.create() 
+
+    for item in data["output"]:
+        current_id = f"{item['order_number']}-{item['component_type']}"
+        match item["blade"]:
+            case 1:
+                blade1_order = PlanOrder.objects.create(
+                    order=OrderList.objects.get(id=current_id),
+                    production_quantity=data['init_order_number'],
+                    out=item["out"],
+                    blade_type='Blade 1'
+                )
+                format_data.blade_1.add(blade1_order)
+                
+            case 2:
+                blade2_order = PlanOrder.objects.create(
+                    order=OrderList.objects.get(id=current_id),
+                    production_quantity=data['foll_order_number'],
+                    out=item["out"],
+                    blade_type='Blade 2'
+                )
+                format_data.blade_2.add(blade2_order)
+
+    return format_data
+
 
 
 def handle_order_exhaustion(data: Dict[str, List[Dict[str, int]]]) -> None:
@@ -362,25 +385,9 @@ def handle_order_exhaustion(data: Dict[str, List[Dict[str, int]]]) -> None:
         filtered_order.quantity
 
 
-def database_format(
-    data: Dict[str, List[Dict[str, int]]]
-) -> List[List[Dict[str, int]]]:
-    format_data = []
-    blade1 = []
-    blade2 = []
-    for item in data["output"]:
-        match item["blade"]:
-            case 1:
-                blade1.append(item)
-            case 2:
-                blade2.append(item)
-
-    format_data.append(blade1)
-    format_data.append(blade2)
-    return format_data
 
 
 def handle_reset():
     cache.clear()
     OrderList.objects.all().delete()
-    OptimizedOrder.objects.all().delete()
+    OptimizationPlan.objects.all().delete()

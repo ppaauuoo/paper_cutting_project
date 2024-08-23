@@ -37,7 +37,7 @@ class ORD(ProviderInterface):
 
 
     def build(self) -> None:
-        self.format_data()
+        self.ordplan = self.format_data(self.ordplan)
         if self.first_date_only:
             self.set_first_date()
         else:
@@ -84,17 +84,14 @@ class ORD(ProviderInterface):
         self.ordplan = ordplan
         return
 
-    def format_data(self):
-        ordplan = self.ordplan
-        ordplan["width"] = round(ordplan["width"] / UNIT_CONVERTER, 2)
-        ordplan["length"] = round(ordplan["length"] / UNIT_CONVERTER, 2)
+    @staticmethod
+    def format_data(ordplan: Dict[str,int]):
         ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%y")
 
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
 
         ordplan = ordplan[ordplan["length"] != 0]  # drop len = 0
-
-        self.ordplan = ordplan
+        return ordplan
 
     def filter_diff_order(self, ordplan: DataFrame) -> DataFrame:
         if not self._filter_diff:

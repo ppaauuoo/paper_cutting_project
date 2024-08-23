@@ -10,7 +10,8 @@ class CSVFile(models.Model):
 
 class OrderList(models.Model):
     file = models.ForeignKey(CSVFile, on_delete=models.CASCADE)
-    order_number = models.IntegerField(primary_key=True)
+    id = models.CharField(max_length=255, primary_key=True, editable=False, default="not defined")  # Set as primary key
+    order_number = models.IntegerField(default=None)
     due_date = models.DateTimeField(default=None)
     front_sheet = models.CharField(max_length=5,default="not defined")
     c_wave = models.CharField(max_length=5,default="not defined")
@@ -35,32 +36,25 @@ class OrderList(models.Model):
     def __str__(self):
         return f"Order {self.order_number}"
 
+    def save(self, *args, **kwargs):  # Override save method
+        self.id = f"{self.order_number}-{self.component_type}"  # Set id based on order_number and component_type
+        super().save(*args, **kwargs)  # Call the original save method
+
+
 class PlanOrder(models.Model):
     order = models.ForeignKey(OrderList, on_delete=models.CASCADE)
     production_quantity = models.IntegerField(default=0)
-    out =  models.IntegerField(default=0)
+    out = models.IntegerField(default=0)
+    blade_type = models.CharField(max_length=10, choices=[('blade_1', 'Blade 1'), ('blade_2', 'Blade 2')], default='blade_1')  # New field to specify blade type
 
-class PlanList(models.Model):
-    blade_1 = models.OneToOneField(
-        PlanOrder,
-        on_delete=models.CASCADE,
-    )
-    blade_2 = models.OneToOneField(
-        PlanOrder,
-        on_delete=models.CASCADE,
-        blank=True
-    )
 
-class OptimizedOrder(models.Model):
-    plan = models.OneToOneField(
-        PlanList,
-        on_delete=models.CASCADE,
-        primary_key=True,
-    )
+class OptimizationPlan(models.Model):
+    blade_1 = models.ManyToManyField(PlanOrder, related_name='blade_1_orders')
+    blade_2 = models.ManyToManyField(PlanOrder, related_name='blade_2_orders', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)  
 
     def __str__(self):
-        return f"OptimizedOrder {self.id} created at {self.created_at}"
+        return f"OptimizationPlan {self.id} created at {self.created_at}"
     
 
 

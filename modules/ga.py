@@ -32,6 +32,7 @@ class GA(ModelInterface):
     def __post_init__(self):
         if self.orders is None:
             raise ValueError("Orders is empty!")
+        self.orders = self.orders[self.orders['quantity'] > 0].reset_index(drop=True)
         self._paper_size  = self.size
 
         self.model = pygad.GA(
@@ -147,7 +148,7 @@ class GA(ModelInterface):
                 "blade": orders.index+1,
                 "order_number": orders["order_number"],
                 "num_orders": orders["quantity"],
-                "order_type": orders["component_type"],
+                "component_type": orders["component_type"],
                 "cut_width": orders["width"],
                 "cut_len": orders["length"],
                 "type": orders["edge_type"],
