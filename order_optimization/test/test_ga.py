@@ -29,6 +29,7 @@ def test_data() -> DataFrame:
             "left_edge_cut": [0, 1, 0, 1, 0],
             "middle_edge_cut": [1, 0, 1, 0, 1],
             "right_edge_cut": [0, 1, 0, 1, 0],
+            "id": [1,2,3,4,5]
         }
     )
 

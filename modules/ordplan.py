@@ -83,17 +83,11 @@ class ORD(ProviderInterface):
                 break
         self.ordplan = ordplan
         return
-
     def format_data(self):
         ordplan = self.ordplan
-        ordplan["width"] = round(ordplan["width"] / UNIT_CONVERTER, 2)
-        ordplan["length"] = round(ordplan["length"] / UNIT_CONVERTER, 2)
         ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%y")
-
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
-
-        ordplan = ordplan[ordplan["length"] != 0]  # drop len = 0
-
+        ordplan = ordplan[ordplan["length"] > 0]  # drop len = 0
         self.ordplan = ordplan
 
     def filter_diff_order(self, ordplan: DataFrame) -> DataFrame:

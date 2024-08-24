@@ -6,7 +6,7 @@
         <th class="text-center">กำหนดส่ง</th>
         <th class="text-center">เลขที่ใบสั่งขาย</th>
         <th class="text-center">ชนิดส่วนประกอบ</th>
-        <th class="text-center">จำนวนสั่งขาย</th>
+        <th class="text-center">จำนวนสั่งผลิต</th>
         <th class="text-center">ตัดกว้าง</th>
         <th class="text-center">ตัดยาว</th>
         <th class="text-center">ประเภทตัดเส้น</th>
@@ -21,22 +21,18 @@
           </td>
         </tr>
       {% else %}
-        {% for order in data %}
-          {% for blade in order %}
-            {% for item in blade %}
-            <tr>
-              <td class="text-center">{{ item.blade }}</td>
-              <td class="text-center">{{ item.deadline }}</td>
-              <td class="text-center">{{ item.order_number }}</td>
-              <td class="text-center">{{ item.order_type }}</td>
-              <td class="text-center">{{ item.num_orders }}</td>
-              <td class="text-center">{{ item.cut_width }}</td>
-              <td class="text-center">{{ item.cut_len }}</td>
-              <td class="text-center">{{ item.type }}</td>
-              <td class="text-center">{{ item.out }}</td>
-            </tr>
-            {% endfor %}
-          {% endfor %}
+        {% for item in data %}
+          <tr>
+            <td class="text-center">{{ item.blade_type }}</td>
+            <td class="text-center">{{ item.due_date }}</td>
+            <td class="text-center">{{ item.order_number }}</td>
+            <td class="text-center">{{ item.component_type }}</td>
+            <td class="text-center">{{ item.plan_quantity }}</td>
+            <td class="text-center">{{ item.width }}</td>
+            <td class="text-center">{{ item.length }}</td>
+            <td class="text-center">{{ item.edge_type }}</td>
+            <td class="text-center">{{ item.out }}</td>
+          </tr>
         {% endfor %}
       {% endif %}
     </tbody>
