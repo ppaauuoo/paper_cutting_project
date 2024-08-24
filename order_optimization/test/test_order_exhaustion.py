@@ -14,10 +14,10 @@ from order_optimization.models import OrderList
 
 @pytest.fixture
 def test_data() -> DataFrame:
-    return {
+    return pd.DataFrame({
         "output": [{"order_number": 1}, {"order_number": 2}],
         "foll_order_number": 10,
-    }
+    })
 
 # def handle_order_exhaustion(data: Dict[str,List[Dict[str,int]]])->None:
 #     output_data = data['output']

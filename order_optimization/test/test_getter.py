@@ -11,7 +11,7 @@ from order_optimization.models import CSVFile
 
 @pytest.mark.django_db
 def test_orders_cache(mocker):
-    file_id = 1
+    file_id = '1'
     expected_orders = pd.DataFrame(
         {"order_number": [1, 2], "due_date": ["01/01/23", "02/01/23"]}
     )
@@ -29,7 +29,7 @@ def test_orders_cache(mocker):
 
 @pytest.mark.django_db
 def test_orders_nocache(mocker):
-    file_id = 1
+    file_id = '1'
     expected_orders = pd.DataFrame(
         {"order_number": [1, 2], "due_date": ["01/01/23", "02/01/23"]}
     )

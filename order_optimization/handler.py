@@ -236,7 +236,7 @@ def handle_common(request) -> Callable:
             best_index = i
 
     if best_index is not None:
-        results = update_results(results, best_index, best_output, best_fitness, size_value)
+        results = update_results(results, best_index, best_output, best_fitness)
         messages.success(request, "Common order found.")
     else:
         messages.error(request, "No suitable common order found.")
@@ -368,7 +368,7 @@ def database_format(
 
 
 
-def handle_order_exhaustion(data: Dict[str, List[Dict[str, int]]]) -> None:
+def handle_order_exhaustion(data: Dict[str, Any]) -> None:
     output_data = data["output"]
 
     for index, order in enumerate(output_data):
