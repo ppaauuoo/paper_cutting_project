@@ -325,8 +325,10 @@ from .models import OptimizationPlan, OrderList, PlanOrder
 
 
 def handle_saving(request):
+    file_id = request.POST.get("file_id")
+    cache.delete(f"order_cache_{file_id}")
     data = cache.get("optimization_results", None)
-    cache.clear()
+    cache.delete(f"optimization_results")
     if data is None:
         raise ValueError("Output is empty!")
 
@@ -342,7 +344,7 @@ def database_format(
     format_data = OptimizationPlan.objects.create() 
 
     for item in data["output"]:
-        current_id = f"{item['order_number']}-{item['component_type']}"
+        current_id = item['id']
         match item["blade"]:
             case 1:
                 blade1_order = PlanOrder.objects.create(

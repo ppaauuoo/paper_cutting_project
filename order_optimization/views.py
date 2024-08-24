@@ -95,15 +95,15 @@ def progress_view(request):
 def optimized_orders_view(request):
     # Get all PlanOrder objects as a list of dictionaries
     optimized_output = list(PlanOrder.objects.all().values(
-        "order_id", "production_quantity", "out", "blade_type"
+        "order_id", "plan_quantity", "out", "blade_type"
     ))
-    
+
     # Extract order IDs
     optimized_output_ids = [order['order_id'] for order in optimized_output]
     
     # Get corresponding OrderList objects
     optimized_order_list = list(OrderList.objects.filter(id__in=optimized_output_ids).values())
-    
+
     # Create a dictionary with order_id as the key
     optimized_order_dict = {order['id']: order for order in optimized_order_list}
     
@@ -115,7 +115,7 @@ def optimized_orders_view(request):
             order.update(optimized_order_dict[order_id])
     
      
-    return render(request, 'saved_orders_table.html', {'data': optimized_output})
+    return render(request, 'saved_orders_table.html', {'data': ic(optimized_output)})
 
 def preview_data(request):
     file_id = request.GET.get("file_id")

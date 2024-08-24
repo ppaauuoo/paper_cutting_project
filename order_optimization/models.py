@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 
 class CSVFile(models.Model):
@@ -9,8 +10,8 @@ class CSVFile(models.Model):
         return self.name
 
 class OrderList(models.Model):
+    id = models.CharField(max_length=255, primary_key=True, editable=False, default=uuid.uuid4)  # Use UUID as default
     file = models.ForeignKey(CSVFile, on_delete=models.CASCADE)
-    id = models.CharField(max_length=255, primary_key=True, editable=False, default="not defined")  # Set as primary key
     order_number = models.IntegerField(default=None)
     due_date = models.DateTimeField(default=None)
     front_sheet = models.CharField(max_length=5,default="not defined")
@@ -35,15 +36,15 @@ class OrderList(models.Model):
 
     def __str__(self):
         return f"Order {self.order_number}"
-
+    
     def save(self, *args, **kwargs):  # Override save method
-        self.id = f"{self.order_number}-{self.component_type}"  # Set id based on order_number and component_type
-        super().save(*args, **kwargs)  # Call the original save method
+        self.id = f"{self.order_number}-{self.component_type}-{uuid.uuid4()}"  # Generate a unique id
+        super().save(*args, **kwargs)
 
 
 class PlanOrder(models.Model):
     order = models.ForeignKey(OrderList, on_delete=models.CASCADE)
-    production_quantity = models.IntegerField(default=0)
+    plan_quantity = models.IntegerField(default=0)
     out = models.IntegerField(default=0)
     blade_type = models.CharField(max_length=10, choices=[('blade_1', 'Blade 1'), ('blade_2', 'Blade 2')], default='blade_1')  # New field to specify blade type
 
