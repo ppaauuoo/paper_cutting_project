@@ -23,7 +23,7 @@ class GA(ModelInterface):
     showOutput: bool = False
     save_solutions: bool = False
     showZero: bool = False
-    selector: Dict[str, int] | None = None
+    selector: Dict[str, Any] | None = None
     set_progress: Callable | None = None
     current_generation: int = 0
     _penalty:int = 0 
