@@ -372,9 +372,9 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
     output_data = data["output"]
 
     for index, order in enumerate(output_data):
-        id = order["order_number"]
+        id = order["id"]
         try:
-            filtered_order = OrderList.objects.filter(order_number=id)[0]
+            filtered_order = OrderList.objects.filter(id=id)[0]
         except IndexError:
             raise ValueError("Order Number Not Found!")
         new_value = filtered_order.quantity - data["foll_order_number"]

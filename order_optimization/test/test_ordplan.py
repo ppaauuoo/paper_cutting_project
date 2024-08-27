@@ -9,7 +9,7 @@ from icecream import ic
 @pytest.fixture
 def test_data() -> pd.DataFrame:
     return pd.DataFrame({
-        "order_number": [1, 2, 3, 4, 5, 6, 7],
+        "id": [1, 2, 3, 4, 5, 6, 7],
         "width": [66.04, 66.04, 66.04, 66.04, 80, 80, 0.0],
         "length": [200.0, 200.0, 200.0, 200.0, 200.0, 100.0, 0],
         "due_date": ["08/01/23", "08/01/23", "08/05/23", "08/10/23", "08/15/23", "08/20/23", "02/21/22"],
@@ -59,7 +59,7 @@ def test_selected_order(test_data):
     ord = ORD(test_data, size=66, selector={'order_id': 6},no_build=True)
     ord.format_data()
     ord.set_selected_order()
-    assert ord.ordplan['order_number'][0] == 6
+    assert ord.ordplan['id'][0] == 6
 
 @pytest.mark.django_db
 def test_common_order(test_data):
