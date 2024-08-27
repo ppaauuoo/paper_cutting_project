@@ -21,7 +21,7 @@ class ORD(ProviderInterface):
     filter_value: int = 16
     _filter_diff: bool = True
     common: bool = False
-    filler: int = 0
+    filler: str = None
     selector: Dict[str, Any] | None = None
     first_date_only: bool = False
     no_build: bool = False
@@ -136,7 +136,7 @@ class ORD(ProviderInterface):
         self.ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
 
     def set_filler_order(self, init_order):
-        if not self.filler:
+        if self.filler is None:
             return init_order
         ordplan = self.ordplan
         init_order = ordplan[

@@ -262,7 +262,7 @@ def update_results(
 
 def handle_filler(request):
     results = cache.get("optimization_results")
-    init_order = results["output"][0]["order_number"]
+    init_order = results["output"][0]["id"]
     file_id = request.POST.get("selected_file_id")
     size_value = results["output"][0]["cut_width"]
     init_out = results["output"][0]["out"]

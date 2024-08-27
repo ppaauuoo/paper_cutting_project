@@ -103,7 +103,7 @@ def get_orders(
     tuning_values: int = 3,
     filter_diff: bool = True,
     common: bool = False,
-    filler: int = 0,
+    filler: str = None,
     first_date_only: bool = False,
 ) -> DataFrame:
 
