@@ -349,7 +349,7 @@ def database_format(
             case 1:
                 blade1_order = PlanOrder.objects.create(
                     order=OrderList.objects.get(id=current_id),
-                    production_quantity=data['init_order_number'],
+                    plan_quantity=data['init_order_number'],
                     out=item["out"],
                     blade_type='Blade 1'
                 )
@@ -358,7 +358,7 @@ def database_format(
             case 2:
                 blade2_order = PlanOrder.objects.create(
                     order=OrderList.objects.get(id=current_id),
-                    production_quantity=data['foll_order_number'],
+                    plan_quantity=data['foll_order_number'],
                     out=item["out"],
                     blade_type='Blade 2'
                 )
