@@ -14,7 +14,7 @@ from order_optimization.container import ModelContainer, OrderContainer
 from modules.ordplan import ORD
 from modules.ga import GA
 
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 from dataclasses import dataclass
 
 from icecream import ic
@@ -103,7 +103,7 @@ def get_orders(
     tuning_values: int = 3,
     filter_diff: bool = True,
     common: bool = False,
-    filler: int = 0,
+    filler: str = None,
     first_date_only: bool = False,
 ) -> DataFrame:
 
@@ -125,12 +125,11 @@ def get_orders(
     ).get()
 
 
-def get_selected_order(request) -> Dict[str, int] | None:
+def get_selected_order(request) -> Dict[str, Any] | None:
     selector_id = request.POST.get("selector_id")
     if not selector_id:
         return None
-
-    selector_id = int(selector_id)
+    selector_id = selector_id.strip(",")
     selector_out = int(request.POST.get("selector_out"))
     return {"order_id": selector_id, "out": selector_out}
 

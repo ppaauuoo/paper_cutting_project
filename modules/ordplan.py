@@ -1,7 +1,7 @@
 from django.conf import settings
 
 import pandas as pd
-from typing import Dict
+from typing import Dict, Any
 from icecream import ic
 from pandas import DataFrame
 from dataclasses import dataclass
@@ -21,8 +21,8 @@ class ORD(ProviderInterface):
     filter_value: int = 16
     _filter_diff: bool = True
     common: bool = False
-    filler: int = 0
-    selector: Dict[str, int] | None = None
+    filler: str = None
+    selector: Dict[str, Any] | None = None
     first_date_only: bool = False
     no_build: bool = False
     deadline_range: int = DEADLINE_RANGE
@@ -109,13 +109,13 @@ class ORD(ProviderInterface):
         return ordplan
 
     def set_selected_order(self):
-        if not self.selector:
+        if self.selector is None:
             return
         self.selected_order = self.ordplan[
-            self.ordplan["order_number"] == self.selector["order_id"]
+            self.ordplan["id"] == self.selector["order_id"]
         ]  # get selected orders
         ordplan = self.ordplan[
-            self.ordplan["order_number"] != self.selector["order_id"]
+            self.ordplan["id"] != self.selector["order_id"]
         ]  # filter out selected orders
         self.ordplan = pd.concat(
             [self.selected_order, ordplan], ignore_index=True
@@ -136,13 +136,13 @@ class ORD(ProviderInterface):
         self.ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
 
     def set_filler_order(self, init_order):
-        if not self.filler:
+        if self.filler is None:
             return init_order
         ordplan = self.ordplan
         init_order = ordplan[
-            ordplan["order_number"] == self.filler
+            ordplan["id"] == self.filler
         ]  # use filler as init instead
         self.ordplan = ordplan[
-            ordplan["order_number"] != self.filler
+            ordplan["id"] != self.filler
         ]  # remove dupe filler
         return init_order

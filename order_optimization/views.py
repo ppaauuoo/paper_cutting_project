@@ -115,7 +115,7 @@ def optimized_orders_view(request):
             order.update(optimized_order_dict[order_id])
     
      
-    return render(request, 'saved_orders_table.html', {'data': ic(optimized_output)})
+    return render(request, 'saved_orders_table.html', {'data': optimized_output})
 
 def preview_data(request):
     file_id = request.GET.get("file_id")

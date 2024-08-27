@@ -11,30 +11,13 @@ import numpy as np
 from order_optimization.handler import handle_order_exhaustion
 from order_optimization.models import OrderList
 
-
-@pytest.fixture
-def test_data() -> DataFrame:
-    return pd.DataFrame({
-        "output": [{"order_number": 1}, {"order_number": 2}],
-        "foll_order_number": 10,
-    })
-
-# def handle_order_exhaustion(data: Dict[str,List[Dict[str,int]]])->None:
-#     output_data = data['output']
-
-#     for index, order  in enumerate(output_data):
-#         id = order['order_number']
-#         filtered_order = OrderList.objects.filter(order_number=id).first()
-#         new_value = data['foll_order_number'] - filtered_order.quantity
-#         if index == 0:
-#             new_value = 0
-#         filtered_order.quantity = new_value
-#         filtered_order.save()
-#         filtered_order.quantity
-
-
 @pytest.mark.django_db
-def test_handle_order_exhaustion_valid_data(test_data, mocker):
+def test_handle_order_exhaustion_valid_data(mocker):
+
+    data = {
+        "output": [{"id": 1}, {"id": 2}],
+        "foll_order_number": 10,
+    }
 
     mock_order1 = mocker.Mock()
     mock_order1.quantity = 5
@@ -45,7 +28,7 @@ def test_handle_order_exhaustion_valid_data(test_data, mocker):
         OrderList.objects, "filter", side_effect=[[mock_order1], [mock_order2]]
     )
 
-    handle_order_exhaustion(test_data)
+    handle_order_exhaustion(data)
 
     assert mock_order1.quantity == 0
     assert mock_order2.quantity == 7
@@ -57,7 +40,7 @@ def test_handle_order_exhaustion_valid_data(test_data, mocker):
 def test_handle_order_exhaustion_many_data(mocker):
 
     data = {
-        "output": [{"order_number": 1}, {"order_number": 2}, {"order_number": 3}],
+        "output": [{"id": 1}, {"id": 2}, {"id": 3}],
         "foll_order_number": 10,
     }
 
@@ -82,7 +65,12 @@ def test_handle_order_exhaustion_many_data(mocker):
     mock_order3.save.assert_called_once()
 
 @pytest.mark.django_db
-def test_handle_order_exhaustion_order_exceed(test_data, mocker):
+def test_handle_order_exhaustion_order_exceed(mocker):
+
+    data = {
+        "output": [{"id": 1}, {"id": 2}, {"id": 3}],
+        "foll_order_number": 10,
+    }
 
     mock_order1 = mocker.Mock()
     mock_order1.quantity = 9
@@ -94,4 +82,4 @@ def test_handle_order_exhaustion_order_exceed(test_data, mocker):
     )
 
     with pytest.raises(ValueError):
-        handle_order_exhaustion(test_data)
+        handle_order_exhaustion(data)

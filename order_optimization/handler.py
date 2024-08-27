@@ -262,7 +262,7 @@ def update_results(
 
 def handle_filler(request):
     results = cache.get("optimization_results")
-    init_order = results["output"][0]["order_number"]
+    init_order = results["output"][0]["id"]
     file_id = request.POST.get("selected_file_id")
     size_value = results["output"][0]["cut_width"]
     init_out = results["output"][0]["out"]
@@ -372,9 +372,9 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
     output_data = data["output"]
 
     for index, order in enumerate(output_data):
-        id = order["order_number"]
+        id = order["id"]
         try:
-            filtered_order = OrderList.objects.filter(order_number=id)[0]
+            filtered_order = OrderList.objects.filter(id=id)[0]
         except IndexError:
             raise ValueError("Order Number Not Found!")
         new_value = filtered_order.quantity - data["foll_order_number"]
