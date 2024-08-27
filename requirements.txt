@@ -5,3 +5,5 @@ ortools
 openpyxl
 pytest
 pytest-django
+livereload
+icecream
