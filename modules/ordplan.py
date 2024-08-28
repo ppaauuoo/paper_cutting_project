@@ -1,10 +1,10 @@
 from django.conf import settings
 
 import pandas as pd
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from icecream import ic
 from pandas import DataFrame
-from dataclasses import dataclass
+from pydantic import BaseModel, validate_call
 
 from order_optimization.container import ProviderInterface
 
@@ -12,30 +12,30 @@ UNIT_CONVERTER = settings.UNIT_CONVERTER
 COMMON_FILTER = settings.COMMON_FILTER
 DEADLINE_RANGE = settings.DEADLINE_RANGE
 
-@dataclass
-class ORD(ProviderInterface):
-    orders: DataFrame
+class ORD(BaseModel, ProviderInterface):
+    ordplan: pd.DataFrame
     deadline_scope: int = 0
     size: float = 66
     tuning_values: int = 3
     filter_value: int = 16
     _filter_diff: bool = True
     common: bool = False
-    filler: str = None
-    selector: Dict[str, Any] | None = None
+    filler: str = ""
+    selector: Optional[Dict[str, Any]] = None
     first_date_only: bool = False
     no_build: bool = False
     deadline_range: int = DEADLINE_RANGE
     lookup_amount: int = 0
 
+
+    class Config:
+        arbitrary_types_allowed = True
+
     def __post_init__(self):
         if self.orders is None:
             raise ValueError("Orders is empty!")
-        self.ordplan: DataFrame = self.orders
         if not self.no_build:
             self.build()
-
-
     def build(self) -> None:
         self.format_data()
         if self.first_date_only:
@@ -136,7 +136,7 @@ class ORD(ProviderInterface):
         self.ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
 
     def set_filler_order(self, init_order):
-        if self.filler is None:
+        if not self.filler:
             return init_order
         ordplan = self.ordplan
         init_order = ordplan[

@@ -8,3 +8,4 @@ pytest-django
 livereload
 icecream
 django_htmx
+pydantic

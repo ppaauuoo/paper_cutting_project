@@ -125,12 +125,13 @@ def preview_data(request):
     if df is not None:
         return render(request, 'preview_table.html', {'preview_data': df})
 
-    df = get_orders(request, file_id, filter_diff=False)
+    df = get_orders(request=request, file_id=file_id, filter_diff=False, first_date_only=True)
 
     # Format datetime columns as per the instruction
-    for column in df.columns:
-        if pd.api.types.is_datetime64_any_dtype(df[column]):
-            df[column] = df[column].dt.strftime("%m/%d/%y")
+    # for column in df.columns:
+    #     if pd.api.types.is_datetime64_any_dtype(df[column]):
+    #         df[column] = df[column].dt.strftime("%m/%d/%y")
+    ic(df)
     df = df.to_dict(orient='records')
     cache.set(cache_key, df, CACHE_TIMEOUT)
     return render(request, 'preview_table.html', {'preview_data': df})

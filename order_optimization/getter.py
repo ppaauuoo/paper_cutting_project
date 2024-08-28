@@ -69,14 +69,12 @@ def set_orders_model(file_id:str)-> None:
             if pd.api.types.is_datetime64_any_dtype(orders[column]):
                 orders[column] = orders[column].dt.strftime("%m/%d/%y")
 
-        # Cache the orders
         cache.set(f"order_cache_{file_id}", orders, CACHE_TIMEOUT)
-
 
 def get_orders_cache(file_id: str) -> DataFrame:
 
     orders = cache.get(f"order_cache_{file_id}", None)
-
+    ic(orders)
     if orders is not None:
         return orders
 
@@ -86,41 +84,28 @@ def get_orders_cache(file_id: str) -> DataFrame:
     order_records = OrderList.objects.filter(file=csv_file)
 
     if order_records.exists():
-        orders = pd.DataFrame(order_records.values())
-        orders["due_date"] = pd.to_datetime(orders["due_date"]).dt.strftime("%m/%d/%y")
-    else:
-        set_orders_model(file_id)
-
-    return orders
+        orders = pd.DataFrame(order_records.values())   
+        orders["due_date"] = orders["due_date"].dt.strftime("%m/%d/%y")
+        cache.set(f"order_cache_{file_id}", orders, CACHE_TIMEOUT)
+        return get_orders_cache(file_id)
+    
+    set_orders_model(file_id)
+    return get_orders_cache(file_id)
 
 
 def get_orders(
     request,
     file_id: str,
-    size_value: float = 66,
-    deadline_scope: int = 0,
-    filter_value: int = 16,
-    tuning_values: int = 3,
-    filter_diff: bool = True,
-    common: bool = False,
-    filler: str = None,
-    first_date_only: bool = False,
+    **kwargs
 ) -> DataFrame:
 
-    orders: DataFrame = get_orders_cache(file_id)
+    orders = get_orders_cache(file_id)
 
     return OrderContainer(
         provider=ORD(
-            orders=orders,
-            deadline_scope=deadline_scope,
-            _filter_diff=filter_diff,
-            filter_value=filter_value,
-            size=size_value,
-            tuning_values=tuning_values,
-            common=common,
-            filler=filler,
+            ordplan=orders,
             selector=get_selected_order(request),
-            first_date_only=first_date_only,
+            **kwargs    
         )
     ).get()
 
@@ -136,22 +121,14 @@ def get_selected_order(request) -> Dict[str, Any] | None:
 
 def get_optimizer(
     request,
-    orders: DataFrame,
-    size_value: float,
-    out_range: int = 3,
-    num_generations: int = 50,
-    show_output: bool = False,
+    **kwargs
 ) -> ModelContainer:
     cache.delete("optimization_progress")
     optimizer_instance = ModelContainer(
         model=GA(
-            orders,
-            size=size_value,
-            out_range=out_range,
-            num_generations=num_generations,
-            showOutput=show_output,
             selector=get_selected_order(request),
             set_progress=set_progress,
+            **kwargs
         ),
     )
     optimizer_instance.run()

@@ -36,7 +36,7 @@ def test_data() -> DataFrame:
 
 @pytest.mark.django_db
 def test_initialization_with_default_parameters(test_data):
-    ga_instance = GA(test_data)
+    ga_instance = GA(orders=test_data)
     assert ga_instance.orders.equals(test_data)
     assert ga_instance.PAPER_SIZE == 66
     assert ga_instance.num_generations == 50
@@ -49,7 +49,7 @@ def test_initialization_with_default_parameters(test_data):
 
 @pytest.mark.django_db
 def test_ga(test_data):
-    ga_instance = GA(test_data)
+    ga_instance = GA(orders=test_data)
     ga_instance.run()
     assert ga_instance.fitness_values == -66
     assert ga_instance.output.empty == True

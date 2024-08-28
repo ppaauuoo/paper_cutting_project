@@ -1,12 +1,14 @@
 from django.conf import settings
 
-from dataclasses import dataclass
+
 from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
-from typing import Callable, Dict, Any, List
+from typing import Callable, Dict, Any, List, Optional
 from icecream import ic
+from pydantic import BaseModel, validate_call
+
 
 from order_optimization.container import ModelInterface
 
@@ -14,20 +16,22 @@ MIN_TRIM = settings.MIN_TRIM
 PENALTY_VALUE = settings.PENALTY_VALUE 
 
 
-@dataclass
-class GA(ModelInterface):
+class GA(BaseModel, ModelInterface):
     orders: DataFrame
-    size: float = 66
+    size: float = 85
     num_generations: int = 50
     out_range: int = 6
     showOutput: bool = False
     save_solutions: bool = False
     showZero: bool = False
-    selector: Dict[str, Any] | None = None
-    set_progress: Callable | None = None
+    selector: Dict[str, Any] = None
+    set_progress: Optional[Callable] = None
     current_generation: int = 0
     _penalty:int = 0 
     _penalty_value:int = PENALTY_VALUE
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def __post_init__(self):
         if self.orders is None:

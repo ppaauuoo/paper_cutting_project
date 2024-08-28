@@ -37,7 +37,7 @@ def handle_optimization(func):
         out_range = kwargs.get("out_range", 6)
 
         optimizer_instance = get_optimizer(
-            request, orders, size_value, out_range, num_generations
+            request=request, orders=orders, size=size_value, out_range=out_range, num_generations=num_generations
         )
         fitness_values, output_data = get_outputs(optimizer_instance)
 
@@ -190,11 +190,11 @@ def auto_size_filter_logic(request):
     tuning_value = TUNING_VALUE[1]
     while orders is None or len(orders) <= 0:
         orders = get_orders(
-            request,
-            file_id,
-            size,
-            FILTER[-filter_index],
-            tuning_value,
+            request=request,
+            file_id=file_id,
+            size=size,
+            filter_value=FILTER[-filter_index],
+            tuning_value=tuning_value,
             first_date_only=False,
         )
         filter_index += 1
@@ -220,15 +220,15 @@ def handle_common(request) -> Callable:
 
         size_value = (item["cut_width"] * item["out"]) + results["trim"]
         orders = get_orders(
-            request,
-            file_id,
-            size_value,
+            request=request,
+            file_id=file_id,
+            size=size_value,
             deadline_scope=-1,
             filter_diff=False,
             common=True,
         )
         optimizer_instance = get_optimizer(
-            request, orders, size_value, show_output=True
+            request=request, orders=orders, size=size_value, show_output=True
         )
 
         if abs(optimizer_instance.fitness_values) < abs(best_fitness):
@@ -267,9 +267,9 @@ def handle_filler(request):
     size_value = results["output"][0]["cut_width"]
     init_out = results["output"][0]["out"]
     orders = get_orders(
-        request,
-        file_id,
-        size_value,
+        request=request,
+        file_id=file_id,
+        size=size_value,
         tuning_values=1,
         filter_diff=False,
         common=True,

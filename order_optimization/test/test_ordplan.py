@@ -28,7 +28,7 @@ def test_data() -> pd.DataFrame:
 
 @pytest.mark.django_db
 def test_format_data(test_data: pd.DataFrame):
-    ord = ORD(test_data, no_build=True)
+    ord = ORD(orders=test_data, no_build=True)
     ord.format_data()
     assert round(ord.ordplan["width"][0], 2) == 66.04
     assert round(ord.ordplan["length"][0], 2) == 200.0
@@ -36,19 +36,19 @@ def test_format_data(test_data: pd.DataFrame):
  
 @pytest.mark.django_db
 def test_filter_diff_order_small(test_data):
-    ord = ORD(test_data, size=66, tuning_values=1, filter_value=1,no_build=True)
+    ord = ORD(orders=test_data, size=66, tuning_values=1, filter_value=1,no_build=True)
     plan = ord.filter_diff_order(ord.ordplan)
     assert len(plan) == 4
 
 @pytest.mark.django_db
 def test_filter_diff_order_large(test_data):
-    ord = ORD(test_data, size=66, tuning_values=1, filter_value=16,no_build=True)
+    ord = ORD(orders=test_data, size=66, tuning_values=1, filter_value=16,no_build=True)
     plan = ord.filter_diff_order(ord.ordplan)
     assert len(plan) == 6
 
 @pytest.mark.django_db
 def test_first_date(test_data):
-    ord = ORD(test_data, size=66,  first_date_only=True, no_build=True, _filter_diff=False)
+    ord = ORD(orders=test_data, size=66,  first_date_only=True, no_build=True, _filter_diff=False)
     ord.format_data()
     ord.set_first_date()
     assert len(ord.ordplan) == 2
@@ -56,21 +56,21 @@ def test_first_date(test_data):
 
 @pytest.mark.django_db
 def test_selected_order(test_data):
-    ord = ORD(test_data, size=66, selector={'order_id': 6},no_build=True)
+    ord = ORD(orders=test_data, size=66, selector={'order_id': 6},no_build=True)
     ord.format_data()
     ord.set_selected_order()
     assert ord.ordplan['id'][0] == 6
 
 @pytest.mark.django_db
 def test_common_order(test_data):
-    ord = ORD(test_data, size=66, common=True,no_build=True)
+    ord = ORD(orders=test_data, size=66, common=True,no_build=True)
     ord.format_data()
     ord.filter_common_order()
     assert len(ord.ordplan) == 2
 
 @pytest.mark.django_db
 def test_filler_common_order(test_data):
-    ord = ORD(test_data, size=66, common=True, filler=6,no_build=True)
+    ord = ORD(orders=test_data, size=66, common=True, filler='6',no_build=True)
     ord.format_data()
     ord.filter_common_order()
     assert len(ord.ordplan) == 1
@@ -78,7 +78,7 @@ def test_filler_common_order(test_data):
 
 @pytest.mark.django_db
 def test_expand_deadline_scope(test_data):
-    ord = ORD(test_data, _filter_diff=False, no_build=True,deadline_range=3)
+    ord = ORD(orders=test_data, _filter_diff=False, no_build=True,deadline_range=3)
     ord.format_data()
     ord.expand_deadline_scope()
     assert len(ord.ordplan) == 3
@@ -88,7 +88,7 @@ def test_expand_deadline_scope(test_data):
 
 @pytest.mark.django_db
 def test_expand_deadline_scope_nolimit(test_data):
-    ord = ORD(test_data, _filter_diff=False, no_build=True,)
+    ord = ORD(orders=test_data, _filter_diff=False, no_build=True,)
     ord.format_data()
     ord.expand_deadline_scope()
     assert len(ord.ordplan) == 6
@@ -96,7 +96,7 @@ def test_expand_deadline_scope_nolimit(test_data):
 
 @pytest.mark.django_db
 def test_no_rules(test_data):
-    ord = ORD(test_data, _filter_diff=False, no_build=True, deadline_scope=-1)
+    ord = ORD(orders=test_data, _filter_diff=False, no_build=True, deadline_scope=-1)
     ord.format_data()
     ord.expand_deadline_scope()
     assert len(ord.ordplan) == 6
