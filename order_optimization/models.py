@@ -36,10 +36,6 @@ class OrderList(models.Model):
 
     def __str__(self):
         return f"Order {self.order_number}"
-    
-    def save(self, *args, **kwargs):  # Override save method
-        self.id = f"{self.order_number}-{self.component_type}-{uuid.uuid4()}"  # Generate a unique id
-        super().save(*args, **kwargs)
 
 
 class PlanOrder(models.Model):
