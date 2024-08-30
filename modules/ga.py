@@ -23,7 +23,7 @@ class GA(ModelInterface):
     showOutput: bool = False
     save_solutions: bool = False
     showZero: bool = False
-    selector: Dict[str, int] | None = None
+    selector: Dict[str, Any] | None = None
     set_progress: Callable | None = None
     current_generation: int = 0
     _penalty:int = 0 
@@ -32,6 +32,7 @@ class GA(ModelInterface):
     def __post_init__(self):
         if self.orders is None:
             raise ValueError("Orders is empty!")
+        self.orders = self.orders[self.orders['quantity'] > 0].reset_index(drop=True)
         self._paper_size  = self.size
 
         self.model = pygad.GA(
@@ -58,7 +59,9 @@ class GA(ModelInterface):
         match orders["edge_type"][self.get_first_solution(solution)]:
             case "X":
                 init_type = 1
-            case "N", "W":
+            case "N":
+                init_type = 2
+            case "W":
                 init_type = 2
 
         if init_type is not None:
@@ -93,8 +96,20 @@ class GA(ModelInterface):
         return 0
 
     def paper_out_logic(self, solution):
-        if sum(solution) > 6:  # out รวมเกิน 6 = _penalty
+        if sum(solution) > 5:
+            if sum(solution) <= 6:
+                init = 0
+                for index, out in enumerate(solution):
+                    if out>=1:
+                        if self.orders['edge_type'][index]=='X' and init==0:
+                            init = 1
+                            continue
+                        if self.orders['edge_type'][index]=='Y' and init==1:
+                            return                
+            
             self._penalty += self._penalty_value * sum(solution)  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
+        
+        
         order_length = 0
         for index, out in enumerate(solution):
             if out >= 1:
@@ -144,10 +159,11 @@ class GA(ModelInterface):
 
         _output = pd.DataFrame(
             {   
+                "id": orders['id'],
                 "blade": orders.index+1,
                 "order_number": orders["order_number"],
                 "num_orders": orders["quantity"],
-                "order_type": orders["component_type"],
+                "component_type": orders["component_type"],
                 "cut_width": orders["width"],
                 "cut_len": orders["length"],
                 "type": orders["edge_type"],

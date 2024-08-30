@@ -4,8 +4,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 from django.conf import settings
+import pandas as pd
 
-from .models import CSVFile, OptimizedOrder
+from .models import CSVFile, OptimizationPlan, OrderList, PlanOrder
 from .forms import CSVFileForm, LoginForm
 from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_reset, handle_saving
 from .getter import get_csv_file, get_orders
@@ -92,19 +93,45 @@ def progress_view(request):
     return render(request, 'progress_bar.html', context)
 
 def optimized_orders_view(request):
-    saved_list = OptimizedOrder.objects.all()
-    saved_list_data = [order.output for order in saved_list]
-    return render(request, 'saved_orders_table.html', {'data': saved_list_data})
+    # Get all PlanOrder objects as a list of dictionaries
+    optimized_output = list(PlanOrder.objects.all().values(
+        "order_id", "plan_quantity", "out", "blade_type"
+    ))
+
+    # Extract order IDs
+    optimized_output_ids = [order['order_id'] for order in optimized_output]
+    
+    # Get corresponding OrderList objects
+    optimized_order_list = list(OrderList.objects.filter(id__in=optimized_output_ids).values())
+
+    # Create a dictionary with order_id as the key
+    optimized_order_dict = {order['id']: order for order in optimized_order_list}
+    
+    
+    # Combine results
+    for order in optimized_output:
+        order_id = order['order_id']
+        if order_id in optimized_order_dict:
+            order.update(optimized_order_dict[order_id])
+    
+     
+    return render(request, 'saved_orders_table.html', {'data': optimized_output})
 
 def preview_data(request):
     file_id = request.GET.get("file_id")
     cache_key = f"file_selector_{file_id}"
     df = cache.get(cache_key)
 
-    if df:
+    if df is not None:
         return render(request, 'preview_table.html', {'preview_data': df})
-    
-    df = get_orders(request, file_id, filter_diff=False).to_dict(orient='records')
+
+    df = get_orders(request, file_id, filter_diff=False)
+
+    # Format datetime columns as per the instruction
+    for column in df.columns:
+        if pd.api.types.is_datetime64_any_dtype(df[column]):
+            df[column] = df[column].dt.strftime("%m/%d/%y")
+    df = df.to_dict(orient='records')
     cache.set(cache_key, df, CACHE_TIMEOUT)
     return render(request, 'preview_table.html', {'preview_data': df})
 

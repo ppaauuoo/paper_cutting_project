@@ -1,16 +1,13 @@
 from django.conf import settings
 
 import pandas as pd
-from typing import Dict
+from typing import Dict, Any
 from icecream import ic
 from pandas import DataFrame
 from dataclasses import dataclass
 
 from order_optimization.container import ProviderInterface
-
-UNIT_CONVERTER = settings.UNIT_CONVERTER
-COMMON_FILTER = settings.COMMON_FILTER
-DEADLINE_RANGE = settings.DEADLINE_RANGE
+from ordplan_project.settings import LEGACY_FILTER,COMMON_FILTER,DEADLINE_RANGE
 
 @dataclass
 class ORD(ProviderInterface):
@@ -21,8 +18,8 @@ class ORD(ProviderInterface):
     filter_value: int = 16
     _filter_diff: bool = True
     common: bool = False
-    filler: int = 0
-    selector: Dict[str, int] | None = None
+    filler: str = None
+    selector: Dict[str, Any] | None = None
     first_date_only: bool = False
     no_build: bool = False
     deadline_range: int = DEADLINE_RANGE
@@ -38,6 +35,7 @@ class ORD(ProviderInterface):
 
     def build(self) -> None:
         self.format_data()
+        self.legacy_filter_order()
         if self.first_date_only:
             self.set_first_date()
         else:
@@ -83,17 +81,11 @@ class ORD(ProviderInterface):
                 break
         self.ordplan = ordplan
         return
-
     def format_data(self):
         ordplan = self.ordplan
-        ordplan["width"] = round(ordplan["width"] / UNIT_CONVERTER, 2)
-        ordplan["length"] = round(ordplan["length"] / UNIT_CONVERTER, 2)
         ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%y")
-
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
-
-        ordplan = ordplan[ordplan["length"] != 0]  # drop len = 0
-
+        ordplan = ordplan[ordplan["length"] > 0]  # drop len = 0
         self.ordplan = ordplan
 
     def filter_diff_order(self, ordplan: DataFrame) -> DataFrame:
@@ -115,13 +107,13 @@ class ORD(ProviderInterface):
         return ordplan
 
     def set_selected_order(self):
-        if not self.selector:
+        if self.selector is None:
             return
         self.selected_order = self.ordplan[
-            self.ordplan["order_number"] == self.selector["order_id"]
+            self.ordplan["id"] == self.selector["order_id"]
         ]  # get selected orders
         ordplan = self.ordplan[
-            self.ordplan["order_number"] != self.selector["order_id"]
+            self.ordplan["id"] != self.selector["order_id"]
         ]  # filter out selected orders
         self.ordplan = pd.concat(
             [self.selected_order, ordplan], ignore_index=True
@@ -141,14 +133,27 @@ class ORD(ProviderInterface):
         )  # common mask
         self.ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
 
+    def legacy_filter_order(self):
+        ordplan = self.ordplan
+        init_order = self.ordplan.iloc[0]  # use first orders as init
+
+        init_order = self.set_filler_order(init_order)
+
+        legacy_filters = LEGACY_FILTER
+        mask = (
+            ordplan[legacy_filters].eq(init_order[legacy_filters]).all(axis=1)
+        )  # common mask
+        self.ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
+
+
     def set_filler_order(self, init_order):
-        if not self.filler:
+        if self.filler is None:
             return init_order
         ordplan = self.ordplan
         init_order = ordplan[
-            ordplan["order_number"] == self.filler
+            ordplan["id"] == self.filler
         ]  # use filler as init instead
         self.ordplan = ordplan[
-            ordplan["order_number"] != self.filler
+            ordplan["id"] != self.filler
         ]  # remove dupe filler
         return init_order

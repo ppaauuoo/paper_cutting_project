@@ -2,7 +2,7 @@
         {% include "date_picker.html"%}
         <div class="form-group mb-3">
             <label for="file_id" class="form-label">Select File:</label>
-            <select id="file_id" name="file_id" hx-include="this" class="form-select" required>
+            <select id="file_id" name="file_id" hx-include="this" class="form-select">
                 {% for file in csv_files %}
                     <option value="{{ file.id }}" {% if file.id|stringformat:"s" == request.POST.file_id %}selected{% endif %}>{{ file.name }}</option>
                 {% endfor %}
