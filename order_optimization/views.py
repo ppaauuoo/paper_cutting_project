@@ -8,7 +8,7 @@ import pandas as pd
 
 from .models import CSVFile, OptimizationPlan, OrderList, PlanOrder
 from .forms import CSVFileForm, LoginForm
-from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_reset, handle_saving
+from .handler import handle_common, handle_export, handle_filler, handle_manual_config, handle_auto_config, handle_reset, handle_saving, handle_timezones
 from .getter import get_csv_file, get_orders
 
 from icecream import ic
@@ -39,6 +39,8 @@ def order_optimizer_view(request):
                 handle_saving(request)
             case {"reset": _}:
                 handle_reset()
+            case {"export": _}:
+                handle_export()
 
     cache.delete("optimization_progress")  # Clear previous progress
     csv_files = CSVFile.objects.all()
@@ -114,7 +116,10 @@ def optimized_orders_view(request):
         if order_id in optimized_order_dict:
             order.update(optimized_order_dict[order_id])
     
-     
+    df = pd.DataFrame(optimized_output)
+    df = handle_timezones(df)
+    optimized_output = df.to_dict('records')
+
     return render(request, 'saved_orders_table.html', {'data': optimized_output})
 
 def preview_data(request):
