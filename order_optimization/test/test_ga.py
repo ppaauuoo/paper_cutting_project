@@ -116,7 +116,7 @@ def test_logic_optimal(mocker):
     orders_df = pd.DataFrame(orders_data)
 
     # Mock solution
-    solution = [3, 3, 0]
+    solution = [3, 2, 0]
 
     paper_size = 100
     
@@ -150,7 +150,7 @@ def test_logic_optimal(mocker):
     ga_instance.penalty = 0
     output = np.sum(solution * orders_df["width"])  # ผลรวมของตัดกว้างทั้งหมด
     ga_instance.paper_size_logic(output)
-    assert output == 60
+    assert output == 50
     assert ga_instance.penalty == 0
 
     ga_instance.penalty = 0
@@ -219,3 +219,41 @@ def test_paper_type_logic_case2():
     ga_instance.paper_type_logic(solution)
     assert ga_instance.penalty == 0
 
+
+@pytest.mark.django_db
+def test_paper_out_logic():
+    orders_data = {"edge_type": ["X","Y"], "width": [10, 10],"quantity": [1000, 200],}
+    orders_df = pd.DataFrame(orders_data)
+
+    solution = [3,3]
+    
+    ga_instance = GA(orders_df)
+    ga_instance.paper_out_logic(solution)
+    assert ga_instance.penalty == 0
+
+    orders_data = {"edge_type": ["X","X"], "width": [10, 10],"quantity": [1000, 200],}
+    orders_df = pd.DataFrame(orders_data)
+
+    solution = [3,3]
+    
+    ga_instance = GA(orders_df)
+    ga_instance.paper_out_logic(solution)
+    assert ga_instance.penalty == 6000
+
+    orders_data = {"edge_type": ["Y","X"], "width": [10, 10],"quantity": [1000, 200],}
+    orders_df = pd.DataFrame(orders_data)
+
+    solution = [3,3]
+    
+    ga_instance = GA(orders_df)
+    ga_instance.paper_out_logic(solution)
+    assert ga_instance.penalty == 6000
+
+    orders_data = {"edge_type": ["X","X"], "width": [10, 10],"quantity": [1000, 200],}
+    orders_df = pd.DataFrame(orders_data)
+
+    solution = [2,3]
+    
+    ga_instance = GA(orders_df)
+    ga_instance.paper_out_logic(solution)
+    assert ga_instance.penalty == 0
