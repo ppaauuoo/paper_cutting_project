@@ -8,7 +8,7 @@ from pandas import DataFrame
 from dataclasses import dataclass
 
 from order_optimization.container import ProviderInterface
-from ordplan_project.settings import LEGACY_FILTER,COMMON_FILTER,UNIT_CONVERTER,DEADLINE_RANGE
+from ordplan_project.settings import PLAN_RANGE, LEGACY_FILTER,COMMON_FILTER,UNIT_CONVERTER,DEADLINE_RANGE
 
 @dataclass
 class ORD(ProviderInterface):
@@ -145,8 +145,6 @@ class ORD(ProviderInterface):
         if self.preview:
             return
         legacy_filters = LEGACY_FILTER
-        max_attempts = 100  # Limit the number of attempts to avoid infinite loop
-        attempts = 0
         ordplan = pd.DataFrame(None)
         best_index=0
         most_compat_plan = 0
@@ -157,7 +155,6 @@ class ORD(ProviderInterface):
             mask = (self.ordplan[legacy_filters].eq(init_order[legacy_filters])).all(axis=1)
             # Apply the mask and reset the index
             ordplan = self.ordplan.loc[mask].reset_index(drop=True)
-            attempts += 1  # Increment attempts
             ic(len(ordplan),index)
             if len(ordplan)>most_compat_plan:
                 best_index=index

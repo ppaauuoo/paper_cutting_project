@@ -19,8 +19,7 @@ from dataclasses import dataclass
 
 from icecream import ic
 
-CACHE_TIMEOUT = settings.CACHE_TIMEOUT
-
+from ordplan_project.settings import PLAN_RANGE,CACHE_TIMEOUT
 
 def set_orders_model(file_id:str)-> None:
         csv_file = get_csv_file(file_id)
@@ -77,11 +76,10 @@ def get_orders_cache(file_id: str) -> DataFrame:
 
     orders = cache.get(f"order_cache_{file_id}", None)
 
-    if orders is not None:
+    if orders is not None and len(orders)>=PLAN_RANGE:
         return orders
 
     csv_file = get_csv_file(file_id)
-
     # Check if orders are already saved in the database
     order_records = OrderList.objects.filter(file=csv_file)
 
