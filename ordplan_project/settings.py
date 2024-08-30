@@ -35,7 +35,18 @@ COMMON_FILTER = [
     "right_edge_cut",
     "component_type",
 ]
-
+LEGACY_FILTER = [
+    "front_sheet",
+    "c_wave",
+    "middle_sheet",
+    "b_wave",
+    "back_sheet",
+    "edge_type",
+    "left_edge_cut",
+    "middle_edge_cut",
+    "right_edge_cut",
+    "component_type",
+]
 
 from pathlib import Path
 
