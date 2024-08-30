@@ -27,7 +27,6 @@ COMMON_FILTER = [
     "middle_sheet",
     "b_wave",
     "back_sheet",
-    "level",
     "edge_type",
     "width",
     "length",
