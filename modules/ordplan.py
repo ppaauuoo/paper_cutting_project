@@ -7,10 +7,7 @@ from pandas import DataFrame
 from dataclasses import dataclass
 
 from order_optimization.container import ProviderInterface
-
-UNIT_CONVERTER = settings.UNIT_CONVERTER
-COMMON_FILTER = settings.COMMON_FILTER
-DEADLINE_RANGE = settings.DEADLINE_RANGE
+from ordplan_project.settings import LEGACY_FILTER,COMMON_FILTER,UNIT_CONVERTER,DEADLINE_RANGE
 
 @dataclass
 class ORD(ProviderInterface):
@@ -38,6 +35,7 @@ class ORD(ProviderInterface):
 
     def build(self) -> None:
         self.format_data()
+        self.legacy_filter_order()
         if self.first_date_only:
             self.set_first_date()
         else:
@@ -134,6 +132,19 @@ class ORD(ProviderInterface):
             ordplan[common_cols].eq(init_order[common_cols]).all(axis=1)
         )  # common mask
         self.ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
+
+    def legacy_filter_order(self):
+        ordplan = self.ordplan
+        init_order = self.ordplan.iloc[0]  # use first orders as init
+
+        init_order = self.set_filler_order(init_order)
+
+        legacy_filters = LEGACY_FILTER
+        mask = (
+            ordplan[legacy_filters].eq(init_order[legacy_filters]).all(axis=1)
+        )  # common mask
+        self.ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
+
 
     def set_filler_order(self, init_order):
         if self.filler is None:

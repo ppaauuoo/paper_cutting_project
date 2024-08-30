@@ -101,3 +101,75 @@ def test_no_rules(test_data):
     ord.expand_deadline_scope()
     assert len(ord.ordplan) == 6
     assert len(set(ord.ordplan["due_date"])) == 5
+
+@pytest.mark.django_db
+def test_legacy():
+    test_data = pd.DataFrame({
+        "id": [1, 2, 3, 4, 5, 6, 7],
+        "width": [66.04, 67.04, 68.04, 69.04, 80, 80, 0.0],
+        "length": [190.0, 200.0, 210.0, 220.0, 200.0, 100.0, 0],
+        "due_date": ["08/01/23", "08/01/23", "08/05/23", "08/10/23", "08/15/23", "08/20/23", "02/21/22"],
+        "front_sheet": [1, 1, 1, 1, 1, 1, 0],
+        "c_wave": [1, 1, 1, 1, 1, 1, 0],
+        "middle_sheet": [1, 1, 1, 1, 1, 1, 0],
+        "b_wave": [1, 1, 1, 1, 1, 1, 0],
+        "back_sheet": [1, 1, 1, 1, 1, 1, 0],
+        "level": [1, 1, 1, 1, 1, 1, 0],
+        "edge_type": [1, 1, 1, 1, 1, 1, 0],
+        "left_edge_cut": [1, 1, 1, 1, 1, 1, 0],
+        "middle_edge_cut": [1, 1, 1, 1, 1, 1, 0],
+        "right_edge_cut": [1, 1, 1, 1, 1, 1, 0],
+        "component_type": [1, 1, 1, 1, 1, 1, 0]
+    })
+    ord = ORD(test_data, size=66,no_build=True)
+    ord.format_data()
+    ord.legacy_filter_order()
+    assert len(ord.ordplan) == 6
+
+@pytest.mark.django_db
+def test_legacy_restriction_fist_only():
+    test_data = pd.DataFrame({
+        "id": [1, 2, 3, 4, 5, 6, 7],
+        "width": [66.04, 67.04, 68.04, 69.04, 80, 80, 0.0],
+        "length": [190.0, 200.0, 210.0, 220.0, 200.0, 100.0, 0],
+        "due_date": ["08/01/23", "08/01/23", "08/05/23", "08/10/23", "08/15/23", "08/20/23", "02/21/22"],
+        "front_sheet": [2, 1, 1, 1, 1, 1, 0],
+        "c_wave": [1, 1, 1, 1, 1, 1, 0],
+        "middle_sheet": [1, 1, 1, 1, 1, 1, 0],
+        "b_wave": [1, 1, 1, 1, 1, 1, 0],
+        "back_sheet": [1, 1, 1, 1, 1, 1, 0],
+        "level": [1, 1, 1, 1, 1, 1, 0],
+        "edge_type": [1, 1, 1, 1, 1, 1, 0],
+        "left_edge_cut": [1, 1, 1, 1, 1, 1, 0],
+        "middle_edge_cut": [1, 1, 1, 1, 1, 1, 0],
+        "right_edge_cut": [1, 1, 1, 1, 1, 1, 0],
+        "component_type": [1, 1, 1, 1, 1, 1, 0]
+    })
+    ord = ORD(test_data, size=66,no_build=True)
+    ord.format_data()
+    ord.legacy_filter_order()
+    assert len(ord.ordplan) == 1
+
+@pytest.mark.django_db
+def test_legacy_restriction_fist_last():
+    test_data = pd.DataFrame({
+        "id": [1, 2, 3, 4, 5, 6, 7],
+        "width": [66.04, 67.04, 68.04, 69.04, 80, 80, 0.0],
+        "length": [190.0, 200.0, 210.0, 220.0, 200.0, 100.0, 0],
+        "due_date": ["08/01/23", "08/01/23", "08/05/23", "08/10/23", "08/15/23", "08/20/23", "02/21/22"],
+        "front_sheet": [2, 1, 1, 1, 1, 2, 0],
+        "c_wave": [1, 1, 1, 1, 1, 1, 0],
+        "middle_sheet": [1, 1, 1, 1, 1, 1, 0],
+        "b_wave": [1, 1, 1, 1, 1, 1, 0],
+        "back_sheet": [1, 1, 1, 1, 1, 1, 0],
+        "level": [1, 1, 1, 1, 1, 1, 0],
+        "edge_type": [1, 1, 1, 1, 1, 1, 0],
+        "left_edge_cut": [1, 1, 1, 1, 1, 1, 0],
+        "middle_edge_cut": [1, 1, 1, 1, 1, 1, 0],
+        "right_edge_cut": [1, 1, 1, 1, 1, 1, 0],
+        "component_type": [1, 1, 1, 1, 1, 1, 0]
+    })
+    ord = ORD(test_data, size=66,no_build=True)
+    ord.format_data()
+    ord.legacy_filter_order()
+    assert len(ord.ordplan) == 2
