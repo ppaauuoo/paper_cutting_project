@@ -14,7 +14,7 @@ from order_optimization.container import ModelContainer, OrderContainer
 from modules.ordplan import ORD
 from modules.ga import GA
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
 from icecream import ic
@@ -32,10 +32,10 @@ def set_orders_model(file_id:str)-> None:
             due_date = timezone.make_aware(
                 pd.to_datetime(row["กำหนดส่ง"], format="%m/%d/%y")
             )
-            order_id = (f"{row['เลขที่ใบสั่งขาย']}-{row['ชนิดส่วนประกอบ']}-{uuid.uuid4()}",)
+            order_id = f"{row['เลขที่ใบสั่งขาย']}-{row['ชนิดส่วนประกอบ']}-{uuid.uuid4()}"
 
-            if OrderList.objects.filter(id=order_id).exists():
-                continue
+            # if OrderList.objects.filter(id=order_id).exists():
+            #     continue
 
             order_instance = OrderList(
                 id=order_id,
@@ -103,7 +103,7 @@ def get_orders(
     tuning_values: int = 3,
     filter_diff: bool = True,
     common: bool = False,
-    filler: str = None,
+    filler: Optional[str] = None,
     first_date_only: bool = False,
 ) -> DataFrame:
 

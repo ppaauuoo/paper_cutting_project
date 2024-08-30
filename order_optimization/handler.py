@@ -391,5 +391,6 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
 
 def handle_reset():
     cache.clear()
-    OrderList.objects.all().delete()
     OptimizationPlan.objects.all().delete()
+    OrderList.objects.all().delete()
+    

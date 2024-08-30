@@ -10,8 +10,7 @@ from icecream import ic
 
 from order_optimization.container import ModelInterface
 
-MIN_TRIM = settings.MIN_TRIM 
-PENALTY_VALUE = settings.PENALTY_VALUE 
+from ordplan_project.settings import MIN_TRIM,PENALTY_VALUE
 
 
 @dataclass
