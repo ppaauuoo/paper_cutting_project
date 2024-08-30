@@ -20,7 +20,7 @@ MAX_TRIM = 3
 MIN_TRIM = 1
 PENALTY_VALUE = 1000
 UNIT_CONVERTER = 25.4 #MM _TO_INCH
-DEADLINE_RANGE = 100
+DEADLINE_RANGE = 300
 COMMON_FILTER = [
     "front_sheet",
     "c_wave",
@@ -41,11 +41,6 @@ LEGACY_FILTER = [
     "middle_sheet",
     "b_wave",
     "back_sheet",
-    "edge_type",
-    "left_edge_cut",
-    "middle_edge_cut",
-    "right_edge_cut",
-    "component_type",
 ]
 
 from pathlib import Path

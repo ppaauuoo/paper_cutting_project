@@ -130,7 +130,7 @@ def preview_data(request):
     if df is not None:
         return render(request, 'preview_table.html', {'preview_data': df})
 
-    df = get_orders(request, file_id, filter_diff=False)
+    df = get_orders(request, file_id, filter_diff=False, preview=True)
 
     # Format datetime columns as per the instruction
     for column in df.columns:

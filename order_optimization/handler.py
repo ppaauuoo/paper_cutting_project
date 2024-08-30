@@ -168,7 +168,8 @@ def handle_auto_config(request, **kwargs):
     again = cache.get("try_again", 0)
     out_range = 3 + again
     orders, size = auto_size_filter_logic(request)
-    # Pass all necessary variables to the wrapped function
+    if size is None:
+        raise ValueError("Logic error!")
     if orders is None:
         raise ValueError("Orders is empty!")
 
@@ -192,17 +193,19 @@ def auto_size_filter_logic(request):
     tuning_value = TUNING_VALUE[1]
     while orders is None or len(orders) <= 0:
         orders = get_orders(
-            request,
-            file_id,
-            size,
-            FILTER[-filter_index],
-            tuning_value,
+            request=request,
+            file_id=file_id,
+            size_value=size,
+            filter_value=FILTER[-filter_index],
+            tuning_values=tuning_value,
             first_date_only=False,
         )
         filter_index += 1
-        if filter_index > len(FILTER):
+        if filter_index >= len(FILTER):
             filter_index = 0
             roll_index += 1
+            if roll_index >= len(ROLL_PAPER):
+                return (None,None)
             size = ROLL_PAPER[roll_index]
 
     cache.set("auto_order", orders, CACHE_TIMEOUT)

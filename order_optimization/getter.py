@@ -105,6 +105,7 @@ def get_orders(
     common: bool = False,
     filler: Optional[str] = None,
     first_date_only: bool = False,
+    preview: bool = False,
 ) -> DataFrame:
 
     orders: DataFrame = get_orders_cache(file_id)
@@ -121,6 +122,7 @@ def get_orders(
             filler=filler,
             selector=get_selected_order(request),
             first_date_only=first_date_only,
+            preview=preview
         )
     ).get()
 

@@ -1,3 +1,4 @@
+import random
 from django.conf import settings
 
 import pandas as pd
@@ -24,6 +25,7 @@ class ORD(ProviderInterface):
     no_build: bool = False
     deadline_range: int = DEADLINE_RANGE
     lookup_amount: int = 0
+    preview: bool = False
 
     def __post_init__(self):
         if self.orders is None:
@@ -35,13 +37,19 @@ class ORD(ProviderInterface):
 
     def build(self) -> None:
         self.format_data()
-        self.legacy_filter_order()
+
         if self.first_date_only:
             self.set_first_date()
         else:
             self.expand_deadline_scope()
-        self.filter_common_order()
+
+        if self.common:
+            self.filter_common_order()
+        else:
+            self.legacy_filter_order()
+            
         self.set_selected_order()
+
 
     def get(self) -> DataFrame:
         df = self.ordplan.copy()
@@ -134,20 +142,33 @@ class ORD(ProviderInterface):
         self.ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
 
     def legacy_filter_order(self):
-        ordplan = self.ordplan
-        for index, order in enumerate(self.ordplan):
+        if self.preview:
+            return
+        legacy_filters = LEGACY_FILTER
+        max_attempts = 100  # Limit the number of attempts to avoid infinite loop
+        attempts = 0
+        ordplan = pd.DataFrame(None)
+        best_index=0
+        most_compat_plan = 0
+        for order in self.ordplan:
+            index = random.randint(0, len(self.ordplan) - 1)
+            init_order = self.ordplan.iloc[index]
+            # Create a mask for matching orders using all legacy filters
+            mask = (self.ordplan[legacy_filters].eq(init_order[legacy_filters])).all(axis=1)
+            # Apply the mask and reset the index
+            ordplan = self.ordplan.loc[mask].reset_index(drop=True)
+            attempts += 1  # Increment attempts
+            ic(len(ordplan),index)
+            if len(ordplan)>most_compat_plan:
+                best_index=index
+                most_compat_plan=len(ordplan)
 
-            init_order = self.ordplan.iloc[index] 
-            legacy_filters = LEGACY_FILTER
-            mask = (
-                ordplan[legacy_filters].eq(init_order[legacy_filters]).all(axis=1)
-            ) 
-            ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
+        init_order = self.ordplan.iloc[best_index]
+        mask = (self.ordplan[legacy_filters].eq(init_order[legacy_filters])).all(axis=1)
+        ordplan = self.ordplan.loc[mask].reset_index(drop=True)
 
-            if len(ordplan) >= DEADLINE_RANGE:
-                self.ordplan = ordplan
-                return
-
+        self.ordplan = ordplan
+        ic(best_index)
 
     def set_filler_order(self, init_order):
         if self.filler is None:
