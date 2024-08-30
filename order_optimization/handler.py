@@ -9,16 +9,7 @@ from icecream import ic
 from .getter import get_orders, get_outputs, get_optimizer
 from order_optimization.container import ModelContainer
 
-ROLL_PAPER = settings.ROLL_PAPER
-FILTER = settings.FILTER
-OUT_RANGE = settings.OUT_RANGE
-TUNING_VALUE = settings.TUNING_VALUE
-CACHE_TIMEOUT = settings.CACHE_TIMEOUT
-
-MAX_RETRY = settings.MAX_RETRY
-MAX_TRIM = settings.MAX_TRIM
-MIN_TRIM = settings.MIN_TRIM
-
+from ordplan_project.settings import ROLL_PAPER,FILTER,TUNING_VALUE,CACHE_TIMEOUT,MAX_RETRY,MAX_TRIM,MIN_TRIM
 
 def handle_optimization(func):
     def wrapper(request, *args, **kwargs):
@@ -167,6 +158,8 @@ def handle_auto_config(request, **kwargs):
     out_range = 3 + again
     orders, size = auto_size_filter_logic(request)
     # Pass all necessary variables to the wrapped function
+    if size is None:
+        raise ValueError("Logic Size Error!")
     if orders is None:
         raise ValueError("Orders is empty!")
 
@@ -183,30 +176,32 @@ def handle_auto_config(request, **kwargs):
 
 def auto_size_filter_logic(request):
     filter_index = 0
-    roll_index = 8
+    roll_index = 0
     orders = cache.get("auto_order", None)
-    size = cache.get("order_size", ROLL_PAPER[roll_index])
+    size_tuning = cache.get("order_size", ROLL_PAPER[roll_index])
     file_id = request.POST.get("file_id")
     tuning_value = TUNING_VALUE[1]
     while orders is None or len(orders) <= 0:
         orders = get_orders(
-            request,
-            file_id,
-            size,
-            FILTER[-filter_index],
-            tuning_value,
+            request=request,
+            file_id=file_id,
+            size_value=size_tuning,
+            filter_value=FILTER[-filter_index],
+            tuning_values=tuning_value,
             first_date_only=False,
         )
         filter_index += 1
-        if filter_index > len(FILTER):
+        if filter_index >= len(FILTER):
             filter_index = 0
             roll_index += 1
-            size = ROLL_PAPER[roll_index]
+            if roll_index >= len(ROLL_PAPER):
+                return (None,None)
+            size_tuning = ROLL_PAPER[roll_index]
 
     cache.set("auto_order", orders, CACHE_TIMEOUT)
-    cache.set("order_size", size, CACHE_TIMEOUT)
+    cache.set("order_size", size_tuning, CACHE_TIMEOUT)
 
-    return (orders, size)
+    return (orders, size_tuning)
 
 
 def handle_common(request) -> Callable:

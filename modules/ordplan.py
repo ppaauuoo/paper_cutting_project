@@ -7,7 +7,7 @@ from pandas import DataFrame
 from dataclasses import dataclass
 
 from order_optimization.container import ProviderInterface
-from ordplan_project.settings import LEGACY_FILTER,COMMON_FILTER,UNIT_CONVERTER,DEADLINE_RANGE
+from ordplan_project.settings import LEGACY_FILTER,COMMON_FILTER,DEADLINE_RANGE
 
 @dataclass
 class ORD(ProviderInterface):

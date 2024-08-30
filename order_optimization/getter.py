@@ -32,7 +32,7 @@ def set_orders_model(file_id:str)-> None:
             due_date = timezone.make_aware(
                 pd.to_datetime(row["กำหนดส่ง"], format="%m/%d/%y")
             )
-            order_id = (f"{row['เลขที่ใบสั่งขาย']}-{row['ชนิดส่วนประกอบ']}-{uuid.uuid4()}",)
+            order_id = f"{row['เลขที่ใบสั่งขาย']}-{row['ชนิดส่วนประกอบ']}-{uuid.uuid4()}"
 
             if OrderList.objects.filter(id=order_id).exists():
                 continue
@@ -129,7 +129,6 @@ def get_selected_order(request) -> Dict[str, Any] | None:
     selector_id = request.POST.get("selector_id")
     if not selector_id:
         return None
-    selector_id = selector_id.strip(",")
     selector_out = int(request.POST.get("selector_out"))
     return {"order_id": selector_id, "out": selector_out}
 
