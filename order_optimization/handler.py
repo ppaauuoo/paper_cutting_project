@@ -94,9 +94,8 @@ def handle_orders_logic(output_data):
         foll_out.append(order["out"])
 
     foll_order_number = round(
-        (init_len * init_num_orders) / (foll_order_len[0] * init_out)
+        (init_len * init_num_orders * foll_out[0]) / (foll_order_len[0] * init_out)
     )
-    # foll_order_number = foll_order_number[index]/foll_out[index]
     return (init_order_number, foll_order_number)
 
 
