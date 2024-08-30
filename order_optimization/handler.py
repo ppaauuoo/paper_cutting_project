@@ -1,7 +1,9 @@
+from datetime import datetime
 from django.contrib import messages
 from django.core.cache import cache
 from django.conf import settings
 
+from django.http import HttpResponse
 import pandas as pd
 from typing import Callable, Dict, List, Optional, Any
 from icecream import ic
@@ -387,10 +389,44 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
         filtered_order.quantity
 
 
-
-
 def handle_reset():
     cache.clear()
     OptimizationPlan.objects.all().delete()
     OrderList.objects.all().delete()
     
+def handle_export():
+
+    optimized_output = list(PlanOrder.objects.all().values(
+        "order_id", "plan_quantity", "out", "blade_type"
+    ))
+
+    # Extract order IDs
+    optimized_output_ids = [order['order_id'] for order in optimized_output]
+    
+    # Get corresponding OrderList objects
+    optimized_order_list = list(OrderList.objects.filter(id__in=optimized_output_ids).values())
+
+    # Create a dictionary with order_id as the key
+    optimized_order_dict = {order['id']: order for order in optimized_order_list}
+    
+    
+    # Combine results
+    for order in optimized_output:
+        order_id = order['order_id']
+        if order_id in optimized_order_dict:
+            order.update(optimized_order_dict[order_id])
+    
+    
+
+    # Create a DataFrame
+    df = pd.DataFrame(optimized_output)
+
+    df = handle_timezones(df)
+
+    # Save the DataFrame to a file
+    df.to_excel(f'media/exports/orders_export_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx', index=False)
+
+def handle_timezones(df: pd.DataFrame):
+    for col in df.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns]']):
+        df[col] = df[col].dt.tz_localize(None)
+    return df
