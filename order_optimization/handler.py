@@ -1,4 +1,5 @@
 from datetime import datetime
+import random
 from django.contrib import messages
 from django.core.cache import cache
 from django.conf import settings
@@ -11,15 +12,7 @@ from icecream import ic
 from .getter import get_orders, get_outputs, get_optimizer
 from order_optimization.container import ModelContainer
 
-ROLL_PAPER = settings.ROLL_PAPER
-FILTER = settings.FILTER
-OUT_RANGE = settings.OUT_RANGE
-TUNING_VALUE = settings.TUNING_VALUE
-CACHE_TIMEOUT = settings.CACHE_TIMEOUT
-
-MAX_RETRY = settings.MAX_RETRY
-MAX_TRIM = settings.MAX_TRIM
-MIN_TRIM = settings.MIN_TRIM
+from ordplan_project.settings import MIN_TRIM,ROLL_PAPER,FILTER,OUT_RANGE,TUNING_VALUE,CACHE_TIMEOUT,MAX_RETRY,MAX_TRIM,MIN_TRIM
 
 
 def handle_optimization(func):
@@ -165,7 +158,7 @@ def handle_manual_config(request, **kwargs):
 @handle_optimization
 def handle_auto_config(request, **kwargs):
     again = cache.get("try_again", 0)
-    out_range = 3 + again
+    out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
     orders, size = auto_size_filter_logic(request)
     if size is None:
         raise ValueError("Logic error!")
@@ -184,12 +177,13 @@ def handle_auto_config(request, **kwargs):
 
 
 def auto_size_filter_logic(request):
-    filter_index = 0
-    roll_index = 8
+    filter_index = random.randint(0, len(FILTER)-1)
+    roll_index = random.randint(0, len(ROLL_PAPER)-1)
     orders = cache.get("auto_order", None)
     size = cache.get("order_size", ROLL_PAPER[roll_index])
     file_id = request.POST.get("file_id")
-    tuning_value = TUNING_VALUE[1]
+    tuning_value = TUNING_VALUE[random.randint(0, len(TUNING_VALUE)-1)]
+    ic(filter_index,roll_index,tuning_value)
     while orders is None or len(orders) <= 0:
         orders = get_orders(
             request=request,

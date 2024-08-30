@@ -77,6 +77,7 @@ def get_orders_cache(file_id: str) -> DataFrame:
     orders = cache.get(f"order_cache_{file_id}", None)
 
     if orders is not None and len(orders)>=PLAN_RANGE:
+        ic(len(orders))
         return orders
 
     csv_file = get_csv_file(file_id)
@@ -86,10 +87,11 @@ def get_orders_cache(file_id: str) -> DataFrame:
     if order_records.exists():
         orders = pd.DataFrame(order_records.values())
         orders["due_date"] = pd.to_datetime(orders["due_date"]).dt.strftime("%m/%d/%y")
+        cache.set(f"order_cache_{file_id}", orders, CACHE_TIMEOUT)    
     else:
         set_orders_model(file_id)
 
-    return orders
+    get_orders_cache(file_id)
 
 
 def get_orders(
