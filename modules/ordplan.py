@@ -135,15 +135,18 @@ class ORD(ProviderInterface):
 
     def legacy_filter_order(self):
         ordplan = self.ordplan
-        init_order = self.ordplan.iloc[0]  # use first orders as init
+        for index, order in enumerate(self.ordplan):
 
-        init_order = self.set_filler_order(init_order)
+            init_order = self.ordplan.iloc[index] 
+            legacy_filters = LEGACY_FILTER
+            mask = (
+                ordplan[legacy_filters].eq(init_order[legacy_filters]).all(axis=1)
+            ) 
+            ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
 
-        legacy_filters = LEGACY_FILTER
-        mask = (
-            ordplan[legacy_filters].eq(init_order[legacy_filters]).all(axis=1)
-        )  # common mask
-        self.ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
+            if len(ordplan) >= DEADLINE_RANGE:
+                self.ordplan = ordplan
+                return
 
 
     def set_filler_order(self, init_order):
