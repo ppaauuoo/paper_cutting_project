@@ -158,3 +158,64 @@ def test_logic_optimal(mocker):
     ga_instance.paper_trim_logic(fitness_values)
     assert ga_instance.penalty == 0
     
+@pytest.mark.django_db
+def test_paper_type_logic_case1():
+
+    orders_data = {"edge_type": ["X","Y"], "width": [10, 10],"quantity": [1000, 200],}
+    orders_df = pd.DataFrame(orders_data)
+
+    solution = [1,1]
+    
+    ga_instance = GA(orders_df)
+    ga_instance.paper_type_logic(solution)
+    assert ga_instance.penalty == 0
+
+    orders_data = {"edge_type": ["X","X"], "width": [10, 10],"quantity": [1000, 200],}
+    orders_df = pd.DataFrame(orders_data)
+
+    solution = [1,1]
+    
+    ga_instance = GA(orders_df)
+    ga_instance.paper_type_logic(solution)
+    assert ga_instance.penalty == 0
+
+    orders_data = {"edge_type": ["X","N"], "width": [10, 10],"quantity": [1000, 200],}
+    orders_df = pd.DataFrame(orders_data)
+
+    solution = [1,1]
+    
+    ga_instance = GA(orders_df)
+    ga_instance.paper_type_logic(solution)
+    assert ga_instance.penalty == 1000
+
+
+@pytest.mark.django_db
+def test_paper_type_logic_case2():
+ 
+    orders_data = {"edge_type": ["N","X"], "width": [10, 10],"quantity": [1000, 200],}
+    orders_df = pd.DataFrame(orders_data)
+
+    solution = [1,1]
+    
+    ga_instance = GA(orders_df)
+    ga_instance.paper_type_logic(solution)
+    assert ga_instance.penalty == 1000
+
+    orders_data = {"edge_type": ["W","X"], "width": [10, 10],"quantity": [1000, 200],}
+    orders_df = pd.DataFrame(orders_data)
+
+    solution = [1,1]
+    
+    ga_instance = GA(orders_df)
+    ga_instance.paper_type_logic(solution)
+    assert ga_instance.penalty == 1000
+
+    orders_data = {"edge_type": ["N","Y"], "width": [10, 10],"quantity": [1000, 200],}
+    orders_df = pd.DataFrame(orders_data)
+
+    solution = [1,1]
+    
+    ga_instance = GA(orders_df)
+    ga_instance.paper_type_logic(solution)
+    assert ga_instance.penalty == 0
+

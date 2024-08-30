@@ -59,7 +59,9 @@ class GA(ModelInterface):
         match orders["edge_type"][self.get_first_solution(solution)]:
             case "X":
                 init_type = 1
-            case "N", "W":
+            case "N":
+                init_type = 2
+            case "W":
                 init_type = 2
 
         if init_type is not None:
