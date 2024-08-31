@@ -107,12 +107,9 @@ def get_orders(
     first_date_only: bool = False,
     preview: bool = False,
 ) -> DataFrame:
-
-    orders: DataFrame = get_orders_cache(file_id)
-
     return OrderContainer(
         provider=ORD(
-            orders=orders,
+            orders=get_orders_cache(file_id),
             deadline_scope=deadline_scope,
             _filter_diff=filter_diff,
             filter_value=filter_value,

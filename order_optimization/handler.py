@@ -158,7 +158,8 @@ def handle_manual_config(request, **kwargs):
 @handle_optimization
 def handle_auto_config(request, **kwargs):
     again = cache.get("try_again", 0)
-    out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
+    # out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
+    out_range = 6
     orders, size = auto_size_filter_logic(request)
     if size is None:
         raise ValueError("Logic error!")
@@ -177,12 +178,14 @@ def handle_auto_config(request, **kwargs):
 
 
 def auto_size_filter_logic(request):
-    filter_index = random.randint(0, len(FILTER)-1)
+    # filter_index = random.randint(0, len(FILTER)-1)
+    filter_index = 1
     roll_index = random.randint(0, len(ROLL_PAPER)-1)
     orders = cache.get("auto_order", None)
     size = cache.get("order_size", ROLL_PAPER[roll_index])
     file_id = request.POST.get("file_id")
-    tuning_value = TUNING_VALUE[random.randint(0, len(TUNING_VALUE)-1)]
+    # tuning_value = TUNING_VALUE[random.randint(0, len(TUNING_VALUE)-1)]
+    tuning_value = 3
     ic(filter_index,roll_index,tuning_value)
     while orders is None or len(orders) <= 0:
         orders = get_orders(
