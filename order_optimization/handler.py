@@ -12,7 +12,7 @@ from icecream import ic
 from .getter import get_orders, get_outputs, get_optimizer
 from order_optimization.container import ModelContainer
 
-from ordplan_project.settings import MIN_TRIM,ROLL_PAPER,FILTER,OUT_RANGE,TUNING_VALUE,CACHE_TIMEOUT,MAX_RETRY,MAX_TRIM,MIN_TRIM
+from ordplan_project.settings import PLAN_RANGE,MIN_TRIM,ROLL_PAPER,FILTER,OUT_RANGE,TUNING_VALUE,CACHE_TIMEOUT,MAX_RETRY,MAX_TRIM,MIN_TRIM
 
 
 def handle_optimization(func):
@@ -47,10 +47,15 @@ def handle_optimization(func):
             foll_order_number,
         )
 
-        if is_trim_fit(fitness_values):
+        if is_trim_fit(fitness_values) and is_foll_ok(output_data,foll_order_number):
             messages.success(request, "Optimizing finished.")
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
+        best_result = cache.get("best_result", {'fitness':0})
+        if results['fitness'] < best_result['fitness']:
+            cache.set("best_result", results, CACHE_TIMEOUT)
+        
+        
         if "auto" in request.POST:
             return handle_auto_retry(request)
 
@@ -66,6 +71,13 @@ def handle_optimization(func):
 
     return wrapper
 
+def is_foll_ok(output_data: List[Dict[str, Any]],foll_order_number: int):
+    for index, order in enumerate(output_data):
+        if index == 0 and len(output_data)>1:
+            continue
+        if order["out"] < foll_order_number:
+            return False
+    return True
 
 def is_trim_fit(fitness_values: float):
     return abs(fitness_values) <= MAX_TRIM and abs(fitness_values) >= MIN_TRIM
@@ -98,8 +110,12 @@ def handle_auto_retry(request):
         again += 1
         cache.set("try_again", again, CACHE_TIMEOUT)
         return handle_auto_config(request)
+    cache.delete("try_again")
+    cache.delete("optimization_results")  # clear
     messages.error(request, "Error : Auto config malfunctioned, please contact admin.")
-    return cache.delete("optimization_results")  # clear
+    best_result = cache.get("best_result")
+    return cache.set("optimization_results", best_result, CACHE_TIMEOUT)
+
 
 
 def handle_satisfied_retry(wrapper, request, results, *args, **kwargs):
