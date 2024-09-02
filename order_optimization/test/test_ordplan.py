@@ -24,7 +24,8 @@ def test_data() -> pd.DataFrame:
         "left_edge_cut": [1, 1, 1, 1, 1, 1, 0],
         "middle_edge_cut": [1, 1, 2, 1, 1, 1, 0],
         "right_edge_cut": [1, 1, 1, 1, 1, 1, 0],
-        "component_type": [1, 1, 1, 1, 1, 1, 0]
+        "component_type": [1, 1, 1, 1, 1, 1, 0],
+        "quantity": [1,1,1,1,1,1,1]
     })
 
 @pytest.mark.django_db
@@ -120,7 +121,8 @@ def test_legacy():
         "left_edge_cut": [1, 1, 1, 1, 1, 1, 0],
         "middle_edge_cut": [1, 1, 1, 1, 1, 1, 0],
         "right_edge_cut": [1, 1, 1, 1, 1, 1, 0],
-        "component_type": [1, 1, 1, 1, 1, 1, 0]
+        "component_type": [1, 1, 1, 1, 1, 1, 0],
+        "quantity": [1,1,1,1,1,1,1]
     })
     ord = ORD(test_data, size=66,no_build=True)
     ord.format_data()
@@ -144,7 +146,8 @@ def test_legacy_restriction_fist_only(mocker):
         "left_edge_cut": [1, 1, 1, 1, 1, 1, 0],
         "middle_edge_cut": [1, 1, 1, 1, 1, 1, 0],
         "right_edge_cut": [1, 1, 1, 1, 1, 1, 0],
-        "component_type": [1, 1, 1, 1, 1, 1, 0]
+        "component_type": [1, 1, 1, 1, 1, 1, 0],
+        "quantity": [1,1,1,1,1,1,1]
     })
     mocker.patch('random.randint', return_value=0)
 
@@ -165,6 +168,7 @@ def test_legacy_restriction_fist_last(mocker):
         "middle_sheet": [1, 1, 1, 1, 1, 1, 0],
         "b_wave":       [1, 1, 1, 1, 3, 1, 0],
         "back_sheet":   [3, 3, 1, 1, 1, 3, 0],
+        "quantity": [1,1,1,1,1,1,1]
     })
 
     mocker.patch('random.randint', return_value=0)

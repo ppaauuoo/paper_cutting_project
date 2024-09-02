@@ -1,4 +1,5 @@
 from datetime import datetime
+import random
 from django.contrib import messages
 from django.core.cache import cache
 from django.conf import settings
@@ -11,15 +12,7 @@ from icecream import ic
 from .getter import get_orders, get_outputs, get_optimizer
 from order_optimization.container import ModelContainer
 
-ROLL_PAPER = settings.ROLL_PAPER
-FILTER = settings.FILTER
-OUT_RANGE = settings.OUT_RANGE
-TUNING_VALUE = settings.TUNING_VALUE
-CACHE_TIMEOUT = settings.CACHE_TIMEOUT
-
-MAX_RETRY = settings.MAX_RETRY
-MAX_TRIM = settings.MAX_TRIM
-MIN_TRIM = settings.MIN_TRIM
+from ordplan_project.settings import PLAN_RANGE,MIN_TRIM,ROLL_PAPER,FILTER,OUT_RANGE,TUNING_VALUE,CACHE_TIMEOUT,MAX_RETRY,MAX_TRIM,MIN_TRIM
 
 
 def handle_optimization(func):
@@ -35,11 +28,12 @@ def handle_optimization(func):
 
         if orders is None:
             raise ValueError("Orders is empty!")
+        
         num_generations = kwargs.get("num_generations", 50)
         out_range = kwargs.get("out_range", 6)
 
         optimizer_instance = get_optimizer(
-            request, orders, size_value, out_range, num_generations
+            request, orders, size_value, out_range, num_generations, show_output=False
         )
         fitness_values, output_data = get_outputs(optimizer_instance)
 
@@ -54,10 +48,15 @@ def handle_optimization(func):
             foll_order_number,
         )
 
-        if is_trim_fit(fitness_values):
+        if is_trim_fit(fitness_values) and is_foll_ok(output_data,foll_order_number):
             messages.success(request, "Optimizing finished.")
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
+        best_result = cache.get("best_result", {'trim':1000})
+        if results['trim'] < best_result['trim']:
+            cache.set("best_result", results, CACHE_TIMEOUT)
+        
+        
         if "auto" in request.POST:
             return handle_auto_retry(request)
 
@@ -73,6 +72,13 @@ def handle_optimization(func):
 
     return wrapper
 
+def is_foll_ok(output_data: List[Dict[str, Any]],foll_order_number: int):
+    for index, order in enumerate(output_data):
+        if index == 0 and len(output_data)>1:
+            continue
+        if order["out"] < foll_order_number:
+            return False
+    return True
 
 def is_trim_fit(fitness_values: float):
     return abs(fitness_values) <= MAX_TRIM and abs(fitness_values) >= MIN_TRIM
@@ -99,14 +105,7 @@ def handle_orders_logic(output_data):
     return (init_order_number, foll_order_number)
 
 
-def handle_auto_retry(request):
-    again = cache.get("try_again", 0)
-    if again <= MAX_RETRY:
-        again += 1
-        cache.set("try_again", again, CACHE_TIMEOUT)
-        return handle_auto_config(request)
-    messages.error(request, "Error : Auto config malfunctioned, please contact admin.")
-    return cache.delete("optimization_results")  # clear
+
 
 
 def handle_satisfied_retry(wrapper, request, results, *args, **kwargs):
@@ -161,11 +160,24 @@ def handle_manual_config(request, **kwargs):
 
     return kwargs
 
+def handle_auto_retry(request):
+    again = cache.get("try_again", 0)
+    if again <= MAX_RETRY:
+        again += 1
+        cache.set("try_again", again, CACHE_TIMEOUT)
+        return handle_auto_config(request)
+
+    messages.error(request, "Error : Auto config malfunctioned, please contact admin.")
+    best_result = cache.get("best_result")
+    cache.set("optimization_results", best_result, CACHE_TIMEOUT)
+    cache.delete("try_again") 
+    return 
 
 @handle_optimization
 def handle_auto_config(request, **kwargs):
     again = cache.get("try_again", 0)
-    out_range = 3 + again
+    # out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
+    out_range = 4
     orders, size = auto_size_filter_logic(request)
     if size is None:
         raise ValueError("Logic error!")
@@ -184,31 +196,49 @@ def handle_auto_config(request, **kwargs):
 
 
 def auto_size_filter_logic(request):
-    filter_index = 0
-    roll_index = 8
-    orders = cache.get("auto_order", None)
-    size = cache.get("order_size", ROLL_PAPER[roll_index])
+    # filter_index = random.randint(0, len(FILTER)-1)
+
+    # orders = cache.get("auto_order", [])
+    
+    
+    # tuning_value = TUNING_VALUE[random.randint(0, len(TUNING_VALUE)-1)]
+    # tuning_value = 2 if roll_index < len(ROLL_PAPER)/3 else 3
+    # filter_index = 1 if roll_index < len(ROLL_PAPER)/3 else 0
+
     file_id = request.POST.get("file_id")
-    tuning_value = TUNING_VALUE[1]
-    while orders is None or len(orders) <= 0:
+    tuning_value = 3
+    filter_index = 1
+    orders = None
+    past_size = cache.get("past_size", [])
+
+    if len(past_size) >= len(ROLL_PAPER):
+        return (None, None)
+
+    while orders is None or len(orders) <= PLAN_RANGE/2:
+        roll_index = random.randint(0, len(ROLL_PAPER)-1)
+        size = ROLL_PAPER[roll_index]
+        if size in past_size:
+            continue
         orders = get_orders(
             request=request,
             file_id=file_id,
             size_value=size,
-            filter_value=FILTER[-filter_index],
+            filter_value=FILTER[filter_index],
             tuning_values=tuning_value,
             first_date_only=False,
         )
-        filter_index += 1
-        if filter_index >= len(FILTER):
-            filter_index = 0
-            roll_index += 1
-            if roll_index >= len(ROLL_PAPER):
-                return (None,None)
-            size = ROLL_PAPER[roll_index]
+        # filter_index += 1
+        # if filter_index >= len(FILTER):
+        #     filter_index = 0
+        #     roll_index += 1
+        #     if roll_index >= len(ROLL_PAPER):
+        #         return (None,None)
+        #     size = ROLL_PAPER[roll_index]
 
-    cache.set("auto_order", orders, CACHE_TIMEOUT)
-    cache.set("order_size", size, CACHE_TIMEOUT)
+    # cache.set("auto_order", orders, CACHE_TIMEOUT)
+
+    past_size.append(size)
+    cache.set("past_size", past_size, CACHE_TIMEOUT)
 
     return (orders, size)
 
@@ -232,7 +262,7 @@ def handle_common(request) -> Callable:
             common=True,
         )
         optimizer_instance = get_optimizer(
-            request, orders, size_value, show_output=True
+            request, orders, size_value, show_output=False
         )
 
         if abs(optimizer_instance.fitness_values) < abs(best_fitness):
@@ -288,7 +318,7 @@ def handle_filler(request):
         > results["output"][1]["num_orders"] + orders["quantity"][i]
     ):
         i += 1
-
+ 
     filler_data = output_format(orders.iloc[i], init_out).to_dict(orient="records")
     results["output"].extend(filler_data)
     return cache.set("optimization_results", results, CACHE_TIMEOUT)

@@ -94,6 +94,8 @@ class ORD(ProviderInterface):
         ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%y")
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
         ordplan = ordplan[ordplan["length"] > 0]  # drop len = 0
+        ordplan = ordplan[ordplan["quantity"] > 0]  # drop quantity = 0
+
         self.ordplan = ordplan
 
     def filter_diff_order(self, ordplan: DataFrame) -> DataFrame:
@@ -155,7 +157,6 @@ class ORD(ProviderInterface):
             mask = (self.ordplan[legacy_filters].eq(init_order[legacy_filters])).all(axis=1)
             # Apply the mask and reset the index
             ordplan = self.ordplan.loc[mask].reset_index(drop=True)
-            ic(len(ordplan),index)
             if len(ordplan)>most_compat_plan:
                 best_index=index
                 most_compat_plan=len(ordplan)
@@ -165,16 +166,10 @@ class ORD(ProviderInterface):
         ordplan = self.ordplan.loc[mask].reset_index(drop=True)
 
         self.ordplan = ordplan
-        ic(best_index)
 
     def set_filler_order(self, init_order):
         if self.filler is None:
             return init_order
-        ordplan = self.ordplan
-        init_order = ordplan[
-            ordplan["id"] == self.filler
-        ]  # use filler as init instead
-        self.ordplan = ordplan[
-            ordplan["id"] != self.filler
-        ]  # remove dupe filler
+        init_order = self.ordplan[self.ordplan['id'] == self.filler].iloc[0]
+        self.ordplan = self.ordplan[self.ordplan['id'] != self.filler]
         return init_order

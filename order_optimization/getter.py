@@ -21,7 +21,7 @@ from icecream import ic
 
 from ordplan_project.settings import PLAN_RANGE,CACHE_TIMEOUT
 
-def set_orders_model(file_id:str)-> None:
+def populate_model(file_id:str)-> None:
         csv_file = get_csv_file(file_id)
         # Read from Excel file and create new records
         data = pd.read_excel(csv_file.file.path, engine="openpyxl")
@@ -64,9 +64,10 @@ def set_orders_model(file_id:str)-> None:
         if order_instances:
             OrderList.objects.bulk_create(order_instances)
             orders = pd.DataFrame(list(OrderList.objects.all().values()))
-        for column in orders.columns:
-            if pd.api.types.is_datetime64_any_dtype(orders[column]):
-                orders[column] = orders[column].dt.strftime("%m/%d/%y")
+
+        # for column in orders.columns:
+        #     if pd.api.types.is_datetime64_any_dtype(orders[column]):
+        #         orders[column] = orders[column].dt.strftime("%m/%d/%y")
 
         # Cache the orders
         cache.set(f"order_cache_{file_id}", orders, CACHE_TIMEOUT)
@@ -79,23 +80,22 @@ def get_orders_cache(file_id: str) -> DataFrame:
     if orders is not None and len(orders)>=PLAN_RANGE:
         return orders
 
-    csv_file = get_csv_file(file_id)
-    # Check if orders are already saved in the database
-    order_records = OrderList.objects.filter(file=csv_file)
+    order_records = OrderList.objects.filter(file=get_csv_file(file_id))
 
     if order_records.exists():
         orders = pd.DataFrame(order_records.values())
-        orders["due_date"] = pd.to_datetime(orders["due_date"]).dt.strftime("%m/%d/%y")
+        # orders["due_date"] = pd.to_datetime(orders["due_date"]).dt.strftime("%m/%d/%y")
+        cache.set(f"order_cache_{file_id}", orders, CACHE_TIMEOUT)    
     else:
-        set_orders_model(file_id)
+        populate_model(file_id)
 
-    return orders
+    return get_orders_cache(file_id)
 
 
 def get_orders(
     request,
     file_id: str,
-    size_value: float = 66,
+    size_value: float = 66.0,
     deadline_scope: int = 0,
     filter_value: int = 16,
     tuning_values: int = 3,
@@ -105,12 +105,9 @@ def get_orders(
     first_date_only: bool = False,
     preview: bool = False,
 ) -> DataFrame:
-
-    orders: DataFrame = get_orders_cache(file_id)
-
     return OrderContainer(
         provider=ORD(
-            orders=orders,
+            orders=get_orders_cache(file_id),
             deadline_scope=deadline_scope,
             _filter_diff=filter_diff,
             filter_value=filter_value,
@@ -129,7 +126,6 @@ def get_selected_order(request) -> Dict[str, Any] | None:
     selector_id = request.POST.get("selector_id")
     if not selector_id:
         return None
-    selector_id = selector_id.strip(",")
     selector_out = int(request.POST.get("selector_out"))
     return {"order_id": selector_id, "out": selector_out}
 
