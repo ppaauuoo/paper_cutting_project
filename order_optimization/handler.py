@@ -33,7 +33,7 @@ def handle_optimization(func):
         out_range = kwargs.get("out_range", 6)
 
         optimizer_instance = get_optimizer(
-            request, orders, size_value, out_range, num_generations, show_output=True
+            request, orders, size_value, out_range, num_generations, show_output=False
         )
         fitness_values, output_data = get_outputs(optimizer_instance)
 
@@ -48,7 +48,7 @@ def handle_optimization(func):
             foll_order_number,
         )
 
-        if ic(is_trim_fit(fitness_values) and is_foll_ok(output_data,foll_order_number)):
+        if is_trim_fit(fitness_values) and is_foll_ok(output_data,foll_order_number):
             messages.success(request, "Optimizing finished.")
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
@@ -177,7 +177,7 @@ def handle_auto_retry(request):
 def handle_auto_config(request, **kwargs):
     again = cache.get("try_again", 0)
     # out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
-    out_range = 6
+    out_range = 4
     orders, size = auto_size_filter_logic(request)
     if size is None:
         raise ValueError("Logic error!")
@@ -197,33 +197,48 @@ def handle_auto_config(request, **kwargs):
 
 def auto_size_filter_logic(request):
     # filter_index = random.randint(0, len(FILTER)-1)
-    filter_index = 1
-    roll_index = random.randint(0, len(ROLL_PAPER)-1)
-    orders = cache.get("auto_order", None)
-    size = cache.get("order_size", ROLL_PAPER[roll_index])
-    file_id = request.POST.get("file_id")
+
+    # orders = cache.get("auto_order", [])
+    
+    
     # tuning_value = TUNING_VALUE[random.randint(0, len(TUNING_VALUE)-1)]
+    # tuning_value = 2 if roll_index < len(ROLL_PAPER)/3 else 3
+    # filter_index = 1 if roll_index < len(ROLL_PAPER)/3 else 0
+
+    file_id = request.POST.get("file_id")
     tuning_value = 3
-    ic(filter_index,roll_index,tuning_value)
-    while orders is None or len(orders) <= 0:
+    filter_index = 1
+    orders = None
+    past_size = cache.get("past_size", [])
+
+    if len(past_size) >= len(ROLL_PAPER):
+        return (None, None)
+
+    while orders is None or len(orders) <= PLAN_RANGE/2:
+        roll_index = random.randint(0, len(ROLL_PAPER)-1)
+        size = ROLL_PAPER[roll_index]
+        if size in past_size:
+            continue
         orders = get_orders(
             request=request,
             file_id=file_id,
             size_value=size,
-            filter_value=FILTER[-filter_index],
+            filter_value=FILTER[filter_index],
             tuning_values=tuning_value,
             first_date_only=False,
         )
-        filter_index += 1
-        if filter_index >= len(FILTER):
-            filter_index = 0
-            roll_index += 1
-            if roll_index >= len(ROLL_PAPER):
-                return (None,None)
-            size = ROLL_PAPER[roll_index]
+        # filter_index += 1
+        # if filter_index >= len(FILTER):
+        #     filter_index = 0
+        #     roll_index += 1
+        #     if roll_index >= len(ROLL_PAPER):
+        #         return (None,None)
+        #     size = ROLL_PAPER[roll_index]
 
-    cache.set("auto_order", orders, CACHE_TIMEOUT)
-    cache.set("order_size", size, CACHE_TIMEOUT)
+    # cache.set("auto_order", orders, CACHE_TIMEOUT)
+
+    past_size.append(size)
+    cache.set("past_size", past_size, CACHE_TIMEOUT)
 
     return (orders, size)
 
