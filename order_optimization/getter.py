@@ -89,7 +89,7 @@ def get_orders_cache(file_id: str) -> DataFrame:
     else:
         populate_model(file_id)
 
-    get_orders_cache(file_id)
+    return get_orders_cache(file_id)
 
 
 def get_orders(
