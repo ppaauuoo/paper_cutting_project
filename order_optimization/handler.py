@@ -169,6 +169,7 @@ def handle_auto_retry(request):
 
     messages.error(request, "Error : Auto config malfunctioned, please contact admin.")
     best_result = cache.get("best_result")
+    cache.delete("past_size")
     cache.set("optimization_results", best_result, CACHE_TIMEOUT)
     cache.delete("try_again") 
     return 
@@ -215,10 +216,11 @@ def auto_size_filter_logic(request):
         return (None, None)
 
     while orders is None or len(orders) <= PLAN_RANGE/2:
-        roll_index = random.randint(0, len(ROLL_PAPER)-1)
-        size = ROLL_PAPER[roll_index]
+        
+        size = 85
         if size in past_size:
-            continue
+            size = random.choice([roll for roll in ROLL_PAPER if roll not in past_size])
+        
         orders = get_orders(
             request=request,
             file_id=file_id,
@@ -236,7 +238,6 @@ def auto_size_filter_logic(request):
         #     size = ROLL_PAPER[roll_index]
 
     # cache.set("auto_order", orders, CACHE_TIMEOUT)
-
     past_size.append(size)
     cache.set("past_size", past_size, CACHE_TIMEOUT)
 
