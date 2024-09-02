@@ -28,11 +28,12 @@ def handle_optimization(func):
 
         if orders is None:
             raise ValueError("Orders is empty!")
+        
         num_generations = kwargs.get("num_generations", 50)
         out_range = kwargs.get("out_range", 6)
 
         optimizer_instance = get_optimizer(
-            request, orders, size_value, out_range, num_generations
+            request, orders, size_value, out_range, num_generations, show_output=True
         )
         fitness_values, output_data = get_outputs(optimizer_instance)
 
@@ -47,7 +48,7 @@ def handle_optimization(func):
             foll_order_number,
         )
 
-        if is_trim_fit(fitness_values) and is_foll_ok(output_data,foll_order_number):
+        if ic(is_trim_fit(fitness_values) and is_foll_ok(output_data,foll_order_number)):
             messages.success(request, "Optimizing finished.")
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
@@ -246,7 +247,7 @@ def handle_common(request) -> Callable:
             common=True,
         )
         optimizer_instance = get_optimizer(
-            request, orders, size_value, show_output=True
+            request, orders, size_value, show_output=False
         )
 
         if abs(optimizer_instance.fitness_values) < abs(best_fitness):
