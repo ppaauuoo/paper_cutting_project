@@ -51,8 +51,8 @@ def handle_optimization(func):
             messages.success(request, "Optimizing finished.")
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
-        best_result = cache.get("best_result", {'fitness':0})
-        if results['fitness'] < best_result['fitness']:
+        best_result = cache.get("best_result", {'trim':1000})
+        if results['trim'] < best_result['trim']:
             cache.set("best_result", results, CACHE_TIMEOUT)
         
         
