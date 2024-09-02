@@ -96,10 +96,10 @@ def progress_view(request):
 
 def optimized_orders_view(request):
     # Get all PlanOrder objects as a list of dictionaries
-    optimized_output = list(PlanOrder.objects.all().values(
-        "order_id", "plan_quantity", "out", "blade_type"
-    ))
-
+    optimized_output = list(PlanOrder.objects.all().values('blade_1_orders__id', 'blade_2_orders__id','order_id', 'plan_quantity', 'out', 'blade_type', 'paper_roll'))
+    #     "order_id", "plan_quantity", "out", "blade_type", "paper_roll"
+    # ))
+    
     # Extract order IDs
     optimized_output_ids = [order['order_id'] for order in optimized_output]
     
@@ -115,11 +115,10 @@ def optimized_orders_view(request):
         order_id = order['order_id']
         if order_id in optimized_order_dict:
             order.update(optimized_order_dict[order_id])
-    
     df = pd.DataFrame(optimized_output)
     df = handle_timezones(df)
+    df = df.fillna(0)
     optimized_output = df.to_dict('records')
-
     return render(request, 'saved_orders_table.html', {'data': optimized_output})
 
 def preview_data(request):
