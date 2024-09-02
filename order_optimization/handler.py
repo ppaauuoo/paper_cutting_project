@@ -104,17 +104,6 @@ def handle_orders_logic(output_data):
     return (init_order_number, foll_order_number)
 
 
-def handle_auto_retry(request):
-    again = cache.get("try_again", 0)
-    if again <= MAX_RETRY:
-        again += 1
-        cache.set("try_again", again, CACHE_TIMEOUT)
-        return handle_auto_config(request)
-    cache.delete("try_again")
-    cache.delete("optimization_results")  # clear
-    messages.error(request, "Error : Auto config malfunctioned, please contact admin.")
-    best_result = cache.get("best_result")
-    return cache.set("optimization_results", best_result, CACHE_TIMEOUT)
 
 
 
@@ -170,6 +159,18 @@ def handle_manual_config(request, **kwargs):
 
     return kwargs
 
+def handle_auto_retry(request):
+    again = cache.get("try_again", 0)
+    if again <= MAX_RETRY:
+        again += 1
+        cache.set("try_again", again, CACHE_TIMEOUT)
+        return handle_auto_config(request)
+
+    messages.error(request, "Error : Auto config malfunctioned, please contact admin.")
+    best_result = cache.get("best_result")
+    cache.set("optimization_results", best_result, CACHE_TIMEOUT)
+    cache.delete("try_again") 
+    return 
 
 @handle_optimization
 def handle_auto_config(request, **kwargs):
@@ -301,7 +302,7 @@ def handle_filler(request):
         > results["output"][1]["num_orders"] + orders["quantity"][i]
     ):
         i += 1
-
+ 
     filler_data = output_format(orders.iloc[i], init_out).to_dict(orient="records")
     results["output"].extend(filler_data)
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
