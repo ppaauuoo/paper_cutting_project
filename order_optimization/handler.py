@@ -385,7 +385,7 @@ def database_format(
                     order=OrderList.objects.get(id=current_id),
                     plan_quantity=data['init_order_number'],
                     out=item["out"],
-                    paper_roll = item["roll"],
+                    paper_roll = data["roll"],
                     blade_type='Blade 1'
                 )
                 format_data.blade_1.add(blade1_order)
@@ -395,7 +395,7 @@ def database_format(
                     order=OrderList.objects.get(id=current_id),
                     plan_quantity=data['foll_order_number'],
                     out=item["out"],
-                    paper_roll = item["roll"],
+                    paper_roll = data["roll"],
                     blade_type='Blade 2'
                 )
                 format_data.blade_2.add(blade2_order)
