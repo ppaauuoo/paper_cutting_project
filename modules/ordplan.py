@@ -50,6 +50,7 @@ class ORD(ProviderInterface):
         else:
             self.legacy_filter_order()
             
+        self.order_limiter()
         self.set_selected_order()
 
 
@@ -59,6 +60,12 @@ class ORD(ProviderInterface):
             if df[column].dtype == 'datetime64[ns]':
                 df[column] = df[column].dt.strftime("%m/%d/%y")
         return df
+
+    def order_limiter(self):
+        if len(self.ordplan) <= PLAN_RANGE:
+            return
+        self.ordplan = self.ordplan.head(PLAN_RANGE).copy()
+
 
     def set_first_date(self):
         ordplan = self.ordplan
