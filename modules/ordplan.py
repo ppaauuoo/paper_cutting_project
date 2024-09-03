@@ -2,7 +2,7 @@ import random
 from django.conf import settings
 
 import pandas as pd
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from icecream import ic
 from pandas import DataFrame
 from dataclasses import dataclass
@@ -26,8 +26,8 @@ class ORD(ProviderInterface):
     deadline_range: int = DEADLINE_RANGE
     lookup_amount: int = 0
     preview: bool = False
-    start_date: pd.DatetimeIndex = None
-    stop_date: pd.DatetimeIndex = None
+    start_date: Optional[pd.DatetimeIndex] = None
+    stop_date: Optional[pd.DatetimeIndex] = None
 
     def __post_init__(self):
         if self.orders is None:
@@ -114,6 +114,10 @@ class ORD(ProviderInterface):
             filtered_ordplan = self.filter_diff_order(filtered_ordplan)
             self.lookup_amount = len(filtered_ordplan)
             
+
+            if len(filtered_ordplan) >= self.deadline_range*2:
+                raise ValueError("Orders is exceeding!")
+
             # Update ordplan if the current deadline range is reached or exceeded
             if len(filtered_ordplan) >= self.deadline_range:
                 self.ordplan = filtered_ordplan
