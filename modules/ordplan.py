@@ -64,7 +64,7 @@ class ORD(ProviderInterface):
     def order_limiter(self):
         if len(self.ordplan) <= PLAN_RANGE:
             return
-        self.ordplan = self.ordplan.head(PLAN_RANGE).copy()
+        self.ordplan = self.ordplan.head(int(PLAN_RANGE)).copy()
 
 
     def set_first_date(self):
