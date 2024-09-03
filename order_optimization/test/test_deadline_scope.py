@@ -92,3 +92,17 @@ def test_start_further():
     assert ord.ordplan["due_date"].iloc[0] <= pd.to_datetime(
         "01/03/23", format="%m/%d/%y"
     )
+
+@pytest.mark.django_db
+def test_start_stop_earlier():
+    data = {"due_date": ["01/01/22", "01/02/22", "01/02/23","01/03/23"], "width": [10, 20, 30, 40]}
+    ordplan = pd.DataFrame(data)
+    ord = ORD(ordplan, no_build=True)
+    ord.deadline_scope = 1
+    ord.start_date = pd.to_datetime("01/02/22", format="%m/%d/%y")
+    ord.stop_date = pd.to_datetime("01/02/23", format="%m/%d/%y")
+    ord.expand_deadline_scope()
+    assert len(ord.ordplan) == 2
+    assert ord.ordplan["due_date"].iloc[0] <= pd.to_datetime(
+        "01/03/23", format="%m/%d/%y"
+    )
