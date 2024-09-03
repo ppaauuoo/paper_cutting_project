@@ -81,14 +81,17 @@ class ORD(ProviderInterface):
         # Convert due_date to datetime format for consistency
         self.ordplan["due_date"] = pd.to_datetime(self.ordplan["due_date"], format="%m/%d/%y")
         
+        filtered_plan = self.ordplan.copy()
+
         # Filter plan by start and stop dates if provided
-        filtered_plan = (
-            self.ordplan[
-                (self.ordplan['due_date'] >= self.start_date) & 
-                (self.ordplan['due_date'] <= self.stop_date)
-            ]
-            .copy()
-        )  # Create a copy to avoid modifying the original plan
+        if self.stop_date:
+            filtered_plan = (
+                self.ordplan[
+                    (self.ordplan['due_date'] >= self.start_date) & 
+                    (self.ordplan['due_date'] <= self.stop_date)
+                ]
+                .copy()
+            )  # Create a copy to avoid modifying the original plan
         
         deadlines = filtered_plan["due_date"].unique()
         
