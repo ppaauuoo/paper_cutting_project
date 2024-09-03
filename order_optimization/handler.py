@@ -33,7 +33,7 @@ def handle_optimization(func):
         out_range = kwargs.get("out_range", 6)
 
         optimizer_instance = get_optimizer(
-            request, orders, size_value, out_range, num_generations, show_output=False
+            request, orders, size_value, out_range, num_generations, show_output=True
         )
         fitness_values, output_data = get_outputs(optimizer_instance)
 
@@ -110,7 +110,7 @@ def handle_orders_logic(output_data):
 
 def handle_satisfied_retry(wrapper, request, results, *args, **kwargs):
     again = cache.get("try_again", 0)
-    if again <= MAX_RETRY:
+    if again < MAX_RETRY:
         again += 1
         cache.set("try_again", again, CACHE_TIMEOUT)
         return wrapper(request, *args, **kwargs)
@@ -162,7 +162,7 @@ def handle_manual_config(request, **kwargs):
 
 def handle_auto_retry(request):
     again = cache.get("try_again", 0)
-    if again <= MAX_RETRY:
+    if again < MAX_RETRY:
         again += 1
         cache.set("try_again", again, CACHE_TIMEOUT)
         return handle_auto_config(request)
@@ -176,11 +176,15 @@ def handle_auto_retry(request):
 
 @handle_optimization
 def handle_auto_config(request, **kwargs):
+    start_date = pd.to_datetime(request.POST.get('start_date'),format="%Y-%m-%d")
+    stop_date = pd.to_datetime(request.POST.get('stop_date'),format="%Y-%m-%d")
+    ic(start_date,stop_date)
     again = cache.get("try_again", 0)
     # out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
     out_range = 4
     orders, size = auto_size_filter_logic(request)
-    if size is None:
+
+    if size is None or again > MAX_RETRY:
         raise ValueError("Logic error!")
     if orders is None:
         raise ValueError("Orders is empty!")
@@ -207,6 +211,8 @@ def auto_size_filter_logic(request):
     # filter_index = 1 if roll_index < len(ROLL_PAPER)/3 else 0
 
     file_id = request.POST.get("file_id")
+    start_date = request.POST.get("start_date")
+    stop_date = request.POST.get("stop_date")
     tuning_value = 3
     filter_index = 1
     orders = None
@@ -215,7 +221,7 @@ def auto_size_filter_logic(request):
     if len(past_size) >= len(ROLL_PAPER):
         return (None, None)
 
-    while orders is None or len(orders) <= PLAN_RANGE/2:
+    while orders is None:
         
         size = 85
         if size in past_size:
@@ -228,6 +234,8 @@ def auto_size_filter_logic(request):
             filter_value=FILTER[filter_index],
             tuning_values=tuning_value,
             first_date_only=False,
+            start_date=start_date,
+            stop_date=stop_date
         )
         # filter_index += 1
         # if filter_index >= len(FILTER):
