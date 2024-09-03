@@ -19,7 +19,7 @@ class ORD(ProviderInterface):
     filter_value: int = 16
     _filter_diff: bool = True
     common: bool = False
-    filler: str = None
+    filler: Optional[str] = None
     selector: Dict[str, Any] | None = None
     first_date_only: bool = False
     no_build: bool = False
@@ -102,8 +102,9 @@ class ORD(ProviderInterface):
         
         ordplan = None
         for deadline in deadlines:
+            ic(deadline)
             filtered_ordplan = (
-                self.ordplan[self.ordplan["due_date"] <= deadline]
+                filtered_plan[filtered_plan["due_date"] <= deadline]
                 .sort_values("due_date")
                 .reset_index(drop=True)
             )
