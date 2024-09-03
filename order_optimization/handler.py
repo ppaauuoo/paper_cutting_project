@@ -2,15 +2,20 @@ from datetime import datetime
 import random
 from django.contrib import messages
 from django.core.cache import cache
-from django.conf import settings
 
-from django.http import HttpResponse
 import pandas as pd
 from typing import Callable, Dict, List, Optional, Any
 from icecream import ic
 
+from order_optimization.formatter import (
+    database_formatter,
+    output_formatter,
+    plan_orders_formatter,
+    results_formatter,
+    timezone_formatter,
+)
+
 from .getter import get_orders, get_outputs, get_optimizer
-from order_optimization.container import ModelContainer
 
 from ordplan_project.settings import (
     PLAN_RANGE,
@@ -28,9 +33,10 @@ from ordplan_project.settings import (
 
 def handle_optimization(func):
     """
-    Run optimizer then processing the output, 
+    Run optimizer then processing the output,
     Looping thru optimizer multiple time if stated.
     """
+
     def wrapper(request, *args, **kwargs):
         kwargs = func(request)
         if not kwargs:
@@ -54,7 +60,7 @@ def handle_optimization(func):
 
         init_order_number, foll_order_number = handle_orders_logic(output_data)
 
-        results = results_format(
+        results = results_formatter(
             optimizer_instance,
             output_data,
             size_value,
@@ -320,7 +326,7 @@ def handle_common(request) -> Callable:
             best_index = i
 
     if best_index is not None:
-        results = update_results(results, best_index, best_output, best_fitness)
+        results = update_common(results, best_index, best_output, best_fitness)
         messages.success(request, "Common order found.")
     else:
         messages.error(request, "No suitable common order found.")
@@ -328,7 +334,7 @@ def handle_common(request) -> Callable:
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
 
-def update_results(
+def update_common(
     results: Dict,
     best_index: int,
     best_output: List[Dict],
@@ -351,7 +357,7 @@ def update_results(
 def handle_filler(request):
     """
     Request orders where the defined filler id is locked in the first index
-    of orders to be a filter for common orders, then loop thru the orders 
+    of orders to be a filter for common orders, then loop thru the orders
     to find one that can fill the order with filler id.
     """
     results = cache.get("optimization_results")
@@ -378,47 +384,9 @@ def handle_filler(request):
     ):
         i += 1
 
-    filler_data = output_format(orders.iloc[i], init_out).to_dict(orient="records")
+    filler_data = output_formatter(orders.iloc[i], init_out).to_dict(orient="records")
     results["output"].extend(filler_data)
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
-
-
-def output_format(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
-    """
-    For formatting output by renaming and add an out column.
-    """
-    return pd.DataFrame(
-        {
-            "order_number": [orders["order_number"]],
-            "num_orders": [orders["quantity"]],
-            "cut_width": [orders["width"]],
-            "cut_len": [orders["length"]],
-            "type": [orders["edge_type"]],
-            "deadline": [orders["due_date"]],
-            "out": [init_out],
-        }
-    )
-
-
-def results_format(
-    optimizer_instance: ModelContainer,
-    output_data: List[Dict[str, Any]],
-    size_value: int,
-    fitness_values: float,
-    init_order_number: int,
-    foll_order_number: int,
-) -> Dict[str, Any]:
-    """
-    For formatting results obtain from optimizer to be one dict.
-    """
-    return {
-        "output": output_data,
-        "roll": optimizer_instance.PAPER_SIZE,
-        "fitness": size_value + fitness_values,
-        "trim": abs(fitness_values),
-        "init_order_number": init_order_number,
-        "foll_order_number": foll_order_number,
-    }
 
 
 from .models import OptimizationPlan, OrderList, PlanOrder
@@ -437,42 +405,8 @@ def handle_saving(request):
 
     handle_order_exhaustion(data)
 
-    optimized_order = database_format(data)
+    optimized_order = database_formatter(data)
     optimized_order.save()
-
-
-def database_format(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPlan:
-    """
-    For defining which order belong to which blade, and turn it into a model.
-
-    return: Model
-    """
-    format_data = OptimizationPlan.objects.create()
-
-    for item in data["output"]:
-        current_id = item["id"]
-        match item["blade"]:
-            case 1:
-                blade1_order = PlanOrder.objects.create(
-                    order=OrderList.objects.get(id=current_id),
-                    plan_quantity=data["init_order_number"],
-                    out=item["out"],
-                    paper_roll=data["roll"],
-                    blade_type="Blade 1",
-                )
-                format_data.blade_1.add(blade1_order)
-
-            case 2:
-                blade2_order = PlanOrder.objects.create(
-                    order=OrderList.objects.get(id=current_id),
-                    plan_quantity=data["foll_order_number"],
-                    out=item["out"],
-                    paper_roll=data["roll"],
-                    blade_type="Blade 2",
-                )
-                format_data.blade_2.add(blade2_order)
-
-    return format_data
 
 
 def handle_order_exhaustion(data: Dict[str, Any]) -> None:
@@ -511,52 +445,9 @@ def handle_export():
     """
     For exporting data from model to file excel.
     """
-    # Get all PlanOrder objects as a list of dictionaries
-    optimized_output = list(
-        PlanOrder.objects.all().values(
-            "blade_1_orders__id",
-            "blade_2_orders__id",
-            "order_id",
-            "plan_quantity",
-            "out",
-            "blade_type",
-            "paper_roll",
-        )
-    )
-    #     "order_id", "plan_quantity", "out", "blade_type", "paper_roll"
-    # ))
-
-    # Extract order IDs
-    optimized_output_ids = [order["order_id"] for order in optimized_output]
-
-    # Get corresponding OrderList objects
-    optimized_order_list = list(
-        OrderList.objects.filter(id__in=optimized_output_ids).values()
-    )
-
-    # Create a dictionary with order_id as the key
-    optimized_order_dict = {order["id"]: order for order in optimized_order_list}
-
-    # Combine results
-    for order in optimized_output:
-        order_id = order["order_id"]
-        if order_id in optimized_order_dict:
-            order.update(optimized_order_dict[order_id])
-    df = pd.DataFrame(optimized_output)
-    df = handle_timezones(df)
-    df = df.fillna(0)
-
+    df = plan_orders_formatter()
     # Save the DataFrame to a file
     df.to_excel(
         f'media/exports/orders_export_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx',
         index=False,
     )
-
-
-def handle_timezones(df: pd.DataFrame):
-    """
-    Remove any timezone column in dataframe.
-    """
-    for col in df.select_dtypes(include=["datetime64[ns, UTC]", "datetime64[ns]"]):
-        df[col] = df[col].dt.tz_localize(None)
-    return df
