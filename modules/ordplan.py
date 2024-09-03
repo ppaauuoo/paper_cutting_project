@@ -70,35 +70,56 @@ class ORD(ProviderInterface):
         self.ordplan = self.filter_diff_order(ordplan)
 
     def expand_deadline_scope(self):
+        """Expands deadline scope based on lookup amount and order plan."""
+        
+        # Exit early if deadline scope is negative
         if self.deadline_scope < 0:
             self.lookup_amount = len(self.ordplan)
             self.ordplan = self.filter_diff_order(self.ordplan)
             return
         
-
-        deadline_range = self.deadline_range
-        self.ordplan["due_date"] = pd.to_datetime( self.ordplan["due_date"], format="%m/%d/%y")
-        deadlines = self.ordplan["due_date"].unique()
-        if self.stop_date:
-            filtered_plan = self.ordplan[(self.ordplan['due_date'] >= self.start_date) & (self.ordplan['due_date'] <= self.stop_date)]
-            deadlines = filtered_plan['due_date'].unique()
-
+        # Convert due_date to datetime format for consistency
+        self.ordplan["due_date"] = pd.to_datetime(self.ordplan["due_date"], format="%m/%d/%y")
+        
+        # Filter plan by start and stop dates if provided
+        filtered_plan = (
+            self.ordplan[
+                (self.ordplan['due_date'] >= self.start_date) & 
+                (self.ordplan['due_date'] <= self.stop_date)
+            ]
+            .copy()
+        )  # Create a copy to avoid modifying the original plan
+        
+        deadlines = filtered_plan["due_date"].unique()
+        
+        # Raise error if no data aligns with dates
         ic(deadlines)
-        if len(deadlines)==0:
-            raise ValueError("No data align with date")
+        if len(deadlines) == 0:
+            raise ValueError("No data aligns with date")
+        
+        ordplan = None
         for deadline in deadlines:
-            ordplan = (
+            filtered_ordplan = (
                 self.ordplan[self.ordplan["due_date"] <= deadline]
                 .sort_values("due_date")
                 .reset_index(drop=True)
             )
-            ic(ordplan)
-            self.lookup_amount = len(ordplan)
-            ordplan = self.filter_diff_order(ordplan)
-            if len(ordplan) >= deadline_range:
-                break
-        self.ordplan = ordplan
-        return
+            
+            ic(filtered_ordplan)
+            
+            # Filter order differences and update lookup amount
+            filtered_ordplan = self.filter_diff_order(filtered_ordplan)
+            self.lookup_amount = len(filtered_ordplan)
+            
+            # Update ordplan if the current deadline range is reached or exceeded
+            if len(filtered_ordplan) >= self.deadline_range:
+                self.ordplan = filtered_ordplan
+                return
+        
+        # If no matching deadlines found, update ordplan with existing data
+        self.ordplan = filtered_plan
+
+    
     def format_data(self):
         ordplan = self.ordplan
         ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%y")
