@@ -100,13 +100,13 @@ def optimized_orders_view(request):
     optimized_output = df.to_dict('records')
     return render(request, 'saved_orders_table.html', {'data': optimized_output})
 
-def preview_data(request):
+def data_preview(request):
     file_id = request.GET.get("file_id")
     cache_key = f"file_selector_{file_id}"
     df = cache.get(cache_key)
 
     if df is not None:
-        return render(request, 'preview_table.html', {'preview_data': df})
+        return render(request, 'preview_table.html', {'data_preview': df})
 
     df = get_orders(request, file_id, filter_diff=False, preview=True)
 
@@ -116,10 +116,10 @@ def preview_data(request):
             df[column] = df[column].dt.strftime("%m/%d/%y")
     df = df.to_dict(orient='records')
     cache.set(cache_key, df, CACHE_TIMEOUT)
-    return render(request, 'preview_table.html', {'preview_data': df})
+    return render(request, 'preview_table.html', {'data_preview': df})
 
 ###TODO
-# def search_preview_data(request):
+# def search_data_preview(request):
 #     search_term = request.GET.get('previewSearchInput')
 #     file_id = request.GET.get("file_id")
 #     cache_key = f"file_selector_{file_id}"

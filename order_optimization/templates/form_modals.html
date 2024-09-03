@@ -1,5 +1,5 @@
 <!-- File Preview Modal -->
-<button class="btn btn-secondary" hx-get="/preview_data" hx-target="#preview_data" hx-swap="innerHTML" hx-include="[name='file_id']" data-bs-toggle="modal" data-bs-target="#filePreviewModal"><span class="btn-text">View Preview</span></button>
+<button class="btn btn-secondary" hx-get="/data_preview" hx-target="#data_preview" hx-swap="innerHTML" hx-include="[name='file_id']" data-bs-toggle="modal" data-bs-target="#filePreviewModal"><span class="btn-text">View Preview</span></button>
 
 <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-fullscreen">
@@ -9,7 +9,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div id="preview_data"></div>
+        <div id="data_preview"></div>
       </div>
     </div>
   </div>
