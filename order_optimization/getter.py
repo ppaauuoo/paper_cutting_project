@@ -104,6 +104,8 @@ def get_orders(
     filler: Optional[str] = None,
     first_date_only: bool = False,
     preview: bool = False,
+    start_date: Optional[pd.DatetimeIndex] = None,
+    stop_date: Optional[pd.DatetimeIndex] = None,
 ) -> DataFrame:
     return OrderContainer(
         provider=ORD(
@@ -117,7 +119,9 @@ def get_orders(
             filler=filler,
             selector=get_selected_order(request),
             first_date_only=first_date_only,
-            preview=preview
+            preview=preview,
+            start_date=start_date,
+            stop_date=stop_date
         )
     ).get()
 

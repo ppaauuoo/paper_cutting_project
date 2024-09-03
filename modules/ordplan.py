@@ -26,6 +26,8 @@ class ORD(ProviderInterface):
     deadline_range: int = DEADLINE_RANGE
     lookup_amount: int = 0
     preview: bool = False
+    start_date: pd.DatetimeIndex = None
+    stop_date: pd.DatetimeIndex = None
 
     def __post_init__(self):
         if self.orders is None:
@@ -72,17 +74,25 @@ class ORD(ProviderInterface):
             self.lookup_amount = len(self.ordplan)
             self.ordplan = self.filter_diff_order(self.ordplan)
             return
+        
 
         deadline_range = self.deadline_range
+        self.ordplan["due_date"] = pd.to_datetime( self.ordplan["due_date"], format="%m/%d/%y")
         deadlines = self.ordplan["due_date"].unique()
+        if self.stop_date:
+            filtered_plan = self.ordplan[(self.ordplan['due_date'] >= self.start_date) & (self.ordplan['due_date'] <= self.stop_date)]
+            deadlines = filtered_plan['due_date'].unique()
 
+        ic(deadlines)
+        if len(deadlines)==0:
+            raise ValueError("No data align with date")
         for deadline in deadlines:
-            deadline = pd.to_datetime(deadline, format="%m/%d/%y")
             ordplan = (
                 self.ordplan[self.ordplan["due_date"] <= deadline]
                 .sort_values("due_date")
                 .reset_index(drop=True)
             )
+            ic(ordplan)
             self.lookup_amount = len(ordplan)
             ordplan = self.filter_diff_order(ordplan)
             if len(ordplan) >= deadline_range:
@@ -173,3 +183,4 @@ class ORD(ProviderInterface):
         init_order = self.ordplan[self.ordplan['id'] == self.filler].iloc[0]
         self.ordplan = self.ordplan[self.ordplan['id'] != self.filler]
         return init_order
+                
