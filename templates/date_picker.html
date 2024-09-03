@@ -1,6 +1,8 @@
 <div class="form-group mb-3" x-data="{ currentDate: new Date().toISOString().split('T')[0] }">
     <div class="date-picker">
-        <label for="date">Date:</label>
-        <input type="date" id="date" name="date" x-model="currentDate">
+        <label for="date">From:</label>
+        <input type="date" id="start_date" name="start_date" x-model="currentDate">
+        <label for="date">To:</label>
+        <input type="date" id="stop_date" name="stop_date">
     </div>
 </div>

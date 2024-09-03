@@ -12,7 +12,18 @@ from icecream import ic
 from .getter import get_orders, get_outputs, get_optimizer
 from order_optimization.container import ModelContainer
 
-from ordplan_project.settings import PLAN_RANGE,MIN_TRIM,ROLL_PAPER,FILTER,OUT_RANGE,TUNING_VALUE,CACHE_TIMEOUT,MAX_RETRY,MAX_TRIM,MIN_TRIM
+from ordplan_project.settings import (
+    PLAN_RANGE,
+    MIN_TRIM,
+    ROLL_PAPER,
+    FILTER,
+    OUT_RANGE,
+    TUNING_VALUE,
+    CACHE_TIMEOUT,
+    MAX_RETRY,
+    MAX_TRIM,
+    MIN_TRIM,
+)
 
 
 def handle_optimization(func):
@@ -28,12 +39,12 @@ def handle_optimization(func):
 
         if orders is None:
             raise ValueError("Orders is empty!")
-        
+
         num_generations = kwargs.get("num_generations", 50)
         out_range = kwargs.get("out_range", 6)
 
         optimizer_instance = get_optimizer(
-            request, orders, size_value, out_range, num_generations, show_output=False
+            request, orders, size_value, out_range, num_generations, show_output=True
         )
         fitness_values, output_data = get_outputs(optimizer_instance)
 
@@ -48,15 +59,14 @@ def handle_optimization(func):
             foll_order_number,
         )
 
-        if is_trim_fit(fitness_values) and is_foll_ok(output_data,foll_order_number):
+        if is_trim_fit(fitness_values) and is_foll_ok(output_data, foll_order_number):
             messages.success(request, "Optimizing finished.")
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
-        best_result = cache.get("best_result", {'trim':1000})
-        if results['trim'] < best_result['trim']:
+        best_result = cache.get("best_result", {"trim": 1000})
+        if results["trim"] < best_result["trim"]:
             cache.set("best_result", results, CACHE_TIMEOUT)
-        
-        
+
         if "auto" in request.POST:
             return handle_auto_retry(request)
 
@@ -72,13 +82,15 @@ def handle_optimization(func):
 
     return wrapper
 
-def is_foll_ok(output_data: List[Dict[str, Any]],foll_order_number: int):
+
+def is_foll_ok(output_data: List[Dict[str, Any]], foll_order_number: int):
     for index, order in enumerate(output_data):
-        if index == 0 and len(output_data)>1:
+        if index == 0 and len(output_data) > 1:
             continue
         if order["out"] < foll_order_number:
             return False
     return True
+
 
 def is_trim_fit(fitness_values: float):
     return abs(fitness_values) <= MAX_TRIM and abs(fitness_values) >= MIN_TRIM
@@ -94,7 +106,7 @@ def handle_orders_logic(output_data):
     foll_out: List[int] = []
 
     for index, order in enumerate(output_data):
-        if index == 0 and len(output_data)>1:
+        if index == 0 and len(output_data) > 1:
             continue
         foll_order_len.append(order["cut_len"])
         foll_out.append(order["out"])
@@ -105,12 +117,9 @@ def handle_orders_logic(output_data):
     return (init_order_number, foll_order_number)
 
 
-
-
-
 def handle_satisfied_retry(wrapper, request, results, *args, **kwargs):
     again = cache.get("try_again", 0)
-    if again <= MAX_RETRY:
+    if again < MAX_RETRY:
         again += 1
         cache.set("try_again", again, CACHE_TIMEOUT)
         return wrapper(request, *args, **kwargs)
@@ -160,9 +169,10 @@ def handle_manual_config(request, **kwargs):
 
     return kwargs
 
+
 def handle_auto_retry(request):
     again = cache.get("try_again", 0)
-    if again <= MAX_RETRY:
+    if again < MAX_RETRY:
         again += 1
         cache.set("try_again", again, CACHE_TIMEOUT)
         return handle_auto_config(request)
@@ -171,16 +181,21 @@ def handle_auto_retry(request):
     best_result = cache.get("best_result")
     cache.delete("past_size")
     cache.set("optimization_results", best_result, CACHE_TIMEOUT)
-    cache.delete("try_again") 
-    return 
+    cache.delete("try_again")
+    return
+
 
 @handle_optimization
 def handle_auto_config(request, **kwargs):
+    start_date = pd.to_datetime(request.POST.get("start_date"), format="%Y-%m-%d")
+    stop_date = pd.to_datetime(request.POST.get("stop_date"), format="%Y-%m-%d")
+    ic(start_date, stop_date)
     again = cache.get("try_again", 0)
     # out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
     out_range = 4
     orders, size = auto_size_filter_logic(request)
-    if size is None:
+
+    if size is None or again > MAX_RETRY:
         raise ValueError("Logic error!")
     if orders is None:
         raise ValueError("Orders is empty!")
@@ -200,13 +215,14 @@ def auto_size_filter_logic(request):
     # filter_index = random.randint(0, len(FILTER)-1)
 
     # orders = cache.get("auto_order", [])
-    
-    
+
     # tuning_value = TUNING_VALUE[random.randint(0, len(TUNING_VALUE)-1)]
     # tuning_value = 2 if roll_index < len(ROLL_PAPER)/3 else 3
     # filter_index = 1 if roll_index < len(ROLL_PAPER)/3 else 0
 
     file_id = request.POST.get("file_id")
+    start_date = request.POST.get("start_date")
+    stop_date = request.POST.get("stop_date")
     tuning_value = 3
     filter_index = 1
     orders = None
@@ -215,12 +231,12 @@ def auto_size_filter_logic(request):
     if len(past_size) >= len(ROLL_PAPER):
         return (None, None)
 
-    while orders is None or len(orders) <= PLAN_RANGE/2:
-        
+    while orders is None:
+
         size = 85
         if size in past_size:
             size = random.choice([roll for roll in ROLL_PAPER if roll not in past_size])
-        
+
         orders = get_orders(
             request=request,
             file_id=file_id,
@@ -228,6 +244,8 @@ def auto_size_filter_logic(request):
             filter_value=FILTER[filter_index],
             tuning_values=tuning_value,
             first_date_only=False,
+            start_date=start_date,
+            stop_date=stop_date,
         )
         # filter_index += 1
         # if filter_index >= len(FILTER):
@@ -319,7 +337,7 @@ def handle_filler(request):
         > results["output"][1]["num_orders"] + orders["quantity"][i]
     ):
         i += 1
- 
+
     filler_data = output_format(orders.iloc[i], init_out).to_dict(orient="records")
     results["output"].extend(filler_data)
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
@@ -356,6 +374,7 @@ def results_format(
         "foll_order_number": foll_order_number,
     }
 
+
 from .models import OptimizationPlan, OrderList, PlanOrder
 
 
@@ -372,37 +391,35 @@ def handle_saving(request):
     optimized_order = database_format(data)
     optimized_order.save()
 
-def database_format(
-    data: Dict[str, List[Dict[str, int]]]
-) -> OptimizationPlan:
 
-    format_data = OptimizationPlan.objects.create() 
+def database_format(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPlan:
+
+    format_data = OptimizationPlan.objects.create()
 
     for item in data["output"]:
-        current_id = item['id']
+        current_id = item["id"]
         match item["blade"]:
             case 1:
                 blade1_order = PlanOrder.objects.create(
                     order=OrderList.objects.get(id=current_id),
-                    plan_quantity=data['init_order_number'],
+                    plan_quantity=data["init_order_number"],
                     out=item["out"],
-                    paper_roll = data["roll"],
-                    blade_type='Blade 1'
+                    paper_roll=data["roll"],
+                    blade_type="Blade 1",
                 )
                 format_data.blade_1.add(blade1_order)
-                
+
             case 2:
                 blade2_order = PlanOrder.objects.create(
                     order=OrderList.objects.get(id=current_id),
-                    plan_quantity=data['foll_order_number'],
+                    plan_quantity=data["foll_order_number"],
                     out=item["out"],
-                    paper_roll = data["roll"],
-                    blade_type='Blade 2'
+                    paper_roll=data["roll"],
+                    blade_type="Blade 2",
                 )
                 format_data.blade_2.add(blade2_order)
 
     return format_data
-
 
 
 def handle_order_exhaustion(data: Dict[str, Any]) -> None:
@@ -428,40 +445,52 @@ def handle_reset():
     cache.clear()
     OptimizationPlan.objects.all().delete()
     OrderList.objects.all().delete()
-    
-def handle_export():
 
-    optimized_output = list(PlanOrder.objects.all().values(
-        "order_id", "plan_quantity", "out", "blade_type"
-    ))
+
+def handle_export():
+    # Get all PlanOrder objects as a list of dictionaries
+    optimized_output = list(
+        PlanOrder.objects.all().values(
+            "blade_1_orders__id",
+            "blade_2_orders__id",
+            "order_id",
+            "plan_quantity",
+            "out",
+            "blade_type",
+            "paper_roll",
+        )
+    )
+    #     "order_id", "plan_quantity", "out", "blade_type", "paper_roll"
+    # ))
 
     # Extract order IDs
-    optimized_output_ids = [order['order_id'] for order in optimized_output]
-    
+    optimized_output_ids = [order["order_id"] for order in optimized_output]
+
     # Get corresponding OrderList objects
-    optimized_order_list = list(OrderList.objects.filter(id__in=optimized_output_ids).values())
+    optimized_order_list = list(
+        OrderList.objects.filter(id__in=optimized_output_ids).values()
+    )
 
     # Create a dictionary with order_id as the key
-    optimized_order_dict = {order['id']: order for order in optimized_order_list}
-    
-    
+    optimized_order_dict = {order["id"]: order for order in optimized_order_list}
+
     # Combine results
     for order in optimized_output:
-        order_id = order['order_id']
+        order_id = order["order_id"]
         if order_id in optimized_order_dict:
             order.update(optimized_order_dict[order_id])
-    
-    
-
-    # Create a DataFrame
     df = pd.DataFrame(optimized_output)
-
     df = handle_timezones(df)
+    df = df.fillna(0)
 
     # Save the DataFrame to a file
-    df.to_excel(f'media/exports/orders_export_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx', index=False)
+    df.to_excel(
+        f'media/exports/orders_export_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx',
+        index=False,
+    )
+
 
 def handle_timezones(df: pd.DataFrame):
-    for col in df.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns]']):
+    for col in df.select_dtypes(include=["datetime64[ns, UTC]", "datetime64[ns]"]):
         df[col] = df[col].dt.tz_localize(None)
     return df
