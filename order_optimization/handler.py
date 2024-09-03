@@ -27,6 +27,10 @@ from ordplan_project.settings import (
 
 
 def handle_optimization(func):
+    """
+    Run optimizer then processing the output, 
+    Looping thru optimizer multiple time if stated.
+    """
     def wrapper(request, *args, **kwargs):
         kwargs = func(request)
         if not kwargs:
@@ -84,6 +88,9 @@ def handle_optimization(func):
 
 
 def is_foll_ok(output_data: List[Dict[str, Any]], foll_order_number: int):
+    """
+    Check if second order's cut exceed the second order's stock or not.
+    """
     for index, order in enumerate(output_data):
         if index == 0 and len(output_data) > 1:
             continue
@@ -93,10 +100,16 @@ def is_foll_ok(output_data: List[Dict[str, Any]], foll_order_number: int):
 
 
 def is_trim_fit(fitness_values: float):
+    """
+    Check if trim exceed min/max tirm.
+    """
     return abs(fitness_values) <= MAX_TRIM and abs(fitness_values) >= MIN_TRIM
 
 
 def handle_orders_logic(output_data):
+    """
+    Calculate first order cut and second order cut.
+    """
     init_len = output_data[0]["cut_len"]
     init_out = output_data[0]["out"]
     init_num_orders = output_data[0]["num_orders"]
@@ -118,6 +131,9 @@ def handle_orders_logic(output_data):
 
 
 def handle_satisfied_retry(wrapper, request, results, *args, **kwargs):
+    """
+    Recursive features for manual configuration.
+    """
     again = cache.get("try_again", 0)
     if again < MAX_RETRY:
         again += 1
@@ -132,6 +148,9 @@ def handle_satisfied_retry(wrapper, request, results, *args, **kwargs):
 
 @handle_optimization
 def handle_manual_config(request, **kwargs):
+    """
+    Extract values from UI and request orders then send to optimizer.
+    """
     # Extract values from the request
     file_id = request.POST.get("file_id")
     size_value = int(request.POST.get("size_value", 0))
@@ -171,6 +190,9 @@ def handle_manual_config(request, **kwargs):
 
 
 def handle_auto_retry(request):
+    """
+    Recursive features for auto configuration.
+    """
     again = cache.get("try_again", 0)
     if again < MAX_RETRY:
         again += 1
@@ -187,6 +209,9 @@ def handle_auto_retry(request):
 
 @handle_optimization
 def handle_auto_config(request, **kwargs):
+    """
+    Automatically defines values needed for requesting orders and send it to optimizer.
+    """
     start_date = pd.to_datetime(request.POST.get("start_date"), format="%Y-%m-%d")
     stop_date = pd.to_datetime(request.POST.get("stop_date"), format="%Y-%m-%d")
     ic(start_date, stop_date)
@@ -212,6 +237,9 @@ def handle_auto_config(request, **kwargs):
 
 
 def auto_size_filter_logic(request):
+    """
+    Logic for automatic defining values for requesting orders.
+    """
     # filter_index = random.randint(0, len(FILTER)-1)
 
     # orders = cache.get("auto_order", [])
@@ -263,6 +291,9 @@ def auto_size_filter_logic(request):
 
 
 def handle_common(request) -> Callable:
+    """
+    Request orders base from the past results with common logic and run an optimizer.
+    """
 
     results = cache.get("optimization_results")
     best_fitness = -results["trim"]
@@ -303,6 +334,10 @@ def update_results(
     best_output: List[Dict],
     best_fitness: float,
 ) -> Dict:
+    """
+    Remove the order that got chosen to be swapped by common orders, then
+    injecting the common orders and new fitness into results.
+    """
     results["output"].pop(best_index)  # remove the old order
     results["output"].extend(best_output)  # add the new one
 
@@ -314,6 +349,11 @@ def update_results(
 
 
 def handle_filler(request):
+    """
+    Request orders where the defined filler id is locked in the first index
+    of orders to be a filter for common orders, then loop thru the orders 
+    to find one that can fill the order with filler id.
+    """
     results = cache.get("optimization_results")
     init_order = results["output"][0]["id"]
     file_id = request.POST.get("selected_file_id")
@@ -344,6 +384,9 @@ def handle_filler(request):
 
 
 def output_format(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
+    """
+    For formatting output by renaming and add an out column.
+    """
     return pd.DataFrame(
         {
             "order_number": [orders["order_number"]],
@@ -365,6 +408,9 @@ def results_format(
     init_order_number: int,
     foll_order_number: int,
 ) -> Dict[str, Any]:
+    """
+    For formatting results obtain from optimizer to be one dict.
+    """
     return {
         "output": output_data,
         "roll": optimizer_instance.PAPER_SIZE,
@@ -379,6 +425,9 @@ from .models import OptimizationPlan, OrderList, PlanOrder
 
 
 def handle_saving(request):
+    """
+    Pull data from cache to save into the model and updating both cache and model.
+    """
     file_id = request.POST.get("file_id")
     cache.delete(f"order_cache_{file_id}")
     data = cache.get("optimization_results", None)
@@ -393,7 +442,11 @@ def handle_saving(request):
 
 
 def database_format(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPlan:
+    """
+    For defining which order belong to which blade, and turn it into a model.
 
+    return: Model
+    """
     format_data = OptimizationPlan.objects.create()
 
     for item in data["output"]:
@@ -423,6 +476,10 @@ def database_format(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPlan:
 
 
 def handle_order_exhaustion(data: Dict[str, Any]) -> None:
+    """
+    Updating the OrderList model by set any blade 1 order to zero
+    and update blade 2 order with what had been used.
+    """
     output_data = data["output"]
 
     for index, order in enumerate(output_data):
@@ -442,12 +499,18 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
 
 
 def handle_reset():
+    """
+    Remove cache and database.
+    """
     cache.clear()
     OptimizationPlan.objects.all().delete()
     OrderList.objects.all().delete()
 
 
 def handle_export():
+    """
+    For exporting data from model to file excel.
+    """
     # Get all PlanOrder objects as a list of dictionaries
     optimized_output = list(
         PlanOrder.objects.all().values(
@@ -491,6 +554,9 @@ def handle_export():
 
 
 def handle_timezones(df: pd.DataFrame):
+    """
+    Remove any timezone column in dataframe.
+    """
     for col in df.select_dtypes(include=["datetime64[ns, UTC]", "datetime64[ns]"]):
         df[col] = df[col].dt.tz_localize(None)
     return df
