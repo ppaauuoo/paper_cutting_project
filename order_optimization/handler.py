@@ -306,7 +306,7 @@ def handle_common(request) -> Callable:
     best_index: Optional[int] = None
     file_id = request.POST.get("selected_file_id")
 
-    for i, item in enumerate(results["output"]):
+    for index, item in enumerate(results["output"]):
 
         size_value = (item["cut_width"] * item["out"]) + results["trim"]
         orders = get_orders(
@@ -323,7 +323,7 @@ def handle_common(request) -> Callable:
 
         if abs(optimizer_instance.fitness_values) < abs(best_fitness):
             best_fitness, best_output = get_outputs(optimizer_instance)
-            best_index = i
+            best_index = index
 
     if best_index is not None:
         results = update_common(results, best_index, best_output, best_fitness)
@@ -332,6 +332,9 @@ def handle_common(request) -> Callable:
         messages.error(request, "No suitable common order found.")
 
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
+
+
+def single_common():
 
 
 def update_common(
