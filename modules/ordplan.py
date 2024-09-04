@@ -249,7 +249,7 @@ class ORD(ProviderInterface):
         self.ordplan = ordplan
 
     def set_filler_order(self, init_order):
-        """Get order data with the filler id."""
+        """Eject order data with the filler id."""
         if self.filler is None:
             return init_order
         init_order = self.ordplan[self.ordplan['id'] == self.filler].iloc[0]
