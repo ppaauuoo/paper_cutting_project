@@ -229,8 +229,10 @@ class ORD(ProviderInterface):
         ordplan = pd.DataFrame(None)
         best_index=0
         most_compat_plan = 0
-        for order in self.ordplan:
-            index = random.randint(0, len(self.ordplan) - 1)
+        indices = list(range(len(self.ordplan)))
+        random.shuffle(indices)
+
+        for index in indices:
             init_order = self.ordplan.iloc[index]
             # Create a mask for matching orders using all legacy filters
             mask = (self.ordplan[legacy_filters].eq(init_order[legacy_filters])).all(axis=1)
