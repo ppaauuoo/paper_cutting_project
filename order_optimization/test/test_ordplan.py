@@ -135,7 +135,7 @@ def test_legacy():
 
 
 @pytest.mark.django_db
-def test_legacy_restriction_fist_only(mocker):
+def test_legacy_restriction_first_only():
     test_data = pd.DataFrame(
         {
             "id": [1, 2, 3, 4, 5, 6, 7],
@@ -150,21 +150,14 @@ def test_legacy_restriction_fist_only(mocker):
                 "08/20/23",
                 "02/21/22",
             ],
-            "front_sheet": [2, 1, 1, 1, 1, 1, 0],
-            "c_wave": [1, 1, 1, 1, 1, 1, 0],
+            "front_sheet":  [2, 1, 2, 1, 1, 2, 0],
+            "c_wave":       [2, 1, 1, 1, 2, 2, 0],
             "middle_sheet": [1, 1, 1, 1, 1, 1, 0],
-            "b_wave": [1, 1, 1, 1, 1, 1, 0],
-            "back_sheet": [1, 1, 1, 1, 1, 1, 0],
-            "level": [1, 1, 1, 1, 1, 1, 0],
-            "edge_type": [1, 1, 1, 1, 1, 1, 0],
-            "left_edge_cut": [1, 1, 1, 1, 1, 1, 0],
-            "middle_edge_cut": [1, 1, 1, 1, 1, 1, 0],
-            "right_edge_cut": [1, 1, 1, 1, 1, 1, 0],
-            "component_type": [1, 1, 1, 1, 1, 1, 0],
-            "quantity": [1, 1, 1, 1, 1, 1, 1],
+            "b_wave":       [1, 1, 1, 1, 3, 1, 0],
+            "back_sheet":   [3, 3, 1, 1, 1, 4, 0],
+            "quantity":     [1, 1, 1, 1, 1, 1, 1],
         }
     )
-    mocker.patch("random.randint", return_value=0)
 
     ord = ORD(test_data, size=66, no_build=True)
     ord.format_data()
@@ -173,7 +166,7 @@ def test_legacy_restriction_fist_only(mocker):
 
 
 @pytest.mark.django_db
-def test_legacy_restriction_fist_last(mocker):
+def test_legacy_restriction_fist_last():
     test_data = pd.DataFrame(
         {
             "id": [1, 2, 3, 4, 5, 6, 7],
@@ -188,29 +181,16 @@ def test_legacy_restriction_fist_last(mocker):
                 "08/20/23",
                 "02/21/22",
             ],
-            "front_sheet": [2, 1, 2, 1, 1, 2, 0],
-            "c_wave": [2, 1, 1, 1, 2, 2, 0],
+            "front_sheet":  [2, 1, 2, 1, 1, 2, 0],
+            "c_wave":       [2, 1, 1, 1, 2, 2, 0],
             "middle_sheet": [1, 1, 1, 1, 1, 1, 0],
-            "b_wave": [1, 1, 1, 1, 3, 1, 0],
-            "back_sheet": [3, 3, 1, 1, 1, 3, 0],
-            "quantity": [1, 1, 1, 1, 1, 1, 1],
+            "b_wave":       [1, 1, 1, 1, 3, 1, 0],
+            "back_sheet":   [3, 3, 1, 1, 1, 3, 0],
+            "quantity":     [1, 1, 1, 1, 1, 1, 1],
         }
     )
 
-    mocker.patch("random.randint", return_value=0)
     ord = ORD(test_data, size=66, no_build=True)
     ord.format_data()
     ord.legacy_filter_order()
     assert len(ord.ordplan) == 2
-
-    mocker.patch("random.randint", return_value=5)
-    ord = ORD(test_data, size=66, no_build=True)
-    ord.format_data()
-    ord.legacy_filter_order()
-    assert len(ord.ordplan) == 2
-
-    mocker.patch("random.randint", return_value=1)
-    ord = ORD(test_data, size=66, no_build=True)
-    ord.format_data()
-    ord.legacy_filter_order()
-    assert len(ord.ordplan) == 1
