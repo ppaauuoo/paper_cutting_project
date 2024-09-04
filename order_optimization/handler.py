@@ -302,13 +302,13 @@ def handle_common(request) -> Callable:
     """
 
     results = cache.get("optimization_results")
-    best_fitness = -results["trim"]
+    best_fitness = results["trim"]
     best_index: Optional[int] = None
 
     for index, item in enumerate(results["output"]):
         optimizer_instance = double_common(request=request,item=item, results=results)
 
-        if abs(optimizer_instance.fitness_values) < abs(best_fitness):
+        if abs(optimizer_instance.fitness_values) < best_fitness:
             best_fitness, best_output = get_outputs(optimizer_instance)
             best_index = index
 
@@ -336,6 +336,23 @@ def double_common(request,item: Dict[str,Any], results: Dict[str,Any]):
         )
         return optimizer_instance
 
+
+def single_common(request,item: Dict[str,Any], results: Dict[str,Any]):
+        file_id = request.POST.get("selected_file_id")
+        size_value = (item["cut_width"] * item["out"]) + results["trim"]
+        orders = get_orders(
+            request=request,
+            file_id=file_id,
+            size_value=size_value,
+            deadline_scope=-1,
+            filter_diff=False,
+            common=True,
+            selector={'order_id': item['id']}
+        )
+        optimizer_instance = get_optimizer(
+            request=request, orders=orders, size_value=size_value, show_output=False
+        )
+        return optimizer_instance
 
 def update_common(
     results: Dict,
