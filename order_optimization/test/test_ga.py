@@ -257,3 +257,29 @@ def test_paper_out_logic():
     ga_instance = GA(orders_df)
     ga_instance.paper_out_logic(solution)
     assert ga_instance.penalty == 0
+
+@pytest.mark.django_db
+def test_selector():
+
+    orders_data = {"edge_type": ["X","Y"], "width": [10, 10],"quantity": [1000, 200],}
+    orders_df = pd.DataFrame(orders_data)
+
+    solution = [1,1]
+    ga_instance = GA(orders_df, selector={'out':5})
+    solution = ga_instance.selector_logic(solution)
+    assert solution == [5,1]
+
+    solution = [0,1]
+    ga_instance = GA(orders_df, selector={'test':123})
+    solution = ga_instance.selector_logic(solution)
+    assert solution == [1,1]
+
+    solution = [1,1]
+    ga_instance = GA(orders_df, selector={'test':123})
+    solution = ga_instance.selector_logic(solution)
+    assert solution == [1,1]
+
+    solution = [1,1]
+    ga_instance = GA(orders_df)
+    solution = ga_instance.selector_logic(solution)
+    assert solution == [1,1]
