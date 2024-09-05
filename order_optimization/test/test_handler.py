@@ -11,7 +11,7 @@ def test_common_handler(mocker):
     mock_request = mocker.Mock()
     mock_request.POST.get.return_value = "file_id_123"
 
-    mock_results = {"trim": 10.0, "output": [{"cut_width": 5.0, "out": 2}]}
+    mock_results = {"trim": 10.0, "output": [{"cut_width": 5.0, "out": 2, "id": 1}]}
 
     mocker.patch.object(cache, "get", return_value=mock_results)
     mocker.patch.object(cache, "set")

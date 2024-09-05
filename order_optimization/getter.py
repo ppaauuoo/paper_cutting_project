@@ -84,7 +84,7 @@ def get_orders_cache(file_id: str) -> DataFrame:
     """
     orders = cache.get(f"order_cache_{file_id}", None)
 
-    if orders is not None and len(orders) >= PLAN_RANGE:
+    if orders is not None:
         return orders
 
     order_records = OrderList.objects.filter(file=get_csv_file(file_id))
