@@ -8,3 +8,4 @@ pytest-django
 django-livereload-server
 icecream
 django_htmx
+pytest-mock
