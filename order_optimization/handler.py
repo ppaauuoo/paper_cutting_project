@@ -306,7 +306,10 @@ def handle_common(request) -> Callable:
     best_index: Optional[int] = None
 
     for index, item in enumerate(results["output"]):
-        optimizer_instance = double_common(request=request,item=item, results=results)
+        if item['out']>=1:
+            optimizer_instance = single_common(request=request,item=item, results=results)
+        else:
+            optimizer_instance = double_common(request=request,item=item, results=results)
 
         if abs(optimizer_instance.fitness_values) < best_fitness:
             best_fitness, best_output = get_outputs(optimizer_instance)
