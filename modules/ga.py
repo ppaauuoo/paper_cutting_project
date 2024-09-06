@@ -126,11 +126,24 @@ class GA(ModelInterface):
         if abs(_fitness_values) <= MIN_TRIM:  # ถ้าผลรวมมีค่าน้อยกว่า _penalty > เงื่อนไขบริษัท
             self._penalty += self._penalty_value
 
+    def selector_logic(self, solution: List[int])->List[int]:
+        if self.selector is None:
+            return solution
+        
+        try:
+            solution[0] = self.selector["out"] #lock the first to be out (the first order is also the selector, manage by ORD)
+        except KeyError:
+            pass
+
+        if solution[0] == 0: 
+            solution[0] += 1
+
+        return solution
+
     def fitness_function(self, ga_instance, solution, solution_idx):
         self._penalty = 0
 
-        if self.selector:
-            solution[0] = self.selector["out"]
+        solution = self.selector_logic(solution)
 
         self.paper_type_logic(solution)
 

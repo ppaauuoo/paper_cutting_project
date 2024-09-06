@@ -5,6 +5,7 @@ ortools
 openpyxl
 pytest
 pytest-django
-livereload
+django-livereload-server
 icecream
 django_htmx
+pytest-mock

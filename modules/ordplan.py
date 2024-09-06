@@ -12,6 +12,25 @@ from ordplan_project.settings import PLAN_RANGE, LEGACY_FILTER,COMMON_FILTER,UNI
 
 @dataclass
 class ORD(ProviderInterface):
+    """Raw orders processor.
+
+    Args:
+        orders: Raw orders dataframe.
+        deadline_scope: -1 to scan all orders, 0 by default.
+        size : Paper roll.
+        tuning_values : Paper roll divider.
+        filter_value : Acceptable orders range.
+        _filter_diff : False to skip order's differences filter, True by default.
+        common : True to use common filter, False by default.
+        filler : Chosen order id to be the base for common filter.
+        selector : A dict of a chosen order id with out for setting first order.
+        first_date_only : True to filter only the latest due date.
+        no_build : True to skip everything, use for testing.
+        deadline_range : Range of orders.
+        preview : True to skip all filter.
+        start_date : Datetime of start date.
+        stop_date : Datetime of stop date.
+    """
     orders: DataFrame
     deadline_scope: int = 0
     size: float = 66
@@ -55,6 +74,10 @@ class ORD(ProviderInterface):
 
 
     def get(self) -> DataFrame:
+        """Processed orders getter
+        Returns:
+            Dataframe of processed orders.
+        """
         df = self.ordplan.copy()
         for column in df.columns:
             if df[column].dtype == 'datetime64[ns]':
@@ -62,12 +85,14 @@ class ORD(ProviderInterface):
         return df
 
     def order_limiter(self):
+        """Cut orders to be in PLAN_RANGE."""
         if len(self.ordplan) <= PLAN_RANGE:
             return
         self.ordplan = self.ordplan.head(int(PLAN_RANGE)).copy()
 
 
     def set_first_date(self):
+        """Filter only the latest due date."""
         ordplan = self.ordplan
         deadline = ordplan["due_date"].iloc[0]
         ordplan = ordplan[ordplan["due_date"] == deadline].reset_index(
@@ -77,7 +102,7 @@ class ORD(ProviderInterface):
         self.ordplan = self.filter_diff_order(ordplan)
 
     def expand_deadline_scope(self):
-        """Expands deadline scope based on lookup amount and order plan."""
+        """Expands due date base from defined range."""
         
         # Exit early if deadline scope is negative
         if self.deadline_scope < 0:
@@ -136,6 +161,7 @@ class ORD(ProviderInterface):
 
     
     def format_data(self):
+        """Format due date for calculation purpose and filter out any unuseable data."""
         ordplan = self.ordplan
         ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%y")
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
@@ -145,6 +171,8 @@ class ORD(ProviderInterface):
         self.ordplan = ordplan
 
     def filter_diff_order(self, ordplan: DataFrame) -> DataFrame:
+        """Assign order's differences base on roll paper,
+        then filter out any unuse orders."""
         if not self._filter_diff:
             return ordplan
         if ordplan is None:
@@ -156,13 +184,14 @@ class ORD(ProviderInterface):
         )  # add diff col
         ordplan = (
             ordplan[ordplan["diff"] < self.filter_value]
-            .sort_values(by="width")
             .reset_index(drop=True)
         )  # filter out diff
 
         return ordplan
 
     def set_selected_order(self):
+        """Set selector order to be the first order for
+        optimizing purpose."""
         if self.selector is None:
             return
         self.selected_order = self.ordplan[
@@ -176,6 +205,7 @@ class ORD(ProviderInterface):
         )  # add selected orders to the top row for GA
 
     def filter_common_order(self):
+        """Use common filter base on the first order or filler order."""
         if not self.common:
             return
         ordplan = self.ordplan
@@ -190,14 +220,19 @@ class ORD(ProviderInterface):
         self.ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
 
     def legacy_filter_order(self):
+        """Randomly choose an init order to be the base for
+        legacy filter, then filter out data."""
+
         if self.preview:
             return
         legacy_filters = LEGACY_FILTER
         ordplan = pd.DataFrame(None)
         best_index=0
         most_compat_plan = 0
-        for order in self.ordplan:
-            index = random.randint(0, len(self.ordplan) - 1)
+        indices = list(range(len(self.ordplan)))
+        random.shuffle(indices)
+
+        for index in indices:
             init_order = self.ordplan.iloc[index]
             # Create a mask for matching orders using all legacy filters
             mask = (self.ordplan[legacy_filters].eq(init_order[legacy_filters])).all(axis=1)
@@ -214,6 +249,7 @@ class ORD(ProviderInterface):
         self.ordplan = ordplan
 
     def set_filler_order(self, init_order):
+        """Eject order data with the filler id."""
         if self.filler is None:
             return init_order
         init_order = self.ordplan[self.ordplan['id'] == self.filler].iloc[0]
