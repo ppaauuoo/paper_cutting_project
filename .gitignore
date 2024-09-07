@@ -1,6 +1,5 @@
 __pycache__
 alpha
 *.zip
-*.sqlite3
-db.sqlite3
 exports
+.vscode

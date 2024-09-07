@@ -60,6 +60,8 @@ def handle_optimization(func):
 
         init_order_number, foll_order_number = handle_orders_logic(output_data)
 
+        outputs = cache.get("outputs", {})
+
         results = results_formatter(
             optimizer_instance,
             output_data,
@@ -71,6 +73,9 @@ def handle_optimization(func):
 
         if is_trim_fit(fitness_values) and is_foll_ok(output_data, foll_order_number):
             messages.success(request, "Optimizing finished.")
+            outputs.push(results)
+            cache.set("outputs", outputs, 1000)
+            ic(outputs)
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
         best_result = cache.get("best_result", {"trim": 1000})
