@@ -307,7 +307,7 @@ def auto_size_filter_logic(request):
     return (orders, size)
 
 
-def handle_common(request) -> Callable:
+def handle_common(request) -> None:
     """
     Request orders base from the past results with common logic and run an optimizer.
     """
@@ -331,6 +331,7 @@ def handle_common(request) -> Callable:
         messages.success(request, "Common order found.")
     else:
         messages.error(request, "No suitable common order found.")
+        return
 
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
