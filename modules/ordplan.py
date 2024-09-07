@@ -128,20 +128,20 @@ class ORD(ProviderInterface):
         deadlines = filtered_plan["due_date"].unique()
         
         # Raise error if no data aligns with dates
-        ic(deadlines)
+
         if len(deadlines) == 0:
             raise ValueError("No data aligns with date")
         
         ordplan = None
         for deadline in deadlines:
-            ic(deadline)
+
             filtered_ordplan = (
                 filtered_plan[filtered_plan["due_date"] <= deadline]
                 .sort_values("due_date")
                 .reset_index(drop=True)
             )
             
-            ic(filtered_ordplan)
+   
             
             # Filter order differences and update lookup amount
             filtered_ordplan = self.filter_diff_order(filtered_ordplan)

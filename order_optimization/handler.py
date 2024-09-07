@@ -55,13 +55,13 @@ def handle_optimization(func):
         out_range = kwargs.get("out_range", 6)
 
         optimizer_instance = get_optimizer(
-            request, orders, size_value, out_range, num_generations, show_output=True
+            request, orders, size_value, out_range, num_generations, show_output=False
         )
         fitness_values, output_data = get_outputs(optimizer_instance)
 
         init_order_number, foll_order_number = handle_orders_logic(output_data)
 
-        outputs = cache.get("outputs", {})
+        outputs = cache.get("outputs", [])
 
         results = results_formatter(
             optimizer_instance,
@@ -80,7 +80,7 @@ def handle_optimization(func):
 
         if is_trim_fit(results['trim']) and ic(is_foll_ok(results['output'], results['foll_order_number'])):
             messages.success(request, "Optimizing finished.")
-            outputs.push(results)
+            outputs.append(results)
             cache.set("outputs", outputs, 1000)
             ic(outputs)
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
@@ -116,11 +116,11 @@ def is_foll_ok(output: List[Dict[str, Any]], foll_order_number: int):
     return True
 
 
-def is_trim_fit(fitness_values: float):
+def is_trim_fit(trim: float):
     """
     Check if trim exceed min/max tirm.
     """
-    return abs(fitness_values) <= MAX_TRIM and abs(fitness_values) >= MIN_TRIM
+    return trim <= MAX_TRIM and trim >= MIN_TRIM
 
 
 def handle_orders_logic(output_data):
@@ -231,7 +231,7 @@ def handle_auto_config(request, **kwargs):
     """
     start_date = pd.to_datetime(request.POST.get("start_date"), format="%Y-%m-%d")
     stop_date = pd.to_datetime(request.POST.get("stop_date"), format="%Y-%m-%d")
-    ic(start_date, stop_date)
+
     again = cache.get("try_again", 0)
     # out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
     out_range = 4
