@@ -83,6 +83,7 @@ def handle_optimization(func):
             outputs.append(results)
             cache.set("outputs", outputs, 1000)
             cache.delete("past_size")
+            cache.delete("try_again")
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
         best_result = cache.get("best_result", {"trim": 1000})
