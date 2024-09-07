@@ -50,19 +50,17 @@ class LP:
         output['old_fitness']= results['fitness']
         output['new_roll'] = sum(variables[f'{roll}'].solution_value()*roll for roll in roll_paper)
         self.output = output
-        return self
-    
-    def get(self):
         return self.output
     
+
 
 
 
 def main():
     results = {'fitness': 74}
     model = LP(results)
-    model.run()
-    print(model.get())
+    print(model.run())
+
 
 if __name__ == "__main__":
     main()
