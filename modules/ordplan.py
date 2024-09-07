@@ -45,8 +45,8 @@ class ORD(ProviderInterface):
     deadline_range: int = DEADLINE_RANGE
     lookup_amount: int = 0
     preview: bool = False
-    start_date: Optional[pd.DatetimeIndex] = None
-    stop_date: Optional[pd.DatetimeIndex] = None
+    start_date: Optional[pd.Timestamp] = None
+    stop_date: Optional[pd.Timestamp] = None
 
     def __post_init__(self):
         if self.orders is None:

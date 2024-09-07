@@ -111,8 +111,8 @@ def get_orders(
     filler: Optional[str] = None,
     first_date_only: bool = False,
     preview: bool = False,
-    start_date: Optional[pd.DatetimeIndex] = None,
-    stop_date: Optional[pd.DatetimeIndex] = None,
+    start_date: Optional[pd.Timestamp] = None,
+    stop_date: Optional[pd.Timestamp] = None,
     selector: Optional[Dict[str,Any]] =None,
 ) -> DataFrame:
     """

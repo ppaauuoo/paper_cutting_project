@@ -121,7 +121,7 @@ def test_common_order():
 
 @pytest.mark.django_db
 def test_filler_common_order(test_data):
-    ord = ORD(test_data, size=66, common=True, filler=6, no_build=True)
+    ord = ORD(test_data, size=66, common=True, filler='6', no_build=True)
     ord.format_data()
     ord.filter_common_order()
     assert len(ord.ordplan) == 1
