@@ -82,7 +82,7 @@ def handle_optimization(func):
             messages.success(request, "Optimizing finished.")
             outputs.append(results)
             cache.set("outputs", outputs, 1000)
-            ic(outputs)
+            cache.delete("past_size")
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
         best_result = cache.get("best_result", {"trim": 1000})
