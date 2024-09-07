@@ -104,14 +104,14 @@ def handle_optimization(func):
     return wrapper
 
 
-def is_foll_ok(output_data: List[Dict[str, Any]], foll_order_number: int):
+def is_foll_ok(output: List[Dict[str, Any]], foll_order_number: int):
     """
     Check if second order's cut exceed the second order's stock or not.
     """
-    for index, order in enumerate(output_data):
-        if index == 0 and len(output_data) > 1:
+    for index, order in enumerate(output):
+        if index == 0:
             continue
-        if order["out"] < foll_order_number:
+        if order["num_orders"] < foll_order_number:
             return False
     return True
 
