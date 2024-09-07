@@ -40,7 +40,8 @@ class LP:
         status = solver.Solve()
 
         if status != pywraplp.Solver.OPTIMAL:
-            print("No optimal solution found.")
+            self.output = None
+            return self
 
         output = {'new_trim': float, 'old_fitness': float, 'new_roll':int}
         new_trim = solver.Objective().Value()
@@ -49,11 +50,11 @@ class LP:
         output['old_fitness']= results['fitness']
         output['new_roll'] = sum(variables[f'{roll}'].solution_value()*roll for roll in roll_paper)
         self.output = output
-        self.out()
-
-    def out(self):
-        output = self.output
-        print(output)
+        return self
+    
+    def get(self):
+        return self.output
+    
 
 
 
@@ -61,6 +62,7 @@ def main():
     results = {'fitness': 74}
     model = LP(results)
     model.run()
+    print(model.get())
 
 if __name__ == "__main__":
     main()
