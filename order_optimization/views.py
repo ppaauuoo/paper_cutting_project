@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 import pandas as pd
 
+from order_optimization.controller import optimizer_controller
 from order_optimization.formatter import plan_orders_formatter
 
 from .models import CSVFile
@@ -43,6 +44,8 @@ def order_optimizer_view(request):
                 handle_reset()
             case {"export": _}:
                 handle_export()
+            case {"ai": _}:
+                optimizer_controller(request)           
 
     csv_files = CSVFile.objects.all()
     form = CSVFileForm()
