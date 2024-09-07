@@ -82,8 +82,7 @@ def handle_optimization(func):
         if results["trim"] < best_result["trim"]:
             cache.set("best_result", results, CACHE_TIMEOUT)
 
-        if "auto" in request.POST:
-            return handle_auto_retry(request)
+        if "auto" in request.POST: return handle_auto_retry(request)
 
         satisfied = 1 if request.POST.get("satisfied") == "true" else 0
         if satisfied:
