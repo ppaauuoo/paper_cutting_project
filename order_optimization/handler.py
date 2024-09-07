@@ -7,6 +7,7 @@ import pandas as pd
 from typing import Callable, Dict, List, Optional, Any
 from icecream import ic
 
+from modules.lp import LP
 from order_optimization.formatter import (
     database_formatter,
     output_formatter,
@@ -70,8 +71,14 @@ def handle_optimization(func):
             init_order_number,
             foll_order_number,
         )
+        
+        switcher =LP(results).run().get() 
+        if switcher is not None:
+            ic(switcher)
+            results['trim'] = switcher['new_trim']
+            results['roll'] = switcher['new_roll']
 
-        if is_trim_fit(fitness_values) and is_foll_ok(output_data, foll_order_number):
+        if is_trim_fit(results['trim']) and ic(is_foll_ok(results['output'], results['foll_order_number'])):
             messages.success(request, "Optimizing finished.")
             outputs.push(results)
             cache.set("outputs", outputs, 1000)
