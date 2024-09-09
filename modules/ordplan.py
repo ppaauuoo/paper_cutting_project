@@ -252,7 +252,9 @@ class ORD(ProviderInterface):
         """Eject order data with the filler id."""
         if self.filler is None:
             return init_order
-        init_order = self.ordplan[self.ordplan['id'] == self.filler].iloc[0]
+        init_order = self.ordplan[self.ordplan['id'] == self.filler]
+        if init_order is None:
+            raise ValueError('Error: Filler not found!')
         self.ordplan = self.ordplan[self.ordplan['id'] != self.filler]
         return init_order
                 

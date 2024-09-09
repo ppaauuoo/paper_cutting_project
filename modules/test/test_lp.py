@@ -6,7 +6,25 @@ def test_lp():
     test_data = {
         'fitness' : 90
     }
-    ga_instance = LP(test_data)
-    ga_instance.run()
-    if ga_instance.output is not None:
-        assert ga_instance.output['new_roll'] == 91
+    lp_instance = LP(test_data)
+    lp_instance.run()
+    if lp_instance.output is not None:
+        assert lp_instance.output['new_roll'] == 91
+        
+def test_lp_empty():
+    test_data = None 
+    
+    lp_instance = LP(test_data)
+    with pytest.raises(ValueError):
+        lp_instance.run()
+    
+@pytest.mark.django_db
+def test_lp_notfound():
+    test_data = {
+        'fitness': 30
+    } 
+    
+    lp_instance = LP(test_data)
+    lp_instance.run()
+    assert lp_instance.output == None
+    
