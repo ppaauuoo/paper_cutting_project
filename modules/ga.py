@@ -5,7 +5,7 @@ from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
-from typing import Callable, Dict, Any, List
+from typing import Callable, Dict, Any, List, Optional
 from icecream import ic
 
 from order_optimization.container import ModelInterface
@@ -27,7 +27,7 @@ class GA(ModelInterface):
     current_generation: int = 0
     _penalty:int = 0 
     _penalty_value:int = PENALTY_VALUE
-
+    blade:Optional[int] = None
     def __post_init__(self):
         if self.orders is None:
             raise ValueError("Orders is empty!")
@@ -172,7 +172,7 @@ class GA(ModelInterface):
         _output = pd.DataFrame(
             {   
                 "id": orders['id'].unique(),
-                "blade": orders.index+1,
+                "blade": orders.index+1 if self.blade is None else self.blade,
                 "order_number": orders["order_number"],
                 "num_orders": orders["quantity"],
                 "component_type": orders["component_type"],
