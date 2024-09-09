@@ -3,22 +3,25 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
-from django.conf import settings
 import pandas as pd
 
-from .models import CSVFile, OptimizationPlan, OrderList, PlanOrder
+from order_optimization.controller import optimizer_controller
+from order_optimization.formatter import plan_orders_formatter
+
+from .models import CSVFile
 from .forms import CSVFileForm, LoginForm
-from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config, handle_reset, handle_saving
+from .handler import handle_common, handle_export, handle_filler, handle_manual_config, handle_auto_config, handle_reset, handle_saving, timezone_formatter
 from .getter import get_csv_file, get_orders
 
 from icecream import ic
 
-ROLL_PAPER = settings.ROLL_PAPER 
-FILTER = settings.FILTER 
-OUT_RANGE = settings.OUT_RANGE 
-TUNING_VALUE = settings.TUNING_VALUE 
-CACHE_TIMEOUT = settings.CACHE_TIMEOUT 
-
+from ordplan_project.settings import (
+    ROLL_PAPER,
+    FILTER,
+    OUT_RANGE,
+    TUNING_VALUE,
+    CACHE_TIMEOUT,
+)
 @login_required
 def order_optimizer_view(request):
     if request.method == "POST":
@@ -39,8 +42,11 @@ def order_optimizer_view(request):
                 handle_saving(request)
             case {"reset": _}:
                 handle_reset()
+            case {"export": _}:
+                handle_export()
+            case {"ai": _}:
+                optimizer_controller(request)           
 
-    cache.delete("optimization_progress")  # Clear previous progress
     csv_files = CSVFile.objects.all()
     form = CSVFileForm()
     results = cache.get("optimization_results")
@@ -93,39 +99,19 @@ def progress_view(request):
     return render(request, 'progress_bar.html', context)
 
 def optimized_orders_view(request):
-    # Get all PlanOrder objects as a list of dictionaries
-    optimized_output = list(PlanOrder.objects.all().values(
-        "order_id", "plan_quantity", "out", "blade_type"
-    ))
-
-    # Extract order IDs
-    optimized_output_ids = [order['order_id'] for order in optimized_output]
-    
-    # Get corresponding OrderList objects
-    optimized_order_list = list(OrderList.objects.filter(id__in=optimized_output_ids).values())
-
-    # Create a dictionary with order_id as the key
-    optimized_order_dict = {order['id']: order for order in optimized_order_list}
-    
-    
-    # Combine results
-    for order in optimized_output:
-        order_id = order['order_id']
-        if order_id in optimized_order_dict:
-            order.update(optimized_order_dict[order_id])
-    
-     
+    df = plan_orders_formatter()
+    optimized_output = df.to_dict('records')
     return render(request, 'saved_orders_table.html', {'data': optimized_output})
 
-def preview_data(request):
+def data_preview(request):
     file_id = request.GET.get("file_id")
     cache_key = f"file_selector_{file_id}"
     df = cache.get(cache_key)
 
     if df is not None:
-        return render(request, 'preview_table.html', {'preview_data': df})
+        return render(request, 'preview_table.html', {'data_preview': df})
 
-    df = get_orders(request, file_id, filter_diff=False)
+    df = get_orders(request, file_id, filter_diff=False, preview=True)
 
     # Format datetime columns as per the instruction
     for column in df.columns:
@@ -133,22 +119,23 @@ def preview_data(request):
             df[column] = df[column].dt.strftime("%m/%d/%y")
     df = df.to_dict(orient='records')
     cache.set(cache_key, df, CACHE_TIMEOUT)
-    return render(request, 'preview_table.html', {'preview_data': df})
+    return render(request, 'preview_table.html', {'data_preview': df})
 
-def search_preview_data(request):
-    search_term = request.GET.get('previewSearchInput')
-    file_id = request.GET.get("file_id")
-    cache_key = f"file_selector_{file_id}"
-    data_dict = cache.get(cache_key)
+###TODO
+# def search_data_preview(request):
+#     search_term = request.GET.get('previewSearchInput')
+#     file_id = request.GET.get("file_id")
+#     cache_key = f"file_selector_{file_id}"
+#     data_dict = cache.get(cache_key)
 
-    if search_term:
-        # Filter the dictionary
-        filtered_dict = {key: value for key, value in data_dict.items() 
-                         if any(search_term in str(v).lower() for v in value.values())}
-    else:
-        filtered_dict = data_dict
+#     if search_term:
+#         # Filter the dictionary
+#         filtered_dict = {key: value for key, value in data_dict.items() 
+#                          if any(search_term in str(v).lower() for v in value.values())}
+#     else:
+#         filtered_dict = data_dict
 
-    return render(request, 'preview_table.html', {'data': filtered_dict})
+#     return render(request, 'preview_table.html', {'data': filtered_dict})
 
 def test(request):
     csv_files = CSVFile.objects.all()

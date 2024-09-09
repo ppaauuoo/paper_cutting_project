@@ -14,7 +14,7 @@
     </div>
 
     <!-- Button to trigger the data fetch -->
-    <button hx-get="/preview_data" hx-target="#data-table-body" hx-swap="innerHTML" hx-include="[name='file_id']" data-bs-toggle="modal" data-bs-target="#filePreviewModal">Fetch Data</button>
+    <button hx-get="/data_preview" hx-target="#data-table-body" hx-swap="innerHTML" hx-include="[name='file_id']" data-bs-toggle="modal" data-bs-target="#filePreviewModal">Fetch Data</button>
     
 
     <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-labelledby="filePreviewModalLabel" aria-hidden="true">

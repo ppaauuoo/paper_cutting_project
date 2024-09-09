@@ -1,17 +1,43 @@
+from datetime import datetime
+import random
 from django.contrib import messages
 from django.core.cache import cache
-from django.conf import settings
 
 import pandas as pd
 from typing import Callable, Dict, List, Optional, Any
 from icecream import ic
 
-from .getter import get_orders, get_outputs, get_optimizer
-from order_optimization.container import ModelContainer
+from modules.lp import LP
+from order_optimization.formatter import (
+    database_formatter,
+    output_formatter,
+    plan_orders_formatter,
+    results_formatter,
+    timezone_formatter,
+)
 
-from ordplan_project.settings import ROLL_PAPER,FILTER,TUNING_VALUE,CACHE_TIMEOUT,MAX_RETRY,MAX_TRIM,MIN_TRIM
+from .getter import get_orders, get_outputs, get_optimizer
+
+from ordplan_project.settings import (
+    PLAN_RANGE,
+    MIN_TRIM,
+    ROLL_PAPER,
+    FILTER,
+    OUT_RANGE,
+    TUNING_VALUE,
+    CACHE_TIMEOUT,
+    MAX_RETRY,
+    MAX_TRIM,
+    MIN_TRIM,
+)
+
 
 def handle_optimization(func):
+    """
+    Run optimizer then processing the output,
+    Looping thru optimizer multiple time if stated.
+    """
+
     def wrapper(request, *args, **kwargs):
         kwargs = func(request)
         if not kwargs:
@@ -24,17 +50,20 @@ def handle_optimization(func):
 
         if orders is None:
             raise ValueError("Orders is empty!")
+
         num_generations = kwargs.get("num_generations", 50)
         out_range = kwargs.get("out_range", 6)
 
         optimizer_instance = get_optimizer(
-            request, orders, size_value, out_range, num_generations
+            request, orders, size_value, out_range, num_generations, show_output=False
         )
         fitness_values, output_data = get_outputs(optimizer_instance)
 
         init_order_number, foll_order_number = handle_orders_logic(output_data)
 
-        results = results_format(
+        outputs = cache.get("outputs", [])
+
+        results = results_formatter(
             optimizer_instance,
             output_data,
             size_value,
@@ -42,13 +71,27 @@ def handle_optimization(func):
             init_order_number,
             foll_order_number,
         )
+        
+        if not is_trim_fit(results['trim']):
+            switcher =LP(results).run().get() 
+            if switcher is not None:
+                ic(switcher)
+                results['trim'] = switcher['new_trim']
+                results['roll'] = switcher['new_roll']
 
-        if is_trim_fit(fitness_values):
+        if is_trim_fit(results['trim']) and ic(is_foll_ok(results['output'], results['foll_order_number'])):
             messages.success(request, "Optimizing finished.")
+            outputs.append(results)
+            cache.set("outputs", outputs, 1000)
+            cache.delete("past_size")
+            cache.delete("try_again")
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
-        if "auto" in request.POST:
-            return handle_auto_retry(request)
+        best_result = cache.get("best_result", {"trim": 1000})
+        if results["trim"] < best_result["trim"]:
+            cache.set("best_result", results, CACHE_TIMEOUT)
+
+        if "auto" or 'ai' in request.POST: return handle_auto_retry(request)
 
         satisfied = 1 if request.POST.get("satisfied") == "true" else 0
         if satisfied:
@@ -63,11 +106,29 @@ def handle_optimization(func):
     return wrapper
 
 
-def is_trim_fit(fitness_values: float):
-    return abs(fitness_values) <= MAX_TRIM and abs(fitness_values) >= MIN_TRIM
+def is_foll_ok(output: List[Dict[str, Any]], foll_order_number: int):
+    """
+    Check if second order's cut exceed the second order's stock or not.
+    """
+    for index, order in enumerate(output):
+        if index == 0:
+            continue
+        if order["num_orders"] < foll_order_number:
+            return False
+    return True
+
+
+def is_trim_fit(trim: float):
+    """
+    Check if trim exceed min/max tirm.
+    """
+    return trim <= MAX_TRIM and trim >= MIN_TRIM
 
 
 def handle_orders_logic(output_data):
+    """
+    Calculate first order cut and second order cut.
+    """
     init_len = output_data[0]["cut_len"]
     init_out = output_data[0]["out"]
     init_num_orders = output_data[0]["num_orders"]
@@ -77,31 +138,23 @@ def handle_orders_logic(output_data):
     foll_out: List[int] = []
 
     for index, order in enumerate(output_data):
-        if index == 0 and len(output_data)>1:
+        if index == 0 and len(output_data) > 1:
             continue
         foll_order_len.append(order["cut_len"])
         foll_out.append(order["out"])
 
     foll_order_number = round(
-        (init_len * init_num_orders) / (foll_order_len[0] * init_out)
+        (init_len * init_num_orders * foll_out[0]) / (foll_order_len[0] * init_out)
     )
-    # foll_order_number = foll_order_number[index]/foll_out[index]
     return (init_order_number, foll_order_number)
 
 
-def handle_auto_retry(request):
-    again = cache.get("try_again", 0)
-    if again <= MAX_RETRY:
-        again += 1
-        cache.set("try_again", again, CACHE_TIMEOUT)
-        return handle_auto_config(request)
-    messages.error(request, "Error : Auto config malfunctioned, please contact admin.")
-    return cache.delete("optimization_results")  # clear
-
-
 def handle_satisfied_retry(wrapper, request, results, *args, **kwargs):
+    """
+    Recursive features for manual configuration.
+    """
     again = cache.get("try_again", 0)
-    if again <= MAX_RETRY:
+    if again < MAX_RETRY:
         again += 1
         cache.set("try_again", again, CACHE_TIMEOUT)
         return wrapper(request, *args, **kwargs)
@@ -114,6 +167,9 @@ def handle_satisfied_retry(wrapper, request, results, *args, **kwargs):
 
 @handle_optimization
 def handle_manual_config(request, **kwargs):
+    """
+    Extract values from UI and request orders then send to optimizer.
+    """
     # Extract values from the request
     file_id = request.POST.get("file_id")
     size_value = int(request.POST.get("size_value", 0))
@@ -152,14 +208,37 @@ def handle_manual_config(request, **kwargs):
     return kwargs
 
 
+def handle_auto_retry(request):
+    """
+    Recursive features for auto configuration.
+    """
+    again = cache.get("try_again", 0)
+    if again < MAX_RETRY:
+        again += 1
+        cache.set("try_again", again, CACHE_TIMEOUT)
+        return handle_auto_config(request)
+
+    messages.error(request, "Error : Auto config malfunctioned, please contact admin.")
+    best_result = cache.get("best_result")
+    cache.delete("past_size")
+    cache.set("optimization_results", best_result, CACHE_TIMEOUT)
+    cache.delete("try_again")
+    return
+
+
 @handle_optimization
 def handle_auto_config(request, **kwargs):
+    """
+    Automatically defines values needed for requesting orders and send it to optimizer.
+    """
+
     again = cache.get("try_again", 0)
-    out_range = 3 + again
+    # out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
+    out_range = 4
     orders, size = auto_size_filter_logic(request)
-    # Pass all necessary variables to the wrapped function
-    if size is None:
-        raise ValueError("Logic Size Error!")
+
+    if size is None or again > MAX_RETRY:
+        raise ValueError("Logic error!")
     if orders is None:
         raise ValueError("Orders is empty!")
 
@@ -175,76 +254,116 @@ def handle_auto_config(request, **kwargs):
 
 
 def auto_size_filter_logic(request):
-    filter_index = 0
-    roll_index = 0
-    orders = cache.get("auto_order", None)
-    size_tuning = cache.get("order_size", ROLL_PAPER[roll_index])
+    """
+    Logic for automatic defining values for requesting orders.
+    """
+
     file_id = request.POST.get("file_id")
-    tuning_value = TUNING_VALUE[1]
-    while orders is None or len(orders) <= 0:
+    start_date = request.POST.get("start_date")
+    stop_date = request.POST.get("stop_date")
+    tuning_value = 3
+    filter_index = 1
+    orders = None
+    past_size = cache.get("past_size", [])
+
+    if len(past_size) >= len(ROLL_PAPER):
+        return (None, None)
+
+    while orders is None:
+
+        size = 85
+        if size in past_size:
+            size = random.choice([roll for roll in ROLL_PAPER if roll not in past_size])
+
         orders = get_orders(
             request=request,
             file_id=file_id,
-            size_value=size_tuning,
-            filter_value=FILTER[-filter_index],
+            size_value=size,
+            filter_value=FILTER[filter_index],
             tuning_values=tuning_value,
             first_date_only=False,
+            start_date=start_date,
+            stop_date=stop_date,
         )
-        filter_index += 1
-        if filter_index >= len(FILTER):
-            filter_index = 0
-            roll_index += 1
-            if roll_index >= len(ROLL_PAPER):
-                return (None,None)
-            size_tuning = ROLL_PAPER[roll_index]
 
-    cache.set("auto_order", orders, CACHE_TIMEOUT)
-    cache.set("order_size", size_tuning, CACHE_TIMEOUT)
+    past_size.append(size)
+    cache.set("past_size", past_size, CACHE_TIMEOUT)
 
-    return (orders, size_tuning)
+    return (orders, size)
 
 
-def handle_common(request) -> Callable:
+def handle_common(request) -> None:
+    """
+    Request orders base from the past results with common logic and run an optimizer.
+    """
 
     results = cache.get("optimization_results")
-    best_fitness = -results["trim"]
+    best_fitness = results["trim"]
     best_index: Optional[int] = None
-    file_id = request.POST.get("selected_file_id")
 
-    for i, item in enumerate(results["output"]):
+    for index, item in enumerate(results["output"]):
+        if item['out']>1:
+            optimizer_instance = single_common(request=request,item=item, results=results)
+        else:
+            optimizer_instance = double_common(request=request,item=item, results=results)
 
+        if abs(optimizer_instance.fitness_values) < best_fitness:
+            best_fitness, best_output = get_outputs(optimizer_instance)
+            best_index = index
+
+    if best_index is not None:
+        results = update_common(results, best_index, best_output, best_fitness)
+        messages.success(request, "Common order found.")
+    else:
+        messages.error(request, "No suitable common order found.")
+        return
+
+    return cache.set("optimization_results", results, CACHE_TIMEOUT)
+
+def double_common(request,item: Dict[str,Any], results: Dict[str,Any]):
+        file_id = request.POST.get("selected_file_id")
         size_value = (item["cut_width"] * item["out"]) + results["trim"]
         orders = get_orders(
-            request,
-            file_id,
-            size_value,
+            request=request,
+            file_id=file_id,
+            size_value=size_value,
             deadline_scope=-1,
             filter_diff=False,
             common=True,
         )
         optimizer_instance = get_optimizer(
-            request, orders, size_value, show_output=True
+            request=request, orders=orders, size_value=size_value, show_output=False
         )
-
-        if abs(optimizer_instance.fitness_values) < abs(best_fitness):
-            best_fitness, best_output = get_outputs(optimizer_instance)
-            best_index = i
-
-    if best_index is not None:
-        results = update_results(results, best_index, best_output, best_fitness)
-        messages.success(request, "Common order found.")
-    else:
-        messages.error(request, "No suitable common order found.")
-
-    return cache.set("optimization_results", results, CACHE_TIMEOUT)
+        return optimizer_instance
 
 
-def update_results(
+def single_common(request,item: Dict[str,Any], results: Dict[str,Any]):
+        file_id = request.POST.get("selected_file_id")
+        size_value = (item["cut_width"] * item["out"]) + results["trim"]
+        orders = get_orders(
+            request=request,
+            file_id=file_id,
+            size_value=size_value,
+            deadline_scope=-1,
+            filter_diff=False,
+            common=True,
+            selector={'order_id': item['id']}
+        )
+        optimizer_instance = get_optimizer(
+            request=request, orders=orders, size_value=size_value, show_output=False
+        )
+        return optimizer_instance
+
+def update_common(
     results: Dict,
     best_index: int,
     best_output: List[Dict],
     best_fitness: float,
 ) -> Dict:
+    """
+    Remove the order that got chosen to be swapped by common orders, then
+    injecting the common orders and new fitness into results.
+    """
     results["output"].pop(best_index)  # remove the old order
     results["output"].extend(best_output)  # add the new one
 
@@ -256,6 +375,11 @@ def update_results(
 
 
 def handle_filler(request):
+    """
+    Request orders where the defined filler id is locked in the first index
+    of orders to be a filter for common orders, then loop thru the orders
+    to find one that can fill the order with filler id.
+    """
     results = cache.get("optimization_results")
     init_order = results["output"][0]["id"]
     file_id = request.POST.get("selected_file_id")
@@ -280,46 +404,18 @@ def handle_filler(request):
     ):
         i += 1
 
-    filler_data = output_format(orders.iloc[i], init_out).to_dict(orient="records")
+    filler_data = output_formatter(orders.iloc[i], init_out).to_dict(orient="records")
     results["output"].extend(filler_data)
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
-
-def output_format(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
-    return pd.DataFrame(
-        {
-            "order_number": [orders["order_number"]],
-            "num_orders": [orders["quantity"]],
-            "cut_width": [orders["width"]],
-            "cut_len": [orders["length"]],
-            "type": [orders["edge_type"]],
-            "deadline": [orders["due_date"]],
-            "out": [init_out],
-        }
-    )
-
-
-def results_format(
-    optimizer_instance: ModelContainer,
-    output_data: List[Dict[str, Any]],
-    size_value: int,
-    fitness_values: float,
-    init_order_number: int,
-    foll_order_number: int,
-) -> Dict[str, Any]:
-    return {
-        "output": output_data,
-        "roll": optimizer_instance.PAPER_SIZE,
-        "fitness": size_value + fitness_values,
-        "trim": abs(fitness_values),
-        "init_order_number": init_order_number,
-        "foll_order_number": foll_order_number,
-    }
 
 from .models import OptimizationPlan, OrderList, PlanOrder
 
 
 def handle_saving(request):
+    """
+    Pull data from cache to save into the model and updating both cache and model.
+    """
     file_id = request.POST.get("file_id")
     cache.delete(f"order_cache_{file_id}")
     data = cache.get("optimization_results", None)
@@ -329,41 +425,15 @@ def handle_saving(request):
 
     handle_order_exhaustion(data)
 
-    optimized_order = database_format(data)
+    optimized_order = database_formatter(data)
     optimized_order.save()
-
-def database_format(
-    data: Dict[str, List[Dict[str, int]]]
-) -> OptimizationPlan:
-
-    format_data = OptimizationPlan.objects.create() 
-
-    for item in data["output"]:
-        current_id = item['id']
-        match item["blade"]:
-            case 1:
-                blade1_order = PlanOrder.objects.create(
-                    order=OrderList.objects.get(id=current_id),
-                    plan_quantity=data['init_order_number'],
-                    out=item["out"],
-                    blade_type='Blade 1'
-                )
-                format_data.blade_1.add(blade1_order)
-                
-            case 2:
-                blade2_order = PlanOrder.objects.create(
-                    order=OrderList.objects.get(id=current_id),
-                    plan_quantity=data['foll_order_number'],
-                    out=item["out"],
-                    blade_type='Blade 2'
-                )
-                format_data.blade_2.add(blade2_order)
-
-    return format_data
-
 
 
 def handle_order_exhaustion(data: Dict[str, Any]) -> None:
+    """
+    Updating the OrderList model by set any blade 1 order to zero
+    and update blade 2 order with what had been used.
+    """
     output_data = data["output"]
 
     for index, order in enumerate(output_data):
@@ -382,9 +452,22 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
         filtered_order.quantity
 
 
-
-
 def handle_reset():
+    """
+    Remove cache and database.
+    """
     cache.clear()
-    OrderList.objects.all().delete()
     OptimizationPlan.objects.all().delete()
+    OrderList.objects.all().delete()
+
+
+def handle_export():
+    """
+    For exporting data from model to file excel.
+    """
+    df = plan_orders_formatter()
+    # Save the DataFrame to a file
+    df.to_excel(
+        f'media/exports/orders_export_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx',
+        index=False,
+    )

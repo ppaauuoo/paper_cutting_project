@@ -11,16 +11,17 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 ROLL_PAPER = [66, 68, 70, 73, 74, 75, 79, 82, 85, 88, 91, 93, 95, 97]
-FILTER = [16,8,6,4,2]
+FILTER = [16,8,4]
 OUT_RANGE = [7,5,3]
 TUNING_VALUE = [3,2]
 CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
-MAX_RETRY = 3
+MAX_RETRY = 5
 MAX_TRIM = 3
 MIN_TRIM = 1
 PENALTY_VALUE = 1000
 UNIT_CONVERTER = 25.4 #MM _TO_INCH
-DEADLINE_RANGE = 100
+DEADLINE_RANGE = 500
+PLAN_RANGE = DEADLINE_RANGE/5
 COMMON_FILTER = [
     "front_sheet",
     "c_wave",
@@ -41,11 +42,6 @@ LEGACY_FILTER = [
     "middle_sheet",
     "b_wave",
     "back_sheet",
-    "edge_type",
-    "left_edge_cut",
-    "middle_edge_cut",
-    "right_edge_cut",
-    "component_type",
 ]
 
 from pathlib import Path

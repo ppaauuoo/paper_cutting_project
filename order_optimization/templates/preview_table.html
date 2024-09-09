@@ -23,14 +23,14 @@
       </tr>
     </thead>
     <tbody>
-      {% if not preview_data %}
+      {% if not data_preview %}
         <tr>
           <td colspan="9">
             <i>No data available</i>
           </td>
         </tr>
       {% else %}
-        {% for item in preview_data %}
+        {% for item in data_preview %}
           <tr>
             <td class="text-center">{{ item.due_date }}</td>
             <td class="text-center">{{ item.order_number }}</td>

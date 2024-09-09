@@ -1,109 +1,148 @@
 
         {% include "date_picker.html"%}
-        <div class="form-group mb-3">
-            <label for="file_id" class="form-label">Select File:</label>
-            <select id="file_id" name="file_id" hx-include="this" class="form-select">
-                {% for file in csv_files %}
-                    <option value="{{ file.id }}" {% if file.id|stringformat:"s" == request.POST.file_id %}selected{% endif %}>{{ file.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group mb-3">
-            <label for="size_value" class="form-label">Size Value:</label>
-            <select id="size_value" name="size_value" class="form-select" required>
-                {% for size in roll_paper %}
-                    <option value="{{ size }}" {% if size|stringformat:"s" == request.POST.size_value %}selected{% endif %}>{{ size }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group mb-3">
-            <label for="satisfied" class="form-label">Until Satisfied :</label>
-            <input type="checkbox" id="satisfied" name="satisfied" class="form-check-input" value="true" {% if request.POST.satisfied == "true" %}checked{% endif %}>
-        </div>
-
-        <div class="form-group mb-3">
-            <label for="first_date_only" class="form-label">First Deadline Only :</label>
-            <input type="checkbox" id="first_date_only" name="first_date_only" class="form-check-input" value="true" {% if request.POST.first_date_only == "true" %}checked{% endif %}>
-        </div>
-
-        <a href="#advanced" data-bs-toggle="collapse" id="advanced-tab">Advanced...</a>
-
-        <!-- Advanced Collapsed -->
-        <div id="advanced" class="collapse" aria-labelledby="advanced-tab">
+        <div x-data="{showManual: false}">
             <div class="form-group mb-3">
-                <label for="tuning_value" class="form-label">Tuning Value:</label>
-                <select id="tuning_value" name="tuning_value" class="form-select" required>
-                    {% for val in tuning_value %}
-                        <option value="{{ val }}" {% if val|stringformat:"s"  == request.POST.tuning_value %}selected{% endif %}>{{ val }}</option>
+                <label for="file_id" class="form-label">Select File:</label>
+                <select id="file_id" name="file_id" hx-include="this" class="form-select">
+                    {% for file in csv_files %}
+                        <option value="{{ file.id }}" {% if file.id|stringformat:"s" == request.POST.file_id %}selected{% endif %}>{{ file.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="form-group mb-3">
-                <label for="filter_value" class="form-label">Filter Value:</label>
-                <select id="filter_value" name="filter_value" class="form-select" required>
-                    {% for val in filter %}
-                        <option value="{{ val }}" {% if val|stringformat:"s" == request.POST.filter_value %}selected{% endif %}>{{ val }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group mb-3">
-                <label for="out_range" class="form-label">Out Range:</label>
-                <select id="out_range" name="out_range" class="form-select" required>
-                    {% for out in out_range %}
-                        <option value="{{ out }}" {% if out|stringformat:"s"  == request.POST.out_range %}selected{% endif %}>{{ out|add:"-1" }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div x-data="{num_generations: 50}"class="form-group mb-3">
-                <label for="num_generations" class="form-label">Number of Generations :</label>
-                <output x-text="num_generations" for="num_generations" id="slider_output"></output>
-                <input x-model="num_generations" type="range" id="num_generations" name="num_generations" min="20" max="100" class="form-range" required>
-            </div>
-            <div class="form-group mb-3">
-                <span class="text-danger">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
-                        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
-                    </svg> 
-                    <label for="deadline_toggle" class="form-label">Scan All :</label>
-                </span>
+    
+    
+            <a x-on:click="showManual = !showManual" href="#manual" data-bs-toggle="collapse" id="manual-tab">Manual Configuration</a>
 
-                <input type="checkbox" id="deadline_toggle" name="deadline_toggle" class="form-check-input" value="true" {% if request.POST.deadline_toggle == "true" %}checked{% endif %}>
+            <!-- Manual Collapsed -->
+            <div id="manual" class="collapse" aria-labelledby="manual-tab">
+    
+                            <div class="form-group mb-3">
+                                <label for="size_value" class="form-label">Size Value:</label>
+                                <select id="size_value" name="size_value" class="form-select" required>
+                                    {% for size in roll_paper %}
+                                        <option value="{{ size }}" {% if size|stringformat:"s" == request.POST.size_value %}selected{% endif %}>{{ size }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="satisfied" class="form-label">Until Satisfied :</label>
+                                <input type="checkbox" id="satisfied" name="satisfied" class="form-check-input" value="true" {% if request.POST.satisfied == "true" %}checked{% endif %}>
+                            </div>
+                    
+                            <div class="form-group mb-3">
+                                <label for="first_date_only" class="form-label">First Deadline Only :</label>
+                                <input type="checkbox" id="first_date_only" name="first_date_only" class="form-check-input" value="true" {% if request.POST.first_date_only == "true" %}checked{% endif %}>
+                            </div>
+                            
+                            <a href="#advanced" data-bs-toggle="collapse" id="advanced-tab">Advanced...</a>
             </div>
-        </div>
 
-        <div class="d-flex flex-wrap justify-content-start mt-3 gap-2">
-            
-            <div x-data="{ autoLoading: false, manualLoading: false }">
-                <button type="submit" name="auto" class="btn btn-danger" id="autoBtn"
-                        x-on:click="autoLoading = true;">
-                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
-                        x-show="autoLoading"></span>
-                    <span class="btn-text" x-show="!autoLoading">Auto</span>
-                    <span class="btn-text" x-show="autoLoading">Loading...</span>
+            <!-- Advanced Collapsed -->
+            <div id="advanced" class="collapse" aria-labelledby="advanced-tab">
+    
+                <div class="form-group mb-3">
+                    <label for="size_value" class="form-label">Size Value:</label>
+                    <select id="size_value" name="size_value" class="form-select" required>
+                        {% for size in roll_paper %}
+                            <option value="{{ size }}" {% if size|stringformat:"s" == request.POST.size_value %}selected{% endif %}>{{ size }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="satisfied" class="form-label">Until Satisfied :</label>
+                    <input type="checkbox" id="satisfied" name="satisfied" class="form-check-input" value="true" {% if request.POST.satisfied == "true" %}checked{% endif %}>
+                </div>
+        
+                <div class="form-group mb-3">
+                    <label for="first_date_only" class="form-label">First Deadline Only :</label>
+                    <input type="checkbox" id="first_date_only" name="first_date_only" class="form-check-input" value="true" {% if request.POST.first_date_only == "true" %}checked{% endif %}>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="tuning_value" class="form-label">Tuning Value:</label>
+                    <select id="tuning_value" name="tuning_value" class="form-select" required>
+                        {% for val in tuning_value %}
+                            <option value="{{ val }}" {% if val|stringformat:"s"  == request.POST.tuning_value %}selected{% endif %}>{{ val }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="filter_value" class="form-label">Filter Value:</label>
+                    <select id="filter_value" name="filter_value" class="form-select" required>
+                        {% for val in filter %}
+                            <option value="{{ val }}" {% if val|stringformat:"s" == request.POST.filter_value %}selected{% endif %}>{{ val }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="out_range" class="form-label">Out Range:</label>
+                    <select id="out_range" name="out_range" class="form-select" required>
+                        {% for out in out_range %}
+                            <option value="{{ out }}" {% if out|stringformat:"s"  == request.POST.out_range %}selected{% endif %}>{{ out|add:"-1" }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div x-data="{num_generations: 50}"class="form-group mb-3">
+                    <label for="num_generations" class="form-label">Number of Generations :</label>
+                    <output x-text="num_generations" for="num_generations" id="slider_output"></output>
+                    <input x-model="num_generations" type="range" id="num_generations" name="num_generations" min="20" max="100" class="form-range" required>
+                </div>
+                <div class="form-group mb-3">
+                    <span class="text-danger">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
+                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                        </svg> 
+                        <label for="deadline_toggle" class="form-label">Scan All :</label>
+                    </span>
+    
+                    <input type="checkbox" id="deadline_toggle" name="deadline_toggle" class="form-check-input" value="true" {% if request.POST.deadline_toggle == "true" %}checked{% endif %}>
+                </div>
+            </div>
+    
+            <div class="d-flex flex-wrap justify-content-start mt-3 gap-2">
+
+                <div x-data="{ aiLoading: false }">
+                    <button type="submit" name="ai" class="btn btn-danger" id="aiBtn"
+                            x-on:click="aiLoading = true;">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
+                            x-show="aiLoading"></span>
+                        <span class="btn-text" x-show="!aiLoading">AI</span>
+                        <span class="btn-text" x-show="aiLoading">loading...</span>
+                    </button>
+                </div>
+                
+                <div x-data="{ autoloading: false, manualloading: false }">
+                    <button x-show="showmanual" type="submit" name="optimize" class="btn btn-danger" id="optimizebtn"
+                        x-on:click="manualloading = true;">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
+                            x-show="manualloading"></span>
+                        <span class="btn-text" x-show="!manualloading">Manual</span>
+                        <span class="btn-text" x-show="manualloading">loading...</span>
+                    </button>
+                    <button type="submit" name="auto" class="btn btn-primary" id="autobtn"
+                            x-on:click="autoloading = true;">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
+                            x-show="autoloading"></span>
+                        <span class="btn-text" x-show="!autoloading">Auto</span>
+                        <span class="btn-text" x-show="autoloading">loading...</span>
+                    </button>
+                </div>
+    
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadmodal">
+                    <span class="btn-text">Add File</span>
                 </button>
-                <button type="submit" name="optimize" class="btn btn-primary" id="optimizeBtn"
-                        x-on:click="manualLoading = true;">
-                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
-                        x-show="manualLoading"></span>
-                    <span class="btn-text" x-show="!manualLoading">Manual</span>
-                    <span class="btn-text" x-show="manualLoading">Loading...</span>
+                <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#csvfilesmodal">
+                    <span class="btn-text">View Files List</span>
                 </button>
+                {% include "form_modals.html" %}
+    
+                <button class="btn btn-danger" type="submit" name="reset">
+                    <span class="btn-text">Reset</span>
+                </button>
+                {% if results %}
+                <button class="btn btn-success" type="submit" name="save">
+                    <span class="btn-text">Save</span>
+                </button>
+                {% endif %}
             </div>
-
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                <span class="btn-text">Add File</span>
-            </button>
-            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#csvFilesModal">
-                <span class="btn-text">View Files List</span>
-            </button>
-            {% include "form_modals.html" %}
-
-            <button class="btn btn-danger" type="submit" name="reset">
-                <span class="btn-text">Reset</span>
-            </button>
-            {% if results %}
-            <button class="btn btn-success" type="submit" name="save">
-                <span class="btn-text">Save</span>
-            </button>
-            {% endif %}
         </div>
+        
