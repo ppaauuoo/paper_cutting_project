@@ -78,7 +78,7 @@ def database_formatter(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPla
 
 def timezone_formatter(df: pd.DataFrame):
     """
-    Remove any timezone column in dataframe.
+    Format any timezone column in dataframe.
     """
     
     datetime_cols = df.select_dtypes(include=['datetime64[ns, UTC]']).columns
