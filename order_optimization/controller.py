@@ -4,7 +4,7 @@ from order_optimization.handler import handle_auto_config, handle_saving
 from django.contrib import messages
 
 def optimizer_controller(request)->None:
-    for i in range(0,20):
+    for i in range(0,5):
         try:
             handle_auto_config(request)
             handle_saving(request)
