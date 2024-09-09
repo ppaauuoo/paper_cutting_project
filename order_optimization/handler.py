@@ -72,11 +72,12 @@ def handle_optimization(func):
             foll_order_number,
         )
         
-        switcher =LP(results).run().get() 
-        if switcher is not None:
-            ic(switcher)
-            results['trim'] = switcher['new_trim']
-            results['roll'] = switcher['new_roll']
+        if not is_trim_fit(results['trim']):
+            switcher =LP(results).run().get() 
+            if switcher is not None:
+                ic(switcher)
+                results['trim'] = switcher['new_trim']
+                results['roll'] = switcher['new_roll']
 
         if is_trim_fit(results['trim']) and ic(is_foll_ok(results['output'], results['foll_order_number'])):
             messages.success(request, "Optimizing finished.")
