@@ -315,14 +315,14 @@ def handle_common(request, results:Dict[str,Any]=None,as_component:bool=False) -
 
     for index, item in enumerate(results["output"]):
         if item['out']>1:
-            optimizer_instance = single_common(request=request, file_id=file_id, item=item, results=results)
+            optimizer_instance = get_common(request=request, single=True, blade=index,file_id=file_id, item=item, results=results)
         
             if abs(optimizer_instance.fitness_values) <= best_fitness:
                 best_fitness, best_output = get_outputs(optimizer_instance)
                 best_index = index
 
         
-        optimizer_instance = double_common(request=request, file_id=file_id,item=item, results=results)
+        optimizer_instance = get_common(request=request, blade=index,file_id=file_id,item=item, results=results)
 
         if abs(optimizer_instance.fitness_values) <= best_fitness:
             best_fitness, best_output = get_outputs(optimizer_instance)
@@ -340,7 +340,8 @@ def handle_common(request, results:Dict[str,Any]=None,as_component:bool=False) -
     
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
-def double_common(request, file_id:str, item: Dict[str,Any], results: Dict[str,Any]):
+
+def get_common(request,  blade:int, file_id:str, item: Dict[str,Any], results: Dict[str,Any],single:bool=False):
         size_value = (item["cut_width"] * item["out"]) + results["trim"]
         orders = get_orders(
             request=request,
@@ -349,23 +350,8 @@ def double_common(request, file_id:str, item: Dict[str,Any], results: Dict[str,A
             deadline_scope=-1,
             filter_diff=False,
             common=True,
-        )
-        optimizer_instance = get_optimizer(
-            request=request, orders=orders, size_value=size_value, show_output=False
-        )
-        return optimizer_instance
-
-
-def single_common(request, file_id:str, item: Dict[str,Any], results: Dict[str,Any]):
-        size_value = (item["cut_width"] * item["out"]) + results["trim"]
-        orders = get_orders(
-            request=request,
-            file_id=file_id,
-            size_value=size_value,
-            deadline_scope=-1,
-            filter_diff=False,
-            common=True,
-            selector={'order_id': item['id']}
+            selector={'order_id': item['id']} if single else None,
+            blade=blade
         )
         optimizer_instance = get_optimizer(
             request=request, orders=orders, size_value=size_value, show_output=False
