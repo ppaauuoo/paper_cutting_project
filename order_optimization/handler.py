@@ -97,7 +97,7 @@ def handle_optimization(func):
         best_result = cache.get("best_result", {"trim": 1000})
         if results["trim"] < best_result["trim"]:
             cache.set("best_result", results, CACHE_TIMEOUT)
-
+ 
         if "auto" or 'ai' in request.POST: return handle_auto_retry(request)
 
         satisfied = 1 if request.POST.get("satisfied") == "true" else 0
@@ -316,8 +316,13 @@ def handle_common(request, results:Dict[str,Any]=None,as_component:bool=False) -
     for index, item in enumerate(results["output"]):
         if item['out']>1:
             optimizer_instance = single_common(request=request, file_id=file_id, item=item, results=results)
-        else:
-            optimizer_instance = double_common(request=request, file_id=file_id,item=item, results=results)
+        
+            if abs(optimizer_instance.fitness_values) <= best_fitness:
+                best_fitness, best_output = get_outputs(optimizer_instance)
+                best_index = index
+
+        
+        optimizer_instance = double_common(request=request, file_id=file_id,item=item, results=results)
 
         if abs(optimizer_instance.fitness_values) <= best_fitness:
             best_fitness, best_output = get_outputs(optimizer_instance)
