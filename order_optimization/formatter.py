@@ -81,7 +81,7 @@ def timezone_formatter(df: pd.DataFrame):
     Remove any timezone column in dataframe.
     """
     
-    datetime_cols = df.select_dtypes(include=[pd.DatetimeTZDtype, 'datetime64[ns]']).columns
+    datetime_cols = df.select_dtypes(include=['datetime64[ns, UTC]']).columns
 
     for col in datetime_cols:
         df[col] = df[col].dt.tz_localize(None)
