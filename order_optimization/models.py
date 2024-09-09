@@ -41,6 +41,7 @@ class OrderList(models.Model):
 class PlanOrder(models.Model):
     order = models.ForeignKey(OrderList, on_delete=models.CASCADE)
     plan_quantity = models.IntegerField(default=0)
+    order_leftover = models.IntegerField(default=0)
     out = models.IntegerField(default=0)
     paper_roll = models.IntegerField(default=0)
     blade_type = models.CharField(max_length=10, choices=[('blade_1', 'Blade 1'), ('blade_2', 'Blade 2')], default='blade_1')  # New field to specify blade type
