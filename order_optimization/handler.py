@@ -231,8 +231,6 @@ def handle_auto_config(request, **kwargs):
     """
     Automatically defines values needed for requesting orders and send it to optimizer.
     """
-    start_date = pd.to_datetime(request.POST.get("start_date"), format="%Y-%m-%d")
-    stop_date = pd.to_datetime(request.POST.get("stop_date"), format="%Y-%m-%d")
 
     again = cache.get("try_again", 0)
     # out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
@@ -259,13 +257,6 @@ def auto_size_filter_logic(request):
     """
     Logic for automatic defining values for requesting orders.
     """
-    # filter_index = random.randint(0, len(FILTER)-1)
-
-    # orders = cache.get("auto_order", [])
-
-    # tuning_value = TUNING_VALUE[random.randint(0, len(TUNING_VALUE)-1)]
-    # tuning_value = 2 if roll_index < len(ROLL_PAPER)/3 else 3
-    # filter_index = 1 if roll_index < len(ROLL_PAPER)/3 else 0
 
     file_id = request.POST.get("file_id")
     start_date = request.POST.get("start_date")
@@ -294,15 +285,7 @@ def auto_size_filter_logic(request):
             start_date=start_date,
             stop_date=stop_date,
         )
-        # filter_index += 1
-        # if filter_index >= len(FILTER):
-        #     filter_index = 0
-        #     roll_index += 1
-        #     if roll_index >= len(ROLL_PAPER):
-        #         return (None,None)
-        #     size = ROLL_PAPER[roll_index]
 
-    # cache.set("auto_order", orders, CACHE_TIMEOUT)
     past_size.append(size)
     cache.set("past_size", past_size, CACHE_TIMEOUT)
 
