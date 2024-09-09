@@ -8,7 +8,6 @@ from typing import Callable, Dict, List, Optional, Any
 from icecream import ic
 
 from modules.lp import LP
-from order_optimization.container import ModelContainer
 from order_optimization.formatter import (
     database_formatter,
     output_formatter,
@@ -73,7 +72,7 @@ def handle_optimization(func):
             foll_order_number,
         )
         
-        switcher = ModelContainer(model=LP(results)).run()
+        switcher =LP(results).run().get() 
         if switcher is not None:
             ic(switcher)
             results['trim'] = switcher['new_trim']
