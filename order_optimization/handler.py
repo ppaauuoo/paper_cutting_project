@@ -79,6 +79,12 @@ def handle_optimization(func):
                 ic(switcher)
                 results['trim'] = switcher['new_trim']
                 results['roll'] = switcher['new_roll']
+        
+        if not is_foll_ok(results['output'], results['foll_order_number']):
+            common = handle_common(request, results=results, as_component=True)
+            if common is not None:
+                ic(common)
+                results = common
 
         if is_trim_fit(results['trim']) and ic(is_foll_ok(results['output'], results['foll_order_number'])):
             messages.success(request, "Optimizing finished.")
@@ -293,22 +299,27 @@ def auto_size_filter_logic(request):
     return (orders, size)
 
 
-def handle_common(request) -> None:
+def handle_common(request, results:Dict[str,Any]=None,as_component:bool=False) -> None:
     """
     Request orders base from the past results with common logic and run an optimizer.
     """
-
-    results = cache.get("optimization_results")
+    if results is None:
+        results = cache.get("optimization_results")
     best_fitness = results["trim"]
     best_index: Optional[int] = None
+    if not as_component:
+        file_id = request.POST.get("selected_file_id")
+    else:
+        file_id = request.POST.get("file_id")
+
 
     for index, item in enumerate(results["output"]):
         if item['out']>1:
-            optimizer_instance = single_common(request=request,item=item, results=results)
+            optimizer_instance = single_common(request=request, file_id=file_id, item=item, results=results)
         else:
-            optimizer_instance = double_common(request=request,item=item, results=results)
+            optimizer_instance = double_common(request=request, file_id=file_id,item=item, results=results)
 
-        if abs(optimizer_instance.fitness_values) < best_fitness:
+        if abs(optimizer_instance.fitness_values) <= best_fitness:
             best_fitness, best_output = get_outputs(optimizer_instance)
             best_index = index
 
@@ -318,11 +329,13 @@ def handle_common(request) -> None:
     else:
         messages.error(request, "No suitable common order found.")
         return
-
+    
+    if as_component:
+        return results
+    
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
-def double_common(request,item: Dict[str,Any], results: Dict[str,Any]):
-        file_id = request.POST.get("selected_file_id")
+def double_common(request, file_id:str, item: Dict[str,Any], results: Dict[str,Any]):
         size_value = (item["cut_width"] * item["out"]) + results["trim"]
         orders = get_orders(
             request=request,
@@ -338,8 +351,7 @@ def double_common(request,item: Dict[str,Any], results: Dict[str,Any]):
         return optimizer_instance
 
 
-def single_common(request,item: Dict[str,Any], results: Dict[str,Any]):
-        file_id = request.POST.get("selected_file_id")
+def single_common(request, file_id:str, item: Dict[str,Any], results: Dict[str,Any]):
         size_value = (item["cut_width"] * item["out"]) + results["trim"]
         orders = get_orders(
             request=request,
