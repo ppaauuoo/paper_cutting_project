@@ -6,6 +6,7 @@ from django.core.cache import cache
 import pandas as pd
 from typing import Callable, Dict, List, Optional, Any
 from icecream import ic
+from .models import OptimizationPlan, OrderList, PlanOrder
 
 from modules.lp import LP
 from order_optimization.formatter import (
@@ -409,7 +410,6 @@ def handle_filler(request):
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
 
-from .models import OptimizationPlan, OrderList, PlanOrder
 
 
 def handle_saving(request):
