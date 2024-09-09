@@ -49,8 +49,8 @@ def populate_model(file_id: str) -> None:
             b_wave=row["ลอน B"],
             back_sheet=row["แผ่นหลัง"],
             level=row["จน.ชั้น"],
-            width=round(row["กว้างผลิต"] / UNIT_CONVERTER, 2),
-            length=round(row["ยาวผลิต"] / UNIT_CONVERTER, 2),
+            width=round(row["กว้างผลิต"] / UNIT_CONVERTER, 4),
+            length=round(row["ยาวผลิต"] / UNIT_CONVERTER, 4),
             left_edge_cut=row["ทับเส้นซ้าย"],
             middle_edge_cut=row["ทับเส้นกลาง"],
             right_edge_cut=row["ทับเส้นขวา"],
@@ -111,14 +111,17 @@ def get_orders(
     filler: Optional[str] = None,
     first_date_only: bool = False,
     preview: bool = False,
-    start_date: Optional[pd.DatetimeIndex] = None,
-    stop_date: Optional[pd.DatetimeIndex] = None,
+    start_date: Optional[pd.Timestamp] = None,
+    stop_date: Optional[pd.Timestamp] = None,
+    selector: Optional[Dict[str,Any]] =None,
 ) -> DataFrame:
     """
     Pass args to order processor.
 
     return: processed orders.
     """
+    
+    
     return OrderContainer(
         provider=ORD(
             orders=get_orders_cache(file_id),
@@ -129,7 +132,7 @@ def get_orders(
             tuning_values=tuning_values,
             common=common,
             filler=filler,
-            selector=get_selected_order(request),
+            selector=selector if selector else get_selected_order(request),
             first_date_only=first_date_only,
             preview=preview,
             start_date=start_date,

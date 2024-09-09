@@ -60,6 +60,7 @@ def database_formatter(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPla
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 1",
+                    order_leftover=item['num_orders']
                 )
                 format_data.blade_1.add(blade1_order)
 
@@ -70,6 +71,7 @@ def database_formatter(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPla
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 2",
+                    order_leftover=item['num_orders']-data["foll_order_number"]
                 )
                 format_data.blade_2.add(blade2_order)
 
@@ -78,9 +80,12 @@ def database_formatter(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPla
 
 def timezone_formatter(df: pd.DataFrame):
     """
-    Remove any timezone column in dataframe.
+    Format any timezone column in dataframe.
     """
-    for col in df.select_dtypes(include=["datetime64[ns, UTC]", "datetime64[ns]"]):
+    
+    datetime_cols = df.select_dtypes(include=['datetime64[ns, UTC]']).columns
+
+    for col in datetime_cols:
         df[col] = df[col].dt.tz_localize(None)
     return df
 
@@ -100,6 +105,7 @@ def plan_orders_formatter()-> pd.DataFrame:
             "out",
             "blade_type",
             "paper_roll",
+            "order_leftover"
         )
     )
 

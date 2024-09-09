@@ -7,6 +7,7 @@ import pandas as pd
 from typing import Callable, Dict, List, Optional, Any
 from icecream import ic
 
+from modules.lp import LP
 from order_optimization.formatter import (
     database_formatter,
     output_formatter,
@@ -54,11 +55,13 @@ def handle_optimization(func):
         out_range = kwargs.get("out_range", 6)
 
         optimizer_instance = get_optimizer(
-            request, orders, size_value, out_range, num_generations, show_output=True
+            request, orders, size_value, out_range, num_generations, show_output=False
         )
         fitness_values, output_data = get_outputs(optimizer_instance)
 
         init_order_number, foll_order_number = handle_orders_logic(output_data)
+
+        outputs = cache.get("outputs", [])
 
         results = results_formatter(
             optimizer_instance,
@@ -68,17 +71,27 @@ def handle_optimization(func):
             init_order_number,
             foll_order_number,
         )
+        
+        if not is_trim_fit(results['trim']):
+            switcher =LP(results).run().get() 
+            if switcher is not None:
+                ic(switcher)
+                results['trim'] = switcher['new_trim']
+                results['roll'] = switcher['new_roll']
 
-        if is_trim_fit(fitness_values) and is_foll_ok(output_data, foll_order_number):
+        if is_trim_fit(results['trim']) and ic(is_foll_ok(results['output'], results['foll_order_number'])):
             messages.success(request, "Optimizing finished.")
+            outputs.append(results)
+            cache.set("outputs", outputs, 1000)
+            cache.delete("past_size")
+            cache.delete("try_again")
             return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
         best_result = cache.get("best_result", {"trim": 1000})
         if results["trim"] < best_result["trim"]:
             cache.set("best_result", results, CACHE_TIMEOUT)
 
-        if "auto" in request.POST:
-            return handle_auto_retry(request)
+        if "auto" or 'ai' in request.POST: return handle_auto_retry(request)
 
         satisfied = 1 if request.POST.get("satisfied") == "true" else 0
         if satisfied:
@@ -93,23 +106,23 @@ def handle_optimization(func):
     return wrapper
 
 
-def is_foll_ok(output_data: List[Dict[str, Any]], foll_order_number: int):
+def is_foll_ok(output: List[Dict[str, Any]], foll_order_number: int):
     """
     Check if second order's cut exceed the second order's stock or not.
     """
-    for index, order in enumerate(output_data):
-        if index == 0 and len(output_data) > 1:
+    for index, order in enumerate(output):
+        if index == 0:
             continue
-        if order["out"] < foll_order_number:
+        if order["num_orders"] < foll_order_number:
             return False
     return True
 
 
-def is_trim_fit(fitness_values: float):
+def is_trim_fit(trim: float):
     """
     Check if trim exceed min/max tirm.
     """
-    return abs(fitness_values) <= MAX_TRIM and abs(fitness_values) >= MIN_TRIM
+    return trim <= MAX_TRIM and trim >= MIN_TRIM
 
 
 def handle_orders_logic(output_data):
@@ -218,9 +231,7 @@ def handle_auto_config(request, **kwargs):
     """
     Automatically defines values needed for requesting orders and send it to optimizer.
     """
-    start_date = pd.to_datetime(request.POST.get("start_date"), format="%Y-%m-%d")
-    stop_date = pd.to_datetime(request.POST.get("stop_date"), format="%Y-%m-%d")
-    ic(start_date, stop_date)
+
     again = cache.get("try_again", 0)
     # out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
     out_range = 4
@@ -246,13 +257,6 @@ def auto_size_filter_logic(request):
     """
     Logic for automatic defining values for requesting orders.
     """
-    # filter_index = random.randint(0, len(FILTER)-1)
-
-    # orders = cache.get("auto_order", [])
-
-    # tuning_value = TUNING_VALUE[random.randint(0, len(TUNING_VALUE)-1)]
-    # tuning_value = 2 if roll_index < len(ROLL_PAPER)/3 else 3
-    # filter_index = 1 if roll_index < len(ROLL_PAPER)/3 else 0
 
     file_id = request.POST.get("file_id")
     start_date = request.POST.get("start_date")
@@ -281,22 +285,14 @@ def auto_size_filter_logic(request):
             start_date=start_date,
             stop_date=stop_date,
         )
-        # filter_index += 1
-        # if filter_index >= len(FILTER):
-        #     filter_index = 0
-        #     roll_index += 1
-        #     if roll_index >= len(ROLL_PAPER):
-        #         return (None,None)
-        #     size = ROLL_PAPER[roll_index]
 
-    # cache.set("auto_order", orders, CACHE_TIMEOUT)
     past_size.append(size)
     cache.set("past_size", past_size, CACHE_TIMEOUT)
 
     return (orders, size)
 
 
-def handle_common(request) -> Callable:
+def handle_common(request) -> None:
     """
     Request orders base from the past results with common logic and run an optimizer.
     """
@@ -320,6 +316,7 @@ def handle_common(request) -> Callable:
         messages.success(request, "Common order found.")
     else:
         messages.error(request, "No suitable common order found.")
+        return
 
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 

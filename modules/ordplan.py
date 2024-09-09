@@ -45,8 +45,8 @@ class ORD(ProviderInterface):
     deadline_range: int = DEADLINE_RANGE
     lookup_amount: int = 0
     preview: bool = False
-    start_date: Optional[pd.DatetimeIndex] = None
-    stop_date: Optional[pd.DatetimeIndex] = None
+    start_date: Optional[pd.Timestamp] = None
+    stop_date: Optional[pd.Timestamp] = None
 
     def __post_init__(self):
         if self.orders is None:
@@ -128,20 +128,20 @@ class ORD(ProviderInterface):
         deadlines = filtered_plan["due_date"].unique()
         
         # Raise error if no data aligns with dates
-        ic(deadlines)
+
         if len(deadlines) == 0:
             raise ValueError("No data aligns with date")
         
         ordplan = None
         for deadline in deadlines:
-            ic(deadline)
+
             filtered_ordplan = (
                 filtered_plan[filtered_plan["due_date"] <= deadline]
                 .sort_values("due_date")
                 .reset_index(drop=True)
             )
             
-            ic(filtered_ordplan)
+   
             
             # Filter order differences and update lookup amount
             filtered_ordplan = self.filter_diff_order(filtered_ordplan)
@@ -252,7 +252,9 @@ class ORD(ProviderInterface):
         """Eject order data with the filler id."""
         if self.filler is None:
             return init_order
-        init_order = self.ordplan[self.ordplan['id'] == self.filler].iloc[0]
+        init_order = self.ordplan[self.ordplan['id'] == self.filler]
+        if init_order is None:
+            raise ValueError('Error: Filler not found!')
         self.ordplan = self.ordplan[self.ordplan['id'] != self.filler]
         return init_order
                 
