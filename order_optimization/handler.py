@@ -433,7 +433,8 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
         if index == 0:
             new_value = 0
         else:
-            new_value = round(filtered_order.quantity - (data["foll_order_number"]*order['out']/(sum(output_data['out'])-output_data['out'][0])))
+            foll_out = sum(item['out'] for item in output_data)-output_data[0]['out']
+            new_value = round(filtered_order.quantity - (data["foll_order_number"]*order['out']/foll_out))
         
         if new_value < 0:
             raise ValueError("Second Order Number Exceed!")
