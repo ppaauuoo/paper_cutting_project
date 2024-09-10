@@ -27,7 +27,7 @@ def test_common_handler(mocker):
         "order_optimization.handler.get_outputs",
         return_value=(-5.0, [{"cut_width": 5.0, "out": 2}]),
     )
-    mocker.patch("order_optimization.handler.update_common", return_value=mock_results)
+    mocker.patch("order_optimization.handler.set_common", return_value=mock_results)
     mocker.patch.object(messages, "success")
     mocker.patch.object(messages, "error")
 

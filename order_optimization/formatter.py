@@ -4,6 +4,7 @@ import pandas as pd
 from order_optimization.container import ModelContainer
 from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
 
+
 def output_formatter(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
     """
     For formatting output by renaming and add an out column.
@@ -60,7 +61,7 @@ def database_formatter(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPla
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 1",
-                    order_leftover=item['num_orders']
+                    order_leftover=item["num_orders"],
                 )
                 format_data.blade_1.add(blade1_order)
 
@@ -71,7 +72,7 @@ def database_formatter(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPla
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 2",
-                    order_leftover=item['num_orders']-data["foll_order_number"]
+                    order_leftover=item["num_orders"] - data["foll_order_number"],
                 )
                 format_data.blade_2.add(blade2_order)
 
@@ -82,15 +83,15 @@ def timezone_formatter(df: pd.DataFrame):
     """
     Format any timezone column in dataframe.
     """
-    
-    datetime_cols = df.select_dtypes(include=['datetime64[ns, UTC]']).columns
+
+    datetime_cols = df.select_dtypes(include=["datetime64[ns, UTC]"]).columns
 
     for col in datetime_cols:
         df[col] = df[col].dt.tz_localize(None)
     return df
 
 
-def plan_orders_formatter()-> pd.DataFrame:
+def plan_orders_formatter() -> pd.DataFrame:
     """
     Request data from model and format it.
     """
@@ -105,7 +106,7 @@ def plan_orders_formatter()-> pd.DataFrame:
             "out",
             "blade_type",
             "paper_roll",
-            "order_leftover"
+            "order_leftover",
         )
     )
 
@@ -130,4 +131,3 @@ def plan_orders_formatter()-> pd.DataFrame:
     df = df.fillna(0)
 
     return df
- 

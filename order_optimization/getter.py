@@ -1,13 +1,10 @@
-import uuid
 from pandas import DataFrame
 import pandas as pd
 
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from django.core.cache import cache
-from django.conf import settings
 
-from ordplan_project.settings import UNIT_CONVERTER
+from order_optimization.setter import set_model, set_progress
 
 from .models import CSVFile, OrderList
 from order_optimization.container import ModelContainer, OrderContainer
@@ -15,66 +12,10 @@ from modules.ordplan import ORD
 from modules.ga import GA
 
 from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass
 
 from icecream import ic
 
-from ordplan_project.settings import PLAN_RANGE, CACHE_TIMEOUT
-
-
-def populate_model(file_id: str) -> None:
-    """
-    Extract data from file excel then creating a model with it.
-    """
-    csv_file = get_csv_file(file_id)
-    # Read from Excel file and create new records
-    data = pd.read_excel(csv_file.file.path, engine="openpyxl")
-    order_instances = []
-
-    for _, row in data.iterrows():
-        due_date = timezone.make_aware(
-            pd.to_datetime(row["กำหนดส่ง"], format="%m/%d/%y")
-        )
-        order_id = f"{row['เลขที่ใบสั่งขาย']}-{row['ชนิดส่วนประกอบ']}-{uuid.uuid4()}"
-
-        # if OrderList.objects.filter(id=order_id).exists():
-        #     continue
-
-        order_instance = OrderList(
-            id=order_id,
-            due_date=due_date,
-            front_sheet=row["แผ่นหน้า"],
-            c_wave=row["ลอน C"],
-            middle_sheet=row["แผ่นกลาง"],
-            b_wave=row["ลอน B"],
-            back_sheet=row["แผ่นหลัง"],
-            level=row["จน.ชั้น"],
-            width=round(row["กว้างผลิต"] / UNIT_CONVERTER, 4),
-            length=round(row["ยาวผลิต"] / UNIT_CONVERTER, 4),
-            left_edge_cut=row["ทับเส้นซ้าย"],
-            middle_edge_cut=row["ทับเส้นกลาง"],
-            right_edge_cut=row["ทับเส้นขวา"],
-            order_number=row["เลขที่ใบสั่งขาย"],
-            component_type=row["ชนิดส่วนประกอบ"],
-            quantity=row["จำนวนสั่งขาย"],
-            production_quantity=row["จำนวนสั่งผลิต"],
-            edge_type=row["ประเภททับเส้น"],
-            order_status=row["สถานะใบสั่ง"],
-            excess_percentage=row["% ที่เกิน"],
-            file=csv_file,
-        )
-        order_instances.append(order_instance)
-
-    if order_instances:
-        OrderList.objects.bulk_create(order_instances)
-        orders = pd.DataFrame(list(OrderList.objects.all().values()))
-
-    # for column in orders.columns:
-    #     if pd.api.types.is_datetime64_any_dtype(orders[column]):
-    #         orders[column] = orders[column].dt.strftime("%m/%d/%y")
-
-    # Cache the orders
-    cache.set(f"order_cache_{file_id}", orders, CACHE_TIMEOUT)
+from ordplan_project.settings import CACHE_TIMEOUT
 
 
 def get_orders_cache(file_id: str) -> DataFrame:
@@ -94,7 +35,7 @@ def get_orders_cache(file_id: str) -> DataFrame:
         # orders["due_date"] = pd.to_datetime(orders["due_date"]).dt.strftime("%m/%d/%y")
         cache.set(f"order_cache_{file_id}", orders, CACHE_TIMEOUT)
     else:
-        populate_model(file_id)
+        set_model(file_id)
 
     return get_orders_cache(file_id)
 
@@ -113,15 +54,14 @@ def get_orders(
     preview: bool = False,
     start_date: Optional[pd.Timestamp] = None,
     stop_date: Optional[pd.Timestamp] = None,
-    selector: Optional[Dict[str,Any]] =None,
+    selector: Optional[Dict[str, Any]] = None,
 ) -> DataFrame:
     """
     Pass args to order processor.
 
     return: processed orders.
     """
-    
-    
+
     return OrderContainer(
         provider=ORD(
             orders=get_orders_cache(file_id),
@@ -179,13 +119,6 @@ def get_optimizer(
     return optimizer_instance
 
 
-def set_progress(progress) -> None:
-    """
-    Update progress cache
-    """
-    cache.set("optimization_progress", progress, CACHE_TIMEOUT)
-
-
 def get_csv_file(file_id: str) -> CSVFile:
     return get_object_or_404(CSVFile, id=file_id)
 
@@ -199,3 +132,28 @@ def get_outputs(optimizer_instance: ModelContainer) -> Tuple[float, List[Dict]]:
     output_data = optimizer_instance.output.to_dict("records")
 
     return fitness_values, output_data
+
+
+def get_common(
+    request,
+    blade: int,
+    file_id: str,
+    item: Dict[str, Any],
+    results: Dict[str, Any],
+    single: bool = False,
+):
+    size_value = (item["cut_width"] * item["out"]) + results["trim"]
+    orders = get_orders(
+        request=request,
+        file_id=file_id,
+        size_value=size_value,
+        deadline_scope=-1,
+        filter_diff=False,
+        common=True,
+        selector={"order_id": item["id"]} if single else None,
+        blade=blade,
+    )
+    optimizer_instance = get_optimizer(
+        request=request, orders=orders, size_value=size_value, show_output=False
+    )
+    return optimizer_instance
