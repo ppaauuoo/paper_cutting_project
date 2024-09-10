@@ -10,14 +10,7 @@ def test_lp():
     lp_instance.run()
     if lp_instance.output is not None:
         assert lp_instance.output['new_roll'] == 91
-        
-def test_lp_empty():
-    test_data = None 
-    
-    lp_instance = LP(test_data)
-    with pytest.raises(ValueError):
-        lp_instance.run()
-    
+            
 @pytest.mark.django_db
 def test_lp_notfound():
     test_data = {

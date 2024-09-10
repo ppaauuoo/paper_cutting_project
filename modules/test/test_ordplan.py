@@ -186,8 +186,8 @@ def test_filler_not_found():
     )
     ord = ORD(test_data, size=80, common=True, filler='8', no_build=True)
     ord.format_data()
-    ord.filter_common_order()
-    assert ValueError
+    with pytest.raises(ValueError): 
+        ord.filter_common_order()
 
 
 
