@@ -22,11 +22,19 @@ def set_common(
     injecting the common orders and new fitness into results.
     """
     results["output"].pop(best_index)  # remove the old order
+    
+    for item in results['output']:
+        item['blade'] = 1
+    
     results["output"].extend(best_output)  # add the new one
 
-    for item in results["output"]:  # calculate new fitness
-        results["fitness"] += item["cut_width"] * item["out"]
+    new_fitness = 0
+    for index, item in enumerate(results["output"]):  # calculate new fitness
+        new_fitness += item["cut_width"] * item["out"]
+        
+        
 
+    results["fitness"] = new_fitness
     results["trim"] = abs(best_fitness)  # set new trim
     return results
 
