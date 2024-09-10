@@ -15,7 +15,7 @@ from order_optimization.models import OrderList
 def test_handle_order_exhaustion_valid_data(mocker):
 
     data = {
-        "output": [{"id": 1}, {"id": 2}],
+        "output": [{"id": 1, "out": 1}, {"id": 2, 'out': 2}],
         "foll_order_number": 10,
     }
 
@@ -40,7 +40,7 @@ def test_handle_order_exhaustion_valid_data(mocker):
 def test_handle_order_exhaustion_many_data(mocker):
 
     data = {
-        "output": [{"id": 1}, {"id": 2}, {"id": 3}],
+        "output": [{"id": 1, 'out': 1}, {"id": 2, "out": 2}, {"id": 3, "out":1}],
         "foll_order_number": 10,
     }
 
@@ -58,8 +58,8 @@ def test_handle_order_exhaustion_many_data(mocker):
 
     handle_order_exhaustion(data)
     assert mock_order1.quantity == 0
-    assert mock_order2.quantity == 7
-    assert mock_order3.quantity == 2
+    assert mock_order2.quantity == 10
+    assert mock_order3.quantity == 9
     mock_order1.save.assert_called_once()
     mock_order2.save.assert_called_once()
     mock_order3.save.assert_called_once()
@@ -68,7 +68,7 @@ def test_handle_order_exhaustion_many_data(mocker):
 def test_handle_order_exhaustion_order_exceed(mocker):
 
     data = {
-        "output": [{"id": 1}, {"id": 2}, {"id": 3}],
+        "output": [{"id": 1, "out":1}, {"id": 2,"out":2}, {"id": 3,"out":1}],
         "foll_order_number": 10,
     }
 
