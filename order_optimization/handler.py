@@ -47,9 +47,7 @@ def handle_optimization(func):
         results = handle_switcher(results)
         results = handle_common_component(request, results=results)
 
-        if is_trim_fit(results["trim"]) and results(
-            ["output"], results["foll_order_number"]
-        ):
+        if is_trim_fit(results["trim"]) and is_foll_ok(results["output"], results["foll_order_number"]):
             messages.success(request, "Optimizing finished.")
             cache.delete("past_size")
             cache.delete("try_again")
@@ -314,7 +312,7 @@ def auto_size_filter_logic(request):
 
 
 def handle_common(
-    request, results: Dict[str, Any] = None, as_component: bool = False
+    request, results: Optional[Dict[str, Any]] = None, as_component: bool = False
 ) -> Optional[Dict[str,Any]]:
     """
     Request orders base from the past results with common logic and run an optimizer.
@@ -356,7 +354,6 @@ def handle_common(
         messages.success(request, "Common order found.")
     else:
         messages.error(request, "No suitable common order found.")
-        return
 
     if as_component:
         return results

@@ -43,7 +43,7 @@ def results_formatter(
     }
 
 
-def database_formatter(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPlan:
+def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
     """
     For defining which order belong to which blade, and turn it into a model.
 
@@ -84,7 +84,7 @@ def timezone_formatter(df: pd.DataFrame):
     Format any timezone column in dataframe.
     """
 
-    datetime_cols = df.select_dtypes(include=["datetime64[ns, UTC]"]).columns
+    datetime_cols = df.select_dtypes(include=['datetime64']).columns
 
     for col in datetime_cols:
         df[col] = df[col].dt.tz_localize(None)
