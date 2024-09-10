@@ -424,9 +424,12 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
             filtered_order = OrderList.objects.filter(id=id)[0]
         except IndexError:
             raise ValueError("Order Number Not Found!")
-        new_value = filtered_order.quantity - data["foll_order_number"]
+        
         if index == 0:
             new_value = 0
+        else:
+            new_value = round(filtered_order.quantity - (data["foll_order_number"]*order['out']/(sum(output_data['out'])-output_data['out'][0])))
+        
         if new_value < 0:
             raise ValueError("Second Order Number Exceed!")
         filtered_order.quantity = new_value
