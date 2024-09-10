@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 import pandas as pd
+from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
 from order_optimization.container import ModelContainer
 from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
@@ -83,13 +84,14 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
 
 def timezone_formatter(df: pd.DataFrame):
     """
-    Format any timezone column in dataframe.
+    Format any timezone column in dataframe to be timezone unaware.
     """
 
-    datetime_cols = df.select_dtypes(include=['datetime64']).columns
+    datetime_cols = df.select_dtypes(include=['datetime64[ns]']).columns
 
     for col in datetime_cols:
-        df[col] = df[col].dt.tz_localize(None)
+        if is_datetime(df[col]):
+            df[col] = df[col].dt.tz_localize(None)
     return df
 
 
