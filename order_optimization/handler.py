@@ -43,17 +43,22 @@ def handle_optimization(func):
                 request, "Error 404: No orders were found. Please try again."
             )
 
-        size_value = kwargs.get("size_value", 66)
         orders = kwargs.get("orders", None)
 
         if orders is None:
             raise ValueError("Orders is empty!")
 
+        size_value = kwargs.get("size_value", 66)
         num_generations = kwargs.get("num_generations", 50)
         out_range = kwargs.get("out_range", 6)
 
         optimizer_instance = get_optimizer(
-            request, orders, size_value, out_range, num_generations, show_output=False
+            request=request,
+            orders=orders,
+            size_value=size_value,
+            out_range=out_range,
+            num_generations=num_generations,
+            show_output=False,
         )
         fitness_values, output_data = get_outputs(optimizer_instance)
 
@@ -62,12 +67,12 @@ def handle_optimization(func):
         outputs = cache.get("outputs", [])
 
         results = results_formatter(
-            optimizer_instance,
-            output_data,
-            size_value,
-            fitness_values,
-            init_order_number,
-            foll_order_number,
+            optimizer_instance=optimizer_instance,
+            output_data=output_data,
+            size_value=size_value,
+            fitness_values=fitness_values,
+            init_order_number=init_order_number,
+            foll_order_number=foll_order_number,
         )
 
         if not is_trim_fit(results["trim"]):
