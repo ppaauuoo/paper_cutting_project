@@ -4,7 +4,7 @@ import pandas as pd
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 
-from order_optimization.setter import set_model, set_progress
+from order_optimization.setter import *
 
 from .models import CSVFile, OrderList
 from order_optimization.container import ModelContainer, OrderContainer
@@ -99,6 +99,7 @@ def get_optimizer(
     out_range: int = 3,
     num_generations: int = 50,
     show_output: bool = False,
+    blade:Optional[int] = None,
 ) -> ModelContainer:
     """
     Clear progress, request and run the optimizer.
@@ -113,6 +114,8 @@ def get_optimizer(
             showOutput=show_output,
             selector=get_selected_order(request),
             set_progress=set_progress,
+            blade=blade
+
         ),
     )
     optimizer_instance.run()
@@ -150,10 +153,9 @@ def get_common(
         deadline_scope=-1,
         filter_diff=False,
         common=True,
-        selector={"order_id": item["id"]} if single else None,
-        blade=blade,
+        selector={"order_id": item["id"]} if single else None
     )
     optimizer_instance = get_optimizer(
-        request=request, orders=orders, size_value=size_value, show_output=False
+        request=request, orders=orders, size_value=size_value, show_output=False, blade=blade
     )
     return optimizer_instance
