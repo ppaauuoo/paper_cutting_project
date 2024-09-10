@@ -3,7 +3,7 @@ import uuid
 
 import pandas as pd
 
-from order_optimization.getter import get_csv_file
+from order_optimization.getter import * 
 from order_optimization.models import OrderList
 from ordplan_project.settings import CACHE_TIMEOUT, UNIT_CONVERTER
 
