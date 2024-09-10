@@ -42,10 +42,10 @@ def handle_optimization(func):
             return messages.error(
                 request, "Error 404: No orders were found. Please try again."
             )
-        
+
         results = handle_results(request, kwargs=kwargs)
         results = handle_switcher(results)
-        results = handle_common_component(request,results=results)
+        results = handle_common_component(request, results=results)
 
         if is_trim_fit(results["trim"]) and results(
             ["output"], results["foll_order_number"]
@@ -74,53 +74,58 @@ def handle_optimization(func):
         return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
     return wrapper
- 
-def handle_results(request, kwargs)->Dict[str,Any]:
-        orders = kwargs.get("orders", None)
 
-        if orders is None:
-            raise ValueError("Orders is empty!")
 
-        optimizer_instance = get_optimizer(
-            request=request,
-            orders=orders,
-            size_value=kwargs.get("size_value", 66),
-            out_range=kwargs.get("out_range", 6),
-            num_generations=kwargs.get("num_generations", 50),
-            show_output=False,
-        )
-        fitness_values, output_data = get_outputs(optimizer_instance)
-        init_order_number, foll_order_number = handle_orders_logic(output_data)
+def handle_results(request, kwargs) -> Dict[str, Any]:
+    orders = kwargs.get("orders", None)
 
-        results = results_formatter(
-            optimizer_instance=optimizer_instance,
-            output_data=output_data,
-            size_value=kwargs.get("size_value", 66),
-            fitness_values=fitness_values,
-            init_order_number=init_order_number,
-            foll_order_number=foll_order_number,
-        )
+    if orders is None:
+        raise ValueError("Orders is empty!")
+
+    optimizer_instance = get_optimizer(
+        request=request,
+        orders=orders,
+        size_value=kwargs.get("size_value", 66),
+        out_range=kwargs.get("out_range", 6),
+        num_generations=kwargs.get("num_generations", 50),
+        show_output=False,
+    )
+    fitness_values, output_data = get_outputs(optimizer_instance)
+    init_order_number, foll_order_number = handle_orders_logic(output_data)
+
+    results = results_formatter(
+        optimizer_instance=optimizer_instance,
+        output_data=output_data,
+        size_value=kwargs.get("size_value", 66),
+        fitness_values=fitness_values,
+        init_order_number=init_order_number,
+        foll_order_number=foll_order_number,
+    )
+    return results
+
+
+def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
+    if is_trim_fit(results["trim"]) and is_foll_ok(
+        results["output"], results["foll_order_number"]
+    ):
         return results
-def handle_common_component(request, results: Dict[str,Any])->Dict[str,Any]:
-        if is_trim_fit(results["trim"]) and is_foll_ok(
-            results["output"], results["foll_order_number"]
-        ):
-            return results
-        common = handle_common(request, results=results, as_component=True)
-        if common is not None:
-                ic(common)
-                results = common
-        return results       
-def handle_switcher(results: Dict[str,Any])->Dict[str,Any]:
-        if is_trim_fit(results["trim"]):
-            return results
-        switcher = LP(results).run().get()
-        if switcher is not None:
-                ic(switcher)
-                results["trim"] = switcher["new_trim"]
-                results["roll"] = switcher["new_roll"]
+    common = handle_common(request, results=results, as_component=True)
+    if common is not None:
+        ic(common)
+        results = common
+    return results
+
+
+def handle_switcher(results: Dict[str, Any]) -> Dict[str, Any]:
+    if is_trim_fit(results["trim"]):
         return results
- 
+    switcher = LP(results).run().get()
+    if switcher is not None:
+        ic(switcher)
+        results["trim"] = switcher["new_trim"]
+        results["roll"] = switcher["new_roll"]
+    return results
+
 
 def is_foll_ok(output: List[Dict[str, Any]], foll_order_number: int):
     """
@@ -310,7 +315,7 @@ def auto_size_filter_logic(request):
 
 def handle_common(
     request, results: Dict[str, Any] = None, as_component: bool = False
-) -> None:
+) -> Optional[Dict[str,Any]]:
     """
     Request orders base from the past results with common logic and run an optimizer.
     """
