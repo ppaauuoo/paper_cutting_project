@@ -44,8 +44,8 @@ def handle_optimization(func):
             )
 
         results = handle_results(request, kwargs=kwargs)
-        results = handle_switcher(results)
         results = handle_common_component(request, results=results)
+        results = handle_switcher(results)
 
         if is_trim_fit(results["trim"]) and is_foll_ok(results["output"], results["foll_order_number"]):
             messages.success(request, "Optimizing finished.")
@@ -103,7 +103,7 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
 
 
 def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
-    if is_trim_fit(results["trim"]) and is_foll_ok(
+    if is_foll_ok(
         results["output"], results["foll_order_number"]
     ):
         return results
@@ -331,7 +331,7 @@ def handle_common(
             optimizer_instance = get_common(
                 request=request,
                 single=True,
-                blade=index,
+                blade=2,
                 file_id=file_id,
                 item=item,
                 results=results,
@@ -342,7 +342,7 @@ def handle_common(
                 best_index = index
 
         optimizer_instance = get_common(
-            request=request, blade=index, file_id=file_id, item=item, results=results
+            request=request, blade=2, file_id=file_id, item=item, results=results
         )
 
         if abs(optimizer_instance.fitness_values) <= best_fitness:
