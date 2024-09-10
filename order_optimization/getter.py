@@ -28,7 +28,7 @@ def get_orders_cache(file_id: str) -> DataFrame:
     if orders is not None:
         return orders
 
-    order_records = OrderList.objects.filter(file=get_csv_file(file_id))
+    order_records = OrderList.objects.filter(file=set_csv_file(file_id))
 
     if order_records.exists():
         orders = pd.DataFrame(order_records.values())
@@ -122,8 +122,7 @@ def get_optimizer(
     return optimizer_instance
 
 
-def get_csv_file(file_id: str) -> CSVFile:
-    return get_object_or_404(CSVFile, id=file_id)
+
 
 
 def get_outputs(optimizer_instance: ModelContainer) -> Tuple[float, List[Dict]]:

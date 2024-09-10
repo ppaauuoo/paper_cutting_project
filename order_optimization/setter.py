@@ -1,10 +1,10 @@
 from typing import Dict, List
 import uuid
 
+from django.shortcuts import get_object_or_404
 import pandas as pd
 
-from order_optimization.getter import * 
-from order_optimization.models import OrderList
+from order_optimization.models import CSVFile, OrderList
 from ordplan_project.settings import CACHE_TIMEOUT, UNIT_CONVERTER
 
 from django.core.cache import cache
@@ -31,6 +31,10 @@ def set_common(
     return results
 
 
+def set_csv_file(file_id: str) -> CSVFile:
+    return get_object_or_404(CSVFile, id=file_id)
+
+
 def set_progress(progress) -> None:
     """
     Update progress cache
@@ -42,7 +46,7 @@ def set_model(file_id: str) -> None:
     """
     Extract data from file excel then creating a model with it.
     """
-    csv_file = get_csv_file(file_id)
+    csv_file = set_csv_file(file_id)
     # Read from Excel file and create new records
     data = pd.read_excel(csv_file.file.path, engine="openpyxl")
     order_instances = []
