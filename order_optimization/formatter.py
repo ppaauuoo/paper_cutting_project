@@ -61,18 +61,20 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 1",
-                    order_leftover=item["num_orders"],
+                    order_leftover=data["init_order_number"]-item["num_orders"],
                 )
                 format_data.blade_1.add(blade1_order)
 
             case 2:
+                foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
+                new_value = round((data["foll_order_number"]*item['out']/foll_out))
                 blade2_order = PlanOrder.objects.create(
                     order=OrderList.objects.get(id=current_id),
-                    plan_quantity=data["foll_order_number"],
+                    plan_quantity=new_value,
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 2",
-                    order_leftover=item["num_orders"] - data["foll_order_number"],
+                    order_leftover=item["num_orders"] - new_value,
                 )
                 format_data.blade_2.add(blade2_order)
 
