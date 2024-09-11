@@ -87,7 +87,7 @@ def timezone_formatter(df: pd.DataFrame):
     Format any timezone column in dataframe to be timezone unaware.
     """
 
-    datetime_cols = df.select_dtypes(include=['datetime64[ns]']).columns
+    datetime_cols = df.select_dtypes(include=['datetime64[ns, UTC]']).columns
 
     for col in datetime_cols:
         if is_datetime(df[col]):
