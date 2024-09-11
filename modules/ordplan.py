@@ -47,7 +47,7 @@ class ORD(ProviderInterface):
     preview: bool = False
     start_date: Optional[pd.Timestamp] = None
     stop_date: Optional[pd.Timestamp] = None
-
+    common_init_order: Optional[Dict[str,Any]] = None
     def __post_init__(self):
         if self.orders is None:
             raise ValueError("Orders is empty!")
@@ -208,21 +208,38 @@ class ORD(ProviderInterface):
         """Use common filter base on the first order or filler order."""
         if not self.common:
             return
-        ordplan = self.ordplan
-        init_order = self.ordplan.iloc[0]  # use first orders as init
+        
+        legacy_filters = LEGACY_FILTER
+        init_order = pd.DataFrame(self.common_init_order)
+        mask = (self.ordplan[legacy_filters].eq(init_order[legacy_filters])).all(axis=1)
+        # Apply the mask and reset the index
+        self.ordplan = self.ordplan.loc[mask].reset_index(drop=True)
+        
+        common_filters = COMMON_FILTER
+        ordplan = pd.DataFrame(None)
+        best_index=0
+        most_compat_plan = 0
+        indices = list(range(len(self.ordplan)))
+        random.shuffle(indices)
 
-        init_order = self.set_filler_order(init_order)
+        for index in indices:
+            init_order = self.ordplan.iloc[index]
+            # Create a mask for matching orders using all legacy filters
+            mask = (self.ordplan[common_filters].eq(init_order[common_filters])).all(axis=1)
+            # Apply the mask and reset the index
+            ordplan = self.ordplan.loc[mask].reset_index(drop=True)
+            if len(ordplan)>most_compat_plan:
+                best_index=index
+                most_compat_plan=len(ordplan)
 
-        common_cols = COMMON_FILTER
-        mask = (
-            ordplan[common_cols].eq(init_order[common_cols]).all(axis=1)
-        )  # common mask
-        self.ordplan = ordplan.loc[mask].reset_index(drop=True)  # filter out with mask
+        init_order = self.ordplan.iloc[best_index]
+        mask = (self.ordplan[common_filters].eq(init_order[common_filters])).all(axis=1)
+        ordplan = self.ordplan.loc[mask].reset_index(drop=True)
+        self.ordplan = ordplan
 
     def legacy_filter_order(self):
         """Randomly choose an init order to be the base for
         legacy filter, then filter out data."""
-
         if self.preview:
             return
         legacy_filters = LEGACY_FILTER
@@ -245,9 +262,8 @@ class ORD(ProviderInterface):
         init_order = self.ordplan.iloc[best_index]
         mask = (self.ordplan[legacy_filters].eq(init_order[legacy_filters])).all(axis=1)
         ordplan = self.ordplan.loc[mask].reset_index(drop=True)
-
         self.ordplan = ordplan
-
+    
     def set_filler_order(self, init_order):
         """Eject order data with the filler id."""
         if self.filler is None:
