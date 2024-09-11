@@ -172,7 +172,7 @@ class GA(ModelInterface):
         _output = pd.DataFrame(
             {   
                 "id": orders['id'].unique(),
-                "blade": orders.index+1 if self.blade is None else self.blade,
+                "blade": 0,
                 "order_number": orders["order_number"],
                 "num_orders": orders["quantity"],
                 "component_type": orders["component_type"],
@@ -206,16 +206,16 @@ class GA(ModelInterface):
         if self.showOutput:
             self.show(ga_instance, _output)
 
-    @staticmethod
-    def blade_logic(output: DataFrame) -> DataFrame:
+    def blade_logic(self, output: DataFrame) -> DataFrame:
         blade_list: List[Dict[str,int]] = []
         for idx in output.index:
-            blade_list.append({"blade": idx + 1})
+            blade_val = idx+1
+            if self.blade is not None:
+                blade_val = self.blade
+            blade_list.append({"blade": blade_val})
 
         blade_df = pd.DataFrame(blade_list)
-        
         output = pd.concat([output, blade_df], axis=1)
-
         return output
 
     def show(self, ga_instance, _output):
