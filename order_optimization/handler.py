@@ -428,14 +428,18 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
             raise ValueError("Order Number Not Found!")
         
         if index == 0:
-            new_value = 0
+            new_quantity = 0
         else:
-            foll_out = sum(item['out'] for item in output_data)-output_data[0]['out']
-            new_value = round(filtered_order.quantity - (data["foll_order_number"]*order['out']/foll_out))
+            sum_out = sum(item['out'] for item in output_data)
+            first_blade_out = output_data[0]['out']
+            foll_out = sum_out-first_blade_out
+            new_out_ratio = order['out']/foll_out
+            foll_cut = data["foll_order_number"]*new_out_ratio
+            new_quantity = round(filtered_order.quantity - foll_cut)
         
-        if new_value < 0:
+        if new_quantity < 0:
             raise ValueError("Second Order Number Exceed!")
-        filtered_order.quantity = new_value
+        filtered_order.quantity = new_quantity
         filtered_order.save()
         filtered_order.quantity
 
