@@ -62,7 +62,7 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 1",
-                    order_leftover=(data["init_order_number"]*data['out'])-item["num_orders"],
+                    order_leftover=(data["init_order_number"]*item['out'])-item["num_orders"],
                 )
                 format_data.blade_1.add(blade1_order)
 
