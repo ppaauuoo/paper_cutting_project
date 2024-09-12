@@ -3,9 +3,11 @@ import random
 from django.contrib import messages
 from django.core.cache import cache
 
-import pandas as pd
-from typing import Callable, Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any
 from icecream import ic
+
+from order_optimization.setter import set_common
+from .models import OptimizationPlan, OrderList
 
 from modules.lp import LP
 from order_optimization.formatter import (
@@ -13,18 +15,14 @@ from order_optimization.formatter import (
     output_formatter,
     plan_orders_formatter,
     results_formatter,
-    timezone_formatter,
 )
 
-from .getter import get_orders, get_outputs, get_optimizer
+from .getter import get_common, get_orders, get_outputs, get_optimizer
 
 from ordplan_project.settings import (
-    PLAN_RANGE,
     MIN_TRIM,
     ROLL_PAPER,
     FILTER,
-    OUT_RANGE,
-    TUNING_VALUE,
     CACHE_TIMEOUT,
     MAX_RETRY,
     MAX_TRIM,
@@ -45,51 +43,23 @@ def handle_optimization(func):
                 request, "Error 404: No orders were found. Please try again."
             )
 
-        size_value = kwargs.get("size_value", 66)
-        orders = kwargs.get("orders", None)
+        results = handle_results(request, kwargs=kwargs)
+        results = handle_common_component(request, results=results)
+        results = handle_switcher(results)
 
-        if orders is None:
-            raise ValueError("Orders is empty!")
-
-        num_generations = kwargs.get("num_generations", 50)
-        out_range = kwargs.get("out_range", 6)
-
-        optimizer_instance = get_optimizer(
-            request, orders, size_value, out_range, num_generations, show_output=False
-        )
-        fitness_values, output_data = get_outputs(optimizer_instance)
-
-        init_order_number, foll_order_number = handle_orders_logic(output_data)
-
-        outputs = cache.get("outputs", [])
-
-        results = results_formatter(
-            optimizer_instance,
-            output_data,
-            size_value,
-            fitness_values,
-            init_order_number,
-            foll_order_number,
-        )
-        
-        switcher =LP(results).run().get() 
-        if switcher is not None:
-            ic(switcher)
-            results['trim'] = switcher['new_trim']
-            results['roll'] = switcher['new_roll']
-
-        if is_trim_fit(results['trim']) and ic(is_foll_ok(results['output'], results['foll_order_number'])):
+        if is_trim_fit(results["trim"]) and is_foll_ok(results["output"], results["foll_order_number"]):
             messages.success(request, "Optimizing finished.")
-            outputs.append(results)
-            cache.set("outputs", outputs, 1000)
-            ic(outputs)
-            return cache.set("optimization_results", results, CACHE_TIMEOUT)
+            cache.delete("past_size")
+            cache.delete("try_again")
+            cache.set("optimization_results", results, CACHE_TIMEOUT)
+            return
 
         best_result = cache.get("best_result", {"trim": 1000})
         if results["trim"] < best_result["trim"]:
             cache.set("best_result", results, CACHE_TIMEOUT)
 
-        if "auto" in request.POST: return handle_auto_retry(request)
+        if "auto" or "ai" in request.POST:
+            return handle_auto_retry(request)
 
         satisfied = 1 if request.POST.get("satisfied") == "true" else 0
         if satisfied:
@@ -102,6 +72,57 @@ def handle_optimization(func):
         return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
     return wrapper
+
+
+def handle_results(request, kwargs) -> Dict[str, Any]:
+    orders = kwargs.get("orders", None)
+
+    if orders is None:
+        raise ValueError("Orders is empty!")
+
+    optimizer_instance = get_optimizer(
+        request=request,
+        orders=orders,
+        size_value=kwargs.get("size_value", 66),
+        out_range=kwargs.get("out_range", 6),
+        num_generations=kwargs.get("num_generations", 50),
+        show_output=False,
+    )
+    fitness_values, output_data = get_outputs(optimizer_instance)
+    init_order_number, foll_order_number = handle_orders_logic(output_data)
+
+    results = results_formatter(
+        optimizer_instance=optimizer_instance,
+        output_data=output_data,
+        size_value=kwargs.get("size_value", 66),
+        fitness_values=fitness_values,
+        init_order_number=init_order_number,
+        foll_order_number=foll_order_number,
+    )
+    return results
+
+
+def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
+    if is_foll_ok(
+        results["output"], results["foll_order_number"]
+    ):
+        return results
+    common = handle_common(request, results=results, as_component=True)
+    if common is not None:
+        ic(common)
+        results = common
+    return results
+
+
+def handle_switcher(results: Dict[str, Any]) -> Dict[str, Any]:
+    if is_trim_fit(results["trim"]):
+        return results
+    switcher = LP(results).run().get()
+    if switcher is not None:
+        ic(switcher)
+        results["trim"] = switcher["new_trim"]
+        results["roll"] = switcher["new_roll"]
+    return results
 
 
 def is_foll_ok(output: List[Dict[str, Any]], foll_order_number: int):
@@ -229,8 +250,6 @@ def handle_auto_config(request, **kwargs):
     """
     Automatically defines values needed for requesting orders and send it to optimizer.
     """
-    start_date = pd.to_datetime(request.POST.get("start_date"), format="%Y-%m-%d")
-    stop_date = pd.to_datetime(request.POST.get("stop_date"), format="%Y-%m-%d")
 
     again = cache.get("try_again", 0)
     # out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
@@ -257,13 +276,6 @@ def auto_size_filter_logic(request):
     """
     Logic for automatic defining values for requesting orders.
     """
-    # filter_index = random.randint(0, len(FILTER)-1)
-
-    # orders = cache.get("auto_order", [])
-
-    # tuning_value = TUNING_VALUE[random.randint(0, len(TUNING_VALUE)-1)]
-    # tuning_value = 2 if roll_index < len(ROLL_PAPER)/3 else 3
-    # filter_index = 1 if roll_index < len(ROLL_PAPER)/3 else 0
 
     file_id = request.POST.get("file_id")
     start_date = request.POST.get("start_date")
@@ -292,100 +304,61 @@ def auto_size_filter_logic(request):
             start_date=start_date,
             stop_date=stop_date,
         )
-        # filter_index += 1
-        # if filter_index >= len(FILTER):
-        #     filter_index = 0
-        #     roll_index += 1
-        #     if roll_index >= len(ROLL_PAPER):
-        #         return (None,None)
-        #     size = ROLL_PAPER[roll_index]
 
-    # cache.set("auto_order", orders, CACHE_TIMEOUT)
     past_size.append(size)
     cache.set("past_size", past_size, CACHE_TIMEOUT)
 
     return (orders, size)
 
 
-def handle_common(request) -> Callable:
+def handle_common(
+    request, results: Optional[Dict[str, Any]] = None, as_component: bool = False
+) -> Optional[Dict[str,Any]]:
     """
     Request orders base from the past results with common logic and run an optimizer.
     """
-
-    results = cache.get("optimization_results")
+    if results is None:
+        results = cache.get("optimization_results")
     best_fitness = results["trim"]
     best_index: Optional[int] = None
+    if not as_component:
+        file_id = request.POST.get("selected_file_id")
+    else:
+        file_id = request.POST.get("file_id")
 
     for index, item in enumerate(results["output"]):
-        if item['out']>1:
-            optimizer_instance = single_common(request=request,item=item, results=results)
-        else:
-            optimizer_instance = double_common(request=request,item=item, results=results)
+        if item["out"] > 1:
+            optimizer_instance = get_common(
+                request=request,
+                single=True,
+                blade=2,
+                file_id=file_id,
+                item=item,
+                results=results,
+            )
 
-        if abs(optimizer_instance.fitness_values) < best_fitness:
+            if abs(optimizer_instance.fitness_values) <= best_fitness:
+                best_fitness, best_output = get_outputs(optimizer_instance)
+                best_index = index
+
+        optimizer_instance = get_common(
+            request=request, blade=2, file_id=file_id, item=item, results=results
+        )
+
+        if abs(optimizer_instance.fitness_values) <= best_fitness:
             best_fitness, best_output = get_outputs(optimizer_instance)
             best_index = index
 
     if best_index is not None:
-        results = update_common(results, best_index, best_output, best_fitness)
+        results = set_common(results, best_index, best_output, best_fitness)
         messages.success(request, "Common order found.")
     else:
         messages.error(request, "No suitable common order found.")
 
+    if as_component:
+        return results
+
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
-
-def double_common(request,item: Dict[str,Any], results: Dict[str,Any]):
-        file_id = request.POST.get("selected_file_id")
-        size_value = (item["cut_width"] * item["out"]) + results["trim"]
-        orders = get_orders(
-            request=request,
-            file_id=file_id,
-            size_value=size_value,
-            deadline_scope=-1,
-            filter_diff=False,
-            common=True,
-        )
-        optimizer_instance = get_optimizer(
-            request=request, orders=orders, size_value=size_value, show_output=False
-        )
-        return optimizer_instance
-
-
-def single_common(request,item: Dict[str,Any], results: Dict[str,Any]):
-        file_id = request.POST.get("selected_file_id")
-        size_value = (item["cut_width"] * item["out"]) + results["trim"]
-        orders = get_orders(
-            request=request,
-            file_id=file_id,
-            size_value=size_value,
-            deadline_scope=-1,
-            filter_diff=False,
-            common=True,
-            selector={'order_id': item['id']}
-        )
-        optimizer_instance = get_optimizer(
-            request=request, orders=orders, size_value=size_value, show_output=False
-        )
-        return optimizer_instance
-
-def update_common(
-    results: Dict,
-    best_index: int,
-    best_output: List[Dict],
-    best_fitness: float,
-) -> Dict:
-    """
-    Remove the order that got chosen to be swapped by common orders, then
-    injecting the common orders and new fitness into results.
-    """
-    results["output"].pop(best_index)  # remove the old order
-    results["output"].extend(best_output)  # add the new one
-
-    for item in results["output"]:  # calculate new fitness
-        results["fitness"] += item["cut_width"] * item["out"]
-
-    results["trim"] = abs(best_fitness)  # set new trim
-    return results
 
 
 def handle_filler(request):
@@ -423,9 +396,6 @@ def handle_filler(request):
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
 
-from .models import OptimizationPlan, OrderList, PlanOrder
-
-
 def handle_saving(request):
     """
     Pull data from cache to save into the model and updating both cache and model.
@@ -456,12 +426,20 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
             filtered_order = OrderList.objects.filter(id=id)[0]
         except IndexError:
             raise ValueError("Order Number Not Found!")
-        new_value = filtered_order.quantity - data["foll_order_number"]
+        
         if index == 0:
-            new_value = 0
-        if new_value < 0:
+            new_quantity = 0
+        else:
+            sum_out = sum(item['out'] for item in output_data)
+            first_blade_out = output_data[0]['out']
+            foll_out = sum_out-first_blade_out
+            new_out_ratio = order['out']/foll_out
+            foll_cut = data["foll_order_number"]*new_out_ratio
+            new_quantity = round(filtered_order.quantity - foll_cut)
+        
+        if new_quantity < 0:
             raise ValueError("Second Order Number Exceed!")
-        filtered_order.quantity = new_value
+        filtered_order.quantity = new_quantity
         filtered_order.save()
         filtered_order.quantity
 

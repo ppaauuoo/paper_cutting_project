@@ -9,6 +9,7 @@
         <th class="text-center">เลขที่ใบสั่งขาย</th>
         <th class="text-center">ชนิดส่วนประกอบ</th>
         <th class="text-center">จำนวนสั่งผลิต</th>
+        <th class="text-center">จำนวนที่เหลือ</th>
         <th class="text-center">ตัดกว้าง</th>
         <th class="text-center">ตัดยาว</th>
         <th class="text-center">ประเภทตัดเส้น</th>
@@ -38,6 +39,7 @@
             <td class="text-center">{{ item.order_number }}</td>
             <td class="text-center">{{ item.component_type }}</td>
             <td class="text-center">{{ item.plan_quantity }}</td>
+            <td class="text-center">{{ item.order_leftover}}</td>
             <td class="text-center">{{ item.width }}</td>
             <td class="text-center">{{ item.length }}</td>
             <td class="text-center">{{ item.edge_type }}</td>

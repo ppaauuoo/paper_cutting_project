@@ -99,28 +99,38 @@
             </div>
     
             <div class="d-flex flex-wrap justify-content-start mt-3 gap-2">
-                
-                <div x-data="{ autoLoading: false, manualLoading: false }">
-                    <button x-show="showManual" type="submit" name="optimize" class="btn btn-danger" id="optimizeBtn"
-                        x-on:click="manualLoading = true;">
+
+                <div x-data="{ aiLoading: false }">
+                    <button type="submit" name="ai" class="btn btn-danger" id="aiBtn"
+                            x-on:click="aiLoading = true;">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
-                            x-show="manualLoading"></span>
-                        <span class="btn-text" x-show="!manualLoading">Manual</span>
-                        <span class="btn-text" x-show="manualLoading">Loading...</span>
+                            x-show="aiLoading"></span>
+                        <span class="btn-text" x-show="!aiLoading">AI</span>
+                        <span class="btn-text" x-show="aiLoading">loading...</span>
                     </button>
-                    <button type="submit" name="auto" class="btn btn-primary" id="autoBtn"
-                            x-on:click="autoLoading = true;">
+                </div>
+                
+                <div x-data="{ autoloading: false, manualloading: false }">
+                    <button x-show="showmanual" type="submit" name="optimize" class="btn btn-danger" id="optimizebtn"
+                        x-on:click="manualloading = true;">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
-                            x-show="autoLoading"></span>
-                        <span class="btn-text" x-show="!autoLoading">Auto</span>
-                        <span class="btn-text" x-show="autoLoading">Loading...</span>
+                            x-show="manualloading"></span>
+                        <span class="btn-text" x-show="!manualloading">Manual</span>
+                        <span class="btn-text" x-show="manualloading">loading...</span>
+                    </button>
+                    <button type="submit" name="auto" class="btn btn-primary" id="autobtn"
+                            x-on:click="autoloading = true;">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
+                            x-show="autoloading"></span>
+                        <span class="btn-text" x-show="!autoloading">Auto</span>
+                        <span class="btn-text" x-show="autoloading">loading...</span>
                     </button>
                 </div>
     
-                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadmodal">
                     <span class="btn-text">Add File</span>
                 </button>
-                <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#csvFilesModal">
+                <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#csvfilesmodal">
                     <span class="btn-text">View Files List</span>
                 </button>
                 {% include "form_modals.html" %}

@@ -9,13 +9,15 @@ from ortools.linear_solver import pywraplp
 ROLL_PAPER = [66, 68, 70, 73, 74, 75, 79, 82, 85, 88, 91, 93, 95, 97]
 @dataclass
 class LP:
-    results: Dict[str,Any]
-    
+    results: Dict[str, Any]
+
     def run(self):
         roll_paper = ROLL_PAPER
         results = self.results
+        if results is None:
+            raise ValueError('Results is empty!')
         solver = pywraplp.Solver.CreateSolver("SAT")
-        
+
         variables = {
             f'{roll}' :  solver.IntVar(0, 1,f'{roll}')
             for roll in roll_paper
@@ -51,11 +53,9 @@ class LP:
         output['new_roll'] = sum(variables[f'{roll}'].solution_value()*roll for roll in roll_paper)
         self.output = output
         return self
-    
+
     def get(self):
         return self.output
-    
-
 
 
 def main():
