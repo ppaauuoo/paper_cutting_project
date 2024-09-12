@@ -55,6 +55,7 @@ def get_orders(
     start_date: Optional[pd.Timestamp] = None,
     stop_date: Optional[pd.Timestamp] = None,
     selector: Optional[Dict[str, Any]] = None,
+    common_init_order: Optional[Dict[str,Any]] = None
 ) -> DataFrame:
     """
     Pass args to order processor.
@@ -77,6 +78,7 @@ def get_orders(
             preview=preview,
             start_date=start_date,
             stop_date=stop_date,
+            common_init_order=common_init_order,
         )
     ).get()
 
@@ -152,7 +154,8 @@ def get_common(
         deadline_scope=-1,
         filter_diff=False,
         common=True,
-        selector={"order_id": item["id"]} if single else None
+        selector={"order_id": item["id"]} if single else None,
+        common_init_order=item
     )
     optimizer_instance = get_optimizer(
         request=request, orders=orders, size_value=size_value, show_output=False, blade=blade
