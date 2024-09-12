@@ -208,35 +208,39 @@ class ORD(ProviderInterface):
         """Use common filter base on the first order or filler order."""
         if not self.common:
             return
-        
+
         legacy_filters = LEGACY_FILTER
         init_order = pd.DataFrame(self.common_init_order)
-        mask = (self.ordplan[legacy_filters].eq(init_order[legacy_filters])).all(axis=1)
+        ic(self.ordplan)
+        ic(init_order)
+        mask = (self.ordplan[legacy_filters].eq(init_order[legacy_filters].iloc[0])).all(axis=1)
         # Apply the mask and reset the index
-        self.ordplan = self.ordplan.loc[mask].reset_index(drop=True)
-        
+        legecy_filtered_plan = self.ordplan.loc[mask].reset_index(drop=True).copy()
+        ic(legecy_filtered_plan)
+        if len(legecy_filtered_plan) <= 0:
+            raise ValueError('Legacy is empty')
+    
         common_filters = COMMON_FILTER
         ordplan = pd.DataFrame(None)
         best_index=0
         most_compat_plan = 0
-        indices = list(range(len(self.ordplan)))
+        indices = list(range(len(legecy_filtered_plan)))
         random.shuffle(indices)
-
         for index in indices:
-            init_order = self.ordplan.iloc[index]
+            init_order = legecy_filtered_plan.iloc[index]
             # Create a mask for matching orders using all legacy filters
             mask = (self.ordplan[common_filters].eq(init_order[common_filters])).all(axis=1)
             # Apply the mask and reset the index
-            ordplan = self.ordplan.loc[mask].reset_index(drop=True)
+            ordplan = self.ordplan.loc[mask].reset_index(drop=True).copy()
             if len(ordplan)>most_compat_plan:
                 best_index=index
                 most_compat_plan=len(ordplan)
 
-        init_order = self.ordplan.iloc[best_index]
+        init_order = legecy_filtered_plan.iloc[best_index]
         mask = (self.ordplan[common_filters].eq(init_order[common_filters])).all(axis=1)
         ordplan = self.ordplan.loc[mask].reset_index(drop=True)
         self.ordplan = ordplan
-
+        
     def legacy_filter_order(self):
         """Randomly choose an init order to be the base for
         legacy filter, then filter out data."""
