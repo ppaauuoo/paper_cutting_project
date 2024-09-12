@@ -1,8 +1,10 @@
 from typing import Any, Dict, List
 import pandas as pd
+from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
 from order_optimization.container import ModelContainer
 from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
+
 
 def output_formatter(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
     """
@@ -42,7 +44,7 @@ def results_formatter(
     }
 
 
-def database_formatter(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPlan:
+def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
     """
     For defining which order belong to which blade, and turn it into a model.
 
@@ -60,18 +62,20 @@ def database_formatter(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPla
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 1",
-                    order_leftover=item['num_orders']
+                    order_leftover=(data["init_order_number"]*item['out'])-item["num_orders"],
                 )
                 format_data.blade_1.add(blade1_order)
 
             case 2:
+                foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
+                new_value = round((data["foll_order_number"]*item['out']/foll_out))
                 blade2_order = PlanOrder.objects.create(
                     order=OrderList.objects.get(id=current_id),
-                    plan_quantity=data["foll_order_number"],
+                    plan_quantity=new_value,
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 2",
-                    order_leftover=item['num_orders']-data["foll_order_number"]
+                    order_leftover=item["num_orders"] - new_value,
                 )
                 format_data.blade_2.add(blade2_order)
 
@@ -80,17 +84,18 @@ def database_formatter(data: Dict[str, List[Dict[str, int]]]) -> OptimizationPla
 
 def timezone_formatter(df: pd.DataFrame):
     """
-    Format any timezone column in dataframe.
+    Format any timezone column in dataframe to be timezone unaware.
     """
-    
+
     datetime_cols = df.select_dtypes(include=['datetime64[ns, UTC]']).columns
 
     for col in datetime_cols:
-        df[col] = df[col].dt.tz_localize(None)
+        if is_datetime(df[col]):
+            df[col] = df[col].dt.tz_localize(None)
     return df
 
 
-def plan_orders_formatter()-> pd.DataFrame:
+def plan_orders_formatter() -> pd.DataFrame:
     """
     Request data from model and format it.
     """
@@ -105,7 +110,7 @@ def plan_orders_formatter()-> pd.DataFrame:
             "out",
             "blade_type",
             "paper_roll",
-            "order_leftover"
+            "order_leftover",
         )
     )
 
@@ -130,4 +135,3 @@ def plan_orders_formatter()-> pd.DataFrame:
     df = df.fillna(0)
 
     return df
- 
