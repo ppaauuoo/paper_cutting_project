@@ -419,29 +419,39 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
     and update blade 2 order with what had been used.
     """
     output_data = data["output"]
-
+    filtered_order = []
     for index, order in enumerate(output_data):
         id = order["id"]
         try:
-            filtered_order = OrderList.objects.filter(id=id)[0]
+            filtered_order[index] = OrderList.objects.filter(id=id)[0]
         except IndexError:
             raise ValueError("Order Number Not Found!")
         
         if index == 0:
             new_quantity = 0
         else:
+            #Get sum out and first blade out
             sum_out = sum(item['out'] for item in output_data)
             first_blade_out = output_data[0]['out']
+            #Subtract first blade out from sum
             foll_out = sum_out-first_blade_out
+            #Get new out by deviding ex.B-1 out 2, B-2 out 1 would be B-1=2/3 and B-2=1/3
             new_out_ratio = order['out']/foll_out
+            #Calculate new cut for each common with foll cut from first blade divide by out ratio 
             foll_cut = data["foll_order_number"]*new_out_ratio
-            new_quantity = round(filtered_order.quantity - foll_cut)
-        
+            new_quantity = round(filtered_order[index].quantity - foll_cut - left_over_quantity)
+            left_over_quantity = 0
+
         if new_quantity < 0:
-            raise ValueError("Second Order Number Exceed!")
-        filtered_order.quantity = new_quantity
-        filtered_order.save()
-        filtered_order.quantity
+            left_over_quantity += abs(new_quantity)
+            new_quantity = filtered_order[index].quantity
+        filtered_order[index].quantity = new_quantity
+    
+    if left_over_quantity:
+        raise ValueError("Both orders are out of stock!")
+
+    for order in filtered_order:
+        order.save()
 
 
 def handle_reset():
