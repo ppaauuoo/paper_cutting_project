@@ -420,10 +420,12 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
     """
     output_data = data["output"]
     filtered_order = []
+    left_over_quantity = 0
+
     for index, order in enumerate(output_data):
         id = order["id"]
         try:
-            filtered_order[index] = OrderList.objects.filter(id=id)[0]
+            filtered_order.append(OrderList.objects.filter(id=id)[0])
         except IndexError:
             raise ValueError("Order Number Not Found!")
         
@@ -444,7 +446,7 @@ def handle_order_exhaustion(data: Dict[str, Any]) -> None:
 
         if new_quantity < 0:
             left_over_quantity += abs(new_quantity)
-            new_quantity = filtered_order[index].quantity
+            new_quantity = 0 
         filtered_order[index].quantity = new_quantity
     
     if left_over_quantity:
