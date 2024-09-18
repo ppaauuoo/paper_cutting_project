@@ -1,9 +1,51 @@
-{% extends "base.html" %}
+{% extends "base.html" %} {% block title %}Order Optimization{% endblock %}
+{%block content %}
 
-{% block title %}Order Optimization{% endblock %}
-
-{% block content %}
-
-<h1>Wat sup</h1>
+<h1>Input:</h1>
+<div class="table-responsive">
+    <table id="dataTable" class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th class="text-center">Front Sheet</th>
+                <th class="text-center">C Wave</th>
+                <th class="text-center">Middle Sheet</th>
+                <th class="text-center">B Wave</th>
+                <th class="text-center">Back Sheet</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="text-center">{{ input.front_sheet}}</td>
+                <td class="text-center">{{ input.c_wave}}</td>
+                <td class="text-center">{{ input.middle_sheet}}</td>
+                <td class="text-center">{{ input.b_wave}}</td>
+                <td class="text-center">{{ input.back_sheet}}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<h1>Prediction:</h1>
+<div class="table-responsive">
+    <table id="dataTable" class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th class="text-center">Front Sheet</th>
+                <th class="text-center">C Wave</th>
+                <th class="text-center">Middle Sheet</th>
+                <th class="text-center">B Wave</th>
+                <th class="text-center">Back Sheet</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="text-center">{{ prediction.front_sheet}}</td>
+                <td class="text-center">{{ prediction.c_wave}}</td>
+                <td class="text-center">{{ prediction.middle_sheet}}</td>
+                <td class="text-center">{{ prediction.b_wave}}</td>
+                <td class="text-center">{{ prediction.back_sheet}}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
 
 {% endblock %}
