@@ -1,11 +1,5 @@
-<<<<<<< HEAD
-from modules.ordplan import ORD
-
-from typing import Callable, Dict
-=======
 from datetime import datetime
 import random
->>>>>>> develop
 from django.contrib import messages
 from django.core.cache import cache
 

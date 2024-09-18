@@ -1,18 +1,7 @@
-<<<<<<< HEAD
-from modules.ordplan import ORD
-from modules.ga import GA
-
-from django.shortcuts import get_object_or_404
-
-from .models import CSVFile
-  
-from typing import Dict, List, Tuple
-=======
 from pandas import DataFrame
 import pandas as pd
 
 from django.shortcuts import get_object_or_404
->>>>>>> develop
 from django.core.cache import cache
 
 from order_optimization.setter import *

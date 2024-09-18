@@ -5,13 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 import pandas as pd
 
-<<<<<<< HEAD
-from .handler import handle_common, handle_filler, handle_manual_config, handle_auto_config
-from modules.ordplan import ORD
-=======
 from order_optimization.controller import optimizer_controller
 from order_optimization.formatter import plan_orders_formatter
->>>>>>> develop
 
 from .models import CSVFile
 from .forms import CSVFileForm, LoginForm
