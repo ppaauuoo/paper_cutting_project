@@ -1,0 +1,52 @@
+<div class="table-responsive">
+  <table id="dataTable" class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th class="text-center">กระดาษ</th>
+        <th class="text-center">ลำดับแผน</th>
+        <th class="text-center">ใบมีด</th>
+        <th class="text-center">กำหนดส่ง</th>
+        <th class="text-center">เลขที่ใบสั่งขาย</th>
+        <th class="text-center">ชนิดส่วนประกอบ</th>
+        <th class="text-center">จำนวนสั่งผลิต</th>
+        <th class="text-center">จำนวนที่เหลือ</th>
+        <th class="text-center">ตัดกว้าง</th>
+        <th class="text-center">ตัดยาว</th>
+        <th class="text-center">ประเภทตัดเส้น</th>
+        <th class="text-center">out</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if not data %}
+        <tr>
+          <td colspan="9">
+            <i>No data available</i>
+          </td>
+        </tr>
+      {% else %}
+        {% for item in data %}
+          <tr>
+            <td class="text-center">{{ item.paper_roll }}</td>
+            <td class="text-center">
+              {% if item.blade_1_orders__id == 0 %}
+                {{ item.blade_2_orders__id }}
+              {% else %}
+                {{ item.blade_1_orders__id }}
+              {% endif %}
+            </td>
+            <td class="text-center">{{ item.blade_type }}</td>
+            <td class="text-center">{{ item.due_date }}</td>
+            <td class="text-center">{{ item.order_number }}</td>
+            <td class="text-center">{{ item.component_type }}</td>
+            <td class="text-center">{{ item.plan_quantity }}</td>
+            <td class="text-center">{{ item.order_leftover}}</td>
+            <td class="text-center">{{ item.width }}</td>
+            <td class="text-center">{{ item.length }}</td>
+            <td class="text-center">{{ item.edge_type }}</td>
+            <td class="text-center">{{ item.out }}</td>
+          </tr>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>

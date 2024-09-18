@@ -1,0 +1,50 @@
+{% comment %} <input x-model="search" placeholder="Search for a user..." type="search" /> {% endcomment %}
+<div class="form-group mb-3">
+  <label for="selector_out" class="form-label">Out for selected:</label>
+  <select id="selector_out" name="selector_out" class="form-select" required>
+      {% for out in '1234'|make_list %}
+          <option value="{{ out }}" {% if out|stringformat:"s"  == request.POST.selector_out %}selected{% endif %}>{{ out }}</option>
+      {% endfor %}
+  </select>
+</div>
+<input type="text" id="previewSearchInput" placeholder="Search...">
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th class="text-center">กำหนดส่ง</th>
+        <th class="text-center">เลขที่ใบสั่งขาย</th>
+        <th class="text-center">ชนิดส่วนประกอบ</th>
+        <th class="text-center">จำนวนสั่งขาย</th>
+        <th class="text-center">ตัดกว้าง</th>
+        <th class="text-center">ตัดยาว</th>
+        <th class="text-center">ประเภทตัดเส้น</th>
+        <th class="text-center">เลือก</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if not data_preview %}
+        <tr>
+          <td colspan="9">
+            <i>No data available</i>
+          </td>
+        </tr>
+      {% else %}
+        {% for item in data_preview %}
+          <tr>
+            <td class="text-center">{{ item.due_date }}</td>
+            <td class="text-center">{{ item.order_number }}</td>
+            <td class="text-center">{{ item.component_type }}</td>
+            <td class="text-center">{{ item.quantity }}</td>
+            <td class="text-center">{{ item.width }}</td>
+            <td class="text-center">{{ item.length }}</td>
+            <td class="text-center">{{ item.edge_type }}</td>
+            <td class="text-center">
+              <input type="radio" name="selector_id" value="{{ item.id }}" class="large-radio">
+            </td>
+          </tr>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>

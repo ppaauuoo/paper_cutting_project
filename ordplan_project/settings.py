@@ -11,17 +11,44 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 ROLL_PAPER = [66, 68, 70, 73, 74, 75, 79, 82, 85, 88, 91, 93, 95, 97]
-FILTER = [16,8,6,4,2]
+FILTER = [16,8,4]
 OUT_RANGE = [7,5,3]
 TUNING_VALUE = [3,2]
 CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
-
-
+MAX_RETRY = 5
+MAX_TRIM = 3
+MIN_TRIM = 1
+PENALTY_VALUE = 1000
+UNIT_CONVERTER = 25.4 #MM _TO_INCH
+DEADLINE_RANGE = 500
+PLAN_RANGE = DEADLINE_RANGE/5
+COMMON_FILTER = [
+    "front_sheet",
+    "c_wave",
+    "middle_sheet",
+    "b_wave",
+    "back_sheet",
+    "edge_type",
+    "width",
+    "length",
+    "left_edge_cut",
+    "middle_edge_cut",
+    "right_edge_cut",
+    "component_type",
+]
+LEGACY_FILTER = [
+    "front_sheet",
+    "c_wave",
+    "middle_sheet",
+    "b_wave",
+    "back_sheet",
+]
 
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+MODULES_DIR = BASE_DIR / "modules"
 
 
 # Quick-start development settings - unsuitable for production
@@ -39,6 +66,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'livereload',
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -46,6 +74,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'order_optimization',
+    "django_htmx",
+
 ]
 
 MIDDLEWARE = [
@@ -56,6 +86,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'livereload.middleware.LiveReloadScript',
+    "django_htmx.middleware.HtmxMiddleware",
 ]
 
 ROOT_URLCONF = "ordplan_project.urls"
@@ -63,7 +95,7 @@ ROOT_URLCONF = "ordplan_project.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -127,6 +159,7 @@ USE_TZ = True
 STATIC_URL = "static/"
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -140,3 +173,5 @@ AUTHENTICATION_BACKENDS = [
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'
