@@ -1,21 +1,27 @@
 from django.shortcuts import render
 from modules.yggdrasil import YDF
-
+from icecream import ic
 
 def paper_subsitution_view(request):
-    test_input = {
-        "front_sheet-O": ["KS231"],
-        "c_wave-O": ["CM127"],
-        "middle_sheet-O": ["CM127"],
-        "b_wave-O": ["CM127"],
-        "back_sheet-O": ["KB160"],
-    }
+    # Make prediction using the model
     model = YDF()
-    prediction = model.predict(test_input)
+    if request.method == 'POST':
+        test_input = {
+            "front_sheet-O": [request.POST.get('front_sheet')],
+            "c_wave-O": [request.POST.get("c_wave")],
+            "middle_sheet-O": [request.POST.get("middle_sheet")],
+            "b_wave-O": [request.POST.get("b_wave")],
+            "back_sheet-O": [request.POST.get('back_sheet')]
+        }
+        prediction = model.predict(test_input)
 
-    test_input = {key.replace('-O', ''): value for key, value in test_input.items()}
+    else:
+        # If no POST request, set prediction to None
+        prediction = None
+
     context = {
             'prediction' : prediction,
-            'input': test_input
+            'labels': model.labels,
+            'post_data': request.POST
     }
     return render(request,'paper.html', context)

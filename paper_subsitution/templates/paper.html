@@ -2,28 +2,26 @@
 {%block content %}
 
 <h1>Input:</h1>
-<div class="table-responsive">
-    <table id="dataTable" class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th class="text-center">Front Sheet</th>
-                <th class="text-center">C Wave</th>
-                <th class="text-center">Middle Sheet</th>
-                <th class="text-center">B Wave</th>
-                <th class="text-center">Back Sheet</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td class="text-center">{{ input.front_sheet}}</td>
-                <td class="text-center">{{ input.c_wave}}</td>
-                <td class="text-center">{{ input.middle_sheet}}</td>
-                <td class="text-center">{{ input.b_wave}}</td>
-                <td class="text-center">{{ input.back_sheet}}</td>
-            </tr>
-        </tbody>
-    </table>
-</div>
+
+<form method="post" class="row mb-3">
+    {% csrf_token %} {% if labels %}
+    {% for category, label_list in labels.items%}
+    <div class="col-2">
+        <label for="{{category}}">{{category}}</label>
+        <select name="{{ category }}" id="{{ category }}" class="form-control">
+            {% for label in label_list %}
+            <option value="{{ label }}"> 
+              {{ label }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endfor %} {% else %}
+    <p>No labels data available.</p>
+    {% endif %}
+    <button class="m-3 btn btn-primary" type="submit">Go</button>
+</form>
+
 <h1>Prediction:</h1>
 <div class="table-responsive">
     <table id="dataTable" class="table table-striped table-hover">
