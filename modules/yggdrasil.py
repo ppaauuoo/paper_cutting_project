@@ -47,7 +47,7 @@ class YDF:
 
 def main():
     test_input = {
-        "front_sheet-O": ["KM95"],
+        "front_sheet-O": ["KS231"],
         "c_wave-O": ["CM127"],
         "middle_sheet-O": ["CM127"],
         "b_wave-O": ["CM127"],

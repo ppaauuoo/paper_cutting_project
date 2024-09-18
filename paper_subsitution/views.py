@@ -4,7 +4,7 @@ from modules.yggdrasil import YDF
 
 def paper_subsitution_view(request):
     test_input = {
-        "front_sheet-O": ["CM97"],
+        "front_sheet-O": ["KS231"],
         "c_wave-O": ["CM127"],
         "middle_sheet-O": ["CM127"],
         "b_wave-O": ["CM127"],
