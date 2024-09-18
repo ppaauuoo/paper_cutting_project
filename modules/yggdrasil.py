@@ -22,9 +22,9 @@ class YDF:
         # Organizing labels into a dictionary
         self.labels = {
             "front_sheet": ['KS231','KS161','KB230','KS121','KB160','KB120','KAC125','KI128','KA125','KL250','CM97','KAV150','KAC155','KAC185','KA155','CM127','WLK154','KL125','KA185','KA225','KI158','KAC225','KI188','WLK174','KM120'],
-            "c_wave": ['CM127','CM147','CM112','','CM197','CM100','CME100'],
-            "middle_sheet": ['','CM127','CM147','CME100','CM112','CM197','CM97','CM100'],
-            "b_wave": ['','CM127','CM112','CM147','CM197','CM100','CME100','CM97'],
+            "c_wave": ['CM127','CM147','CM112','None','CM197','CM100','CME100'],
+            "middle_sheet": ['None','CM127','CM147','CME100','CM112','CM197','CM97','CM100'],
+            "b_wave": ['None','CM127','CM112','CM147','CM197','CM100','CME100','CM97'],
             "back_sheet": ['KB160','KB120','KB230','CM127','CM112','CM97','CM147','KL250','KAV150','CM100','CM197','CME100','KA155','KA225','KA185','KAC155']
         }
 
