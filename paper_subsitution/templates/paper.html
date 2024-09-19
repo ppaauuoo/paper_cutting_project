@@ -1,6 +1,6 @@
 {% extends "base.html" %} {% block title %}Order Optimization{% endblock %}
 {%block content %}
-
+<p>{{post_data}}</p>
 <h1>Input:</h1>
 
 <form method="post" class="row mb-3">
@@ -35,6 +35,13 @@
             </tr>
         </thead>
         <tbody>
+            <tr>
+                <td class="text-center">{{ post_data.front_sheet}}</td>
+                <td class="text-center">{{ post_data.c_wave}}</td>
+                <td class="text-center">{{ post_data.middle_sheet}}</td>
+                <td class="text-center">{{ post_data.b_wave}}</td>
+                <td class="text-center">{{ post_data.back_sheet}}</td>
+            </tr>
             <tr>
                 <td class="text-center">{{ prediction.front_sheet}}</td>
                 <td class="text-center">{{ prediction.c_wave}}</td>
