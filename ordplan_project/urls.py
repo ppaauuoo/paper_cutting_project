@@ -27,6 +27,7 @@ urlpatterns = [
     path('login/', login_view, name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('', include('order_optimization.urls')),
+    path('', include('paper_subsitution.urls'))
 ]
 
 if settings.DEBUG:

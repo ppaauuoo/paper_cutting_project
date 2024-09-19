@@ -3,9 +3,15 @@ pandas
 pygad
 ortools
 openpyxl
+joblib
+scikit-learn
+category-encoders
+seaborn
+numpy
 pytest
 pytest-django
 django-livereload-server
 icecream
 django_htmx
 pytest-mock
+ydf

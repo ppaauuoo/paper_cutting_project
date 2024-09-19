@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'order_optimization',
+    'paper_subsitution',
     "django_htmx",
 
 ]
