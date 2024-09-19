@@ -51,7 +51,8 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
     return: Model
     """
     format_data = OptimizationPlan.objects.create()
-
+    blade_2_orders = []    
+    left_over_quantity = 0 
     for item in data["output"]:
         current_id = item["id"]
         match item["blade"]:
@@ -64,11 +65,20 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                     blade_type="Blade 1",
                     order_leftover=(data["init_order_number"]*item['out'])-item["num_orders"],
                 )
-                format_data.blade_1.add(blade1_order)
 
             case 2:
                 foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
-                new_value = round((data["foll_order_number"]*item['out']/foll_out))
+                new_out_ratio = order['out']/foll_out
+                #Calculate new cut for each common with foll cut from first blade divide by out ratio 
+                foll_cut = data["foll_order_number"]*new_out_ratio
+                new_value = round(foll_cut + left_over_quantity)
+                left_over_quantity = 0
+
+                if new_value > item['num_orders']:
+                    left_over_quantity += abs(item['num_orders']-new_value) 
+                    new_value = item['num_orders']
+    
+
                 blade2_order = PlanOrder.objects.create(
                     order=OrderList.objects.get(id=current_id),
                     plan_quantity=new_value,
@@ -77,8 +87,13 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                     blade_type="Blade 2",
                     order_leftover=item["num_orders"] - new_value,
                 )
-                format_data.blade_2.add(blade2_order)
+                blade_2_orders.append(blade2_order)
 
+    if left_over_quantity:
+         raise ValueError("Both orders are out of stock!")
+    format_data.blade_1.add(blade1_order)
+    for order in blade_2_orders:
+         format_data.blade_2.add(blade2_order)
     return format_data
 
 
