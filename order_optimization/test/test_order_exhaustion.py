@@ -15,7 +15,7 @@ from order_optimization.models import OrderList
 def test_handle_order_exhaustion_valid_data(mocker):
 
     data = {
-        "output": [{"id": 1}, {"id": 2}],
+        "output": [{"id": 1, "out": 1}, {"id": 2, 'out': 2}],
         "foll_order_number": 10,
     }
 
@@ -40,17 +40,17 @@ def test_handle_order_exhaustion_valid_data(mocker):
 def test_handle_order_exhaustion_many_data(mocker):
 
     data = {
-        "output": [{"id": 1}, {"id": 2}, {"id": 3}],
-        "foll_order_number": 10,
+        "output": [{"id": 1, 'out': 1}, {"id": 2, "out": 2}, {"id": 3, "out":1}],
+        "foll_order_number": 600,
     }
 
 
     mock_order1 = mocker.Mock()
-    mock_order1.quantity = 5
+    mock_order1.quantity = 500
     mock_order2 = mocker.Mock()
-    mock_order2.quantity = 17
+    mock_order2.quantity = 1700
     mock_order3 = mocker.Mock()
-    mock_order3.quantity = 12
+    mock_order3.quantity = 1200
 
     mocker.patch.object(
         OrderList.objects, "filter", side_effect=[[mock_order1], [mock_order2], [mock_order3]]
@@ -58,28 +58,36 @@ def test_handle_order_exhaustion_many_data(mocker):
 
     handle_order_exhaustion(data)
     assert mock_order1.quantity == 0
-    assert mock_order2.quantity == 7
-    assert mock_order3.quantity == 2
+    assert mock_order2.quantity == 1300
+    assert mock_order3.quantity == 1000
     mock_order1.save.assert_called_once()
     mock_order2.save.assert_called_once()
     mock_order3.save.assert_called_once()
 
 @pytest.mark.django_db
-def test_handle_order_exhaustion_order_exceed(mocker):
+def test_handle_order_exhaustion_many_data_stock_exceed(mocker):
 
     data = {
-        "output": [{"id": 1}, {"id": 2}, {"id": 3}],
-        "foll_order_number": 10,
+        "output": [{"id": 1, 'out': 1}, {"id": 2, "out": 2}, {"id": 3, "out":1}],
+        "foll_order_number": 600,
     }
 
+
     mock_order1 = mocker.Mock()
-    mock_order1.quantity = 9
+    mock_order1.quantity = 500
     mock_order2 = mocker.Mock()
-    mock_order2.quantity = 3
+    mock_order2.quantity = 100
+    mock_order3 = mocker.Mock()
+    mock_order3.quantity = 1200
 
     mocker.patch.object(
-        OrderList.objects, "filter", side_effect=[[mock_order1], [mock_order2]]
+        OrderList.objects, "filter", side_effect=[[mock_order1], [mock_order2], [mock_order3]]
     )
 
-    with pytest.raises(ValueError):
-        handle_order_exhaustion(data)
+    handle_order_exhaustion(data)
+    assert mock_order1.quantity == 0
+    assert mock_order2.quantity == 0
+    assert mock_order3.quantity == 700
+    mock_order1.save.assert_called_once()
+    mock_order2.save.assert_called_once()
+ 

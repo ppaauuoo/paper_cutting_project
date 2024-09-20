@@ -10,8 +10,8 @@ from order_optimization.formatter import plan_orders_formatter
 
 from .models import CSVFile
 from .forms import CSVFileForm, LoginForm
-from .handler import handle_common, handle_export, handle_filler, handle_manual_config, handle_auto_config, handle_reset, handle_saving, timezone_formatter
-from .getter import get_csv_file, get_orders
+from .handler import handle_common, handle_export, handle_filler, handle_manual_config, handle_auto_config, handle_reset, handle_saving
+from .getter import set_csv_file, get_orders
 
 from icecream import ic
 
@@ -72,7 +72,7 @@ def file_upload_view(request):
         messages.error(request, "Error uploading file.")
 
 def file_deletion_view(request):
-    csv_file = get_csv_file(request.POST.get("file_id"))
+    csv_file = set_csv_file(request.POST.get("file_id"))
     csv_file.delete()
     messages.success(request, "File deleted successfully.")
 
