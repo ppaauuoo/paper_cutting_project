@@ -68,7 +68,7 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
 
             case 2:
                 foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
-                new_out_ratio = order['out']/foll_out
+                new_out_ratio = item['out']/foll_out
                 #Calculate new cut for each common with foll cut from first blade divide by out ratio 
                 foll_cut = data["foll_order_number"]*new_out_ratio
                 new_value = round(foll_cut + left_over_quantity)
