@@ -1,9 +1,11 @@
 from typing import Any, Dict, List
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
+from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
 from order_optimization.container import ModelContainer
 from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
+
 
 
 def output_formatter(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
@@ -45,12 +47,15 @@ def results_formatter(
 
 
 def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
+def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
     """
     For defining which order belong to which blade, and turn it into a model.
 
     return: Model
     """
     format_data = OptimizationPlan.objects.create()
+    blade_2_orders = []    
+    left_over_quantity = 0 
     blade_2_orders = []    
     left_over_quantity = 0 
     for item in data["output"]:
@@ -64,9 +69,22 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                     paper_roll=data["roll"],
                     blade_type="Blade 1",
                     order_leftover=(data["init_order_number"]*item['out'])-item["num_orders"],
+                    order_leftover=(data["init_order_number"]*item['out'])-item["num_orders"],
                 )
 
             case 2:
+                foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
+                new_out_ratio = order['out']/foll_out
+                #Calculate new cut for each common with foll cut from first blade divide by out ratio 
+                foll_cut = data["foll_order_number"]*new_out_ratio
+                new_value = round(foll_cut + left_over_quantity)
+                left_over_quantity = 0
+
+                if new_value > item['num_orders']:
+                    left_over_quantity += abs(item['num_orders']-new_value) 
+                    new_value = item['num_orders']
+    
+
                 foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
                 new_out_ratio = item['out']/foll_out
                 #Calculate new cut for each common with foll cut from first blade divide by out ratio 
@@ -82,11 +100,20 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                 blade2_order = PlanOrder.objects.create(
                     order=OrderList.objects.get(id=current_id),
                     plan_quantity=new_value,
+                    plan_quantity=new_value,
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 2",
                     order_leftover=item["num_orders"] - new_value,
+                    order_leftover=item["num_orders"] - new_value,
                 )
+                blade_2_orders.append(blade2_order)
+
+    if left_over_quantity:
+         raise ValueError("Both orders are out of stock!")
+    format_data.blade_1.add(blade1_order)
+    for order in blade_2_orders:
+         format_data.blade_2.add(blade2_order)
                 blade_2_orders.append(blade2_order)
 
     if left_over_quantity:
@@ -100,16 +127,21 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
 def timezone_formatter(df: pd.DataFrame):
     """
     Format any timezone column in dataframe to be timezone unaware.
+    Format any timezone column in dataframe to be timezone unaware.
     """
+
 
     datetime_cols = df.select_dtypes(include=['datetime64[ns, UTC]']).columns
 
     for col in datetime_cols:
         if is_datetime(df[col]):
             df[col] = df[col].dt.tz_localize(None)
+        if is_datetime(df[col]):
+            df[col] = df[col].dt.tz_localize(None)
     return df
 
 
+def plan_orders_formatter() -> pd.DataFrame:
 def plan_orders_formatter() -> pd.DataFrame:
     """
     Request data from model and format it.
@@ -125,6 +157,7 @@ def plan_orders_formatter() -> pd.DataFrame:
             "out",
             "blade_type",
             "paper_roll",
+            "order_leftover",
             "order_leftover",
         )
     )
@@ -150,3 +183,4 @@ def plan_orders_formatter() -> pd.DataFrame:
     df = df.fillna(0)
 
     return df
+
