@@ -7,7 +7,7 @@
 import pandas as pd
 
 UNIT_CONVERTER = 24.5
-data = pd.read_excel('media/data/order2024.xlsx', engine="openpyxl")
+data = pd.read_excel('../media/data/order2024.xlsx', engine="openpyxl")
 
     # Rename columns
 data = data.rename(columns={
@@ -94,11 +94,11 @@ from modules.lp import LP
 # In[9]:
 
 
-from new_ga import GA
+from modules.new_ga import GA
 
 # In[10]:
 
-from hd import HD
+from modules.hd import HD
 
 # In[11]:
 
