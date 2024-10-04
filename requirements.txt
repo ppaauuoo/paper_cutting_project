@@ -15,3 +15,6 @@ icecream
 django_htmx
 pytest-mock
 ydf
+enlighten
+tqdm
+
