@@ -3,3 +3,5 @@ alpha
 *.zip
 exports
 .vscode
+.ipynb_checkpoints
+
