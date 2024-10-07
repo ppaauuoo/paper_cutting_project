@@ -1,6 +1,5 @@
 from pandas import DataFrame
 import pandas as pd
-
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 
@@ -9,7 +8,7 @@ from order_optimization.setter import *
 from .models import CSVFile, OrderList
 from order_optimization.container import ModelContainer, OrderContainer
 from modules.ordplan import ORD
-from modules.ga import GA
+from modules.new_ga import GA
 from modules.hd import HD
 
 from typing import Any, Dict, List, Optional, Tuple
@@ -106,7 +105,7 @@ def get_optimizer(
     request,
     orders: DataFrame,
     size_value: float,
-    out_range: int = 3,
+    out_range: int = 5,
     num_generations: int = 50,
     show_output: bool = False,
     blade:Optional[int] = None,
