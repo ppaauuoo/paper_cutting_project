@@ -3,9 +3,11 @@ import ydf
 from typing import Dict, Optional
 import numpy as np
 from icecream import ic
+import pandas as pd
 
 class YDF:
-    def __init__(self, models_dir: Optional[str] = None):
+    def __init__(self, models_dir: Optional[str] = None, df_data: pd.DataFrame = None): 
+        
         if models_dir is None:
             models_dir = os.path.abspath(os.path.join(".", "modules/" "yggdrasil_models"))
         self.model_names = [

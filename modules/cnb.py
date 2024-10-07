@@ -1,10 +1,14 @@
 
 
+from typing import Optional
 from sklearn.preprocessing import OrdinalEncoder
 import numpy as np
 from sklearn.naive_bayes import CategoricalNB
 from dataclasses import dataclass
 import pandas as pd
+
+
+
 
 input = ['front_sheet-O', 'c_wave-O', 'middle_sheet-O', 'b_wave-O', 'back_sheet-O']
 output = ['front_sheet-P', 'c_wave-P', 'middle_sheet-P', 'b_wave-P', 'back_sheet-P']
@@ -12,9 +16,9 @@ output = ['front_sheet-P', 'c_wave-P', 'middle_sheet-P', 'b_wave-P', 'back_sheet
 @dataclass
 class CNB:
     df_data: pd.DataFrame
-    nb_input: pd.DataFrame
+    nb_input: Optional[pd.DataFrame] = None
 
-    def __post_init__(self):
+    def build(self):
         self.nb_output = {}
         data = self.df_data[input]
         input_enc = OrdinalEncoder()
@@ -81,4 +85,10 @@ class CNB:
                     print(f"  {item}: {details}")
             
             print() 
+
+    def predict(self, data_dict):
+        nb_input = pd.DataFrame(data_dict, index=[0]) 
+        self.nb_input = nb_input
+        self.build()
+        return self.get()        
  
