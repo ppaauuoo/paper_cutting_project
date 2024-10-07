@@ -74,16 +74,26 @@
 
 {% else %}
 
+<div class="container">
     {% for model, predictions in prediction.items %}
-        <div class="model">
-            <h2>{{ model }}:</h2>
-            {% for item, details in predictions.items %}
-                <div class="prediction">
-                        {{ item }}: {{ details }}
-               </div>
-            {% endfor %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2 class="h5 mb-0">{{ model }}
+                        <strong>Acc</strong> {{ predictions.acc }}
+                  :</h2>
+
+            </div>
+            <div class="card-body">
+                {% for item, details in predictions.items %}
+                    {% if not item == 'acc'%}
+                      <div class="mb-2">
+                          <strong>Type:</strong> {{ details.type }} - <strong>Probability:</strong> {{ details.proba }}
+                      </div>
+                    {% endif%}
+                {% endfor %}
+            </div>
         </div>
     {% endfor %}
-
+</div>
 {% endif %}
 {% endblock %}
