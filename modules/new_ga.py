@@ -16,9 +16,8 @@ from ordplan_project.settings import MIN_TRIM,PENALTY_VALUE
 @dataclass
 class GA(ModelInterface):
     orders: DataFrame
-    size: float = 66
     num_generations: int = 50
-    out_range: int = 6
+    out_range: int = 5
     showOutput: bool = False
     save_solutions: bool = False
     showZero: bool = False
@@ -29,9 +28,9 @@ class GA(ModelInterface):
     _penalty_value:int = PENALTY_VALUE
     blade:Optional[int] = None
     seed:Optional[int] = None
-    parent_selection_type:str ="tournament"
+    parent_selection_type:str ="sss"
     crossover_type:str ="uniform"
-    mutation_probability:Optional[List[int]]=None
+    mutation_probability:Optional[List[int]]=[0.25,0.05]
     mutation_percent_genes:List[int] = field(default_factory=lambda: [25,5])
     crossover_probability:float=None
     

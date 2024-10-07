@@ -10,6 +10,7 @@ from .models import CSVFile, OrderList
 from order_optimization.container import ModelContainer, OrderContainer
 from modules.ordplan import ORD
 from modules.ga import GA
+from modules.hd import HD
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -63,24 +64,31 @@ def get_orders(
     return: processed orders.
     """
 
-    return OrderContainer(
-        provider=ORD(
+    return ic(OrderContainer(
+        #provider=ORD(
+        #    orders=get_orders_cache(file_id),
+        #    deadline_scope=deadline_scope,
+        #    _filter_diff=filter_diff,
+        #    filter_value=filter_value,
+        #    size=size_value,
+        #    tuning_values=tuning_values,
+        #    common=common,
+        #    filler=filler,
+        #    selector=selector if selector else get_selected_order(request),
+        #    first_date_only=first_date_only,
+        #    preview=preview,
+        #    start_date=start_date,
+        #    stop_date=stop_date,
+        #    common_init_order=common_init_order,
+        #)
+        provider=HD(
             orders=get_orders_cache(file_id),
-            deadline_scope=deadline_scope,
-            _filter_diff=filter_diff,
-            filter_value=filter_value,
-            size=size_value,
-            tuning_values=tuning_values,
             common=common,
-            filler=filler,
-            selector=selector if selector else get_selected_order(request),
-            first_date_only=first_date_only,
-            preview=preview,
             start_date=start_date,
             stop_date=stop_date,
             common_init_order=common_init_order,
-        )
-    ).get()
+            )
+    ).get())
 
 
 def get_selected_order(request) -> Dict[str, Any] | None:

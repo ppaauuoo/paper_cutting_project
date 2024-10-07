@@ -1,28 +1,66 @@
 
-from typing import List, Any ,Optional
+from typing import List, Any ,Optional, Dict
 from dataclasses import dataclass, field
 import pandas as pd
 from order_optimization.container import ProviderInterface
-from ordplan_project.settings import PLAN_RANGE, LEGACY_FILTER,COMMON_FILTER,UNIT_CONVERTER,DEADLINE_RANGE
+from ordplan_project.settings import PLAN_RANGE, LEGACY_FILTER,COMMON_FILTER,UNIT_CONVERTER,DEADLINE_RANGE,ROLL_PAPER
 import random
+from icecream import ic
 
 @dataclass
 class HD(ProviderInterface):
-    ROLL_PAPER = [66, 68, 70, 73, 74, 75, 79, 82, 85, 88, 91, 93, 95, 97]
     orders: pd.DataFrame
     x:int = 10 
-    h_type:str = 'ff'
+    h_type:str = 'ffa'
     start_date: Optional[pd.Timestamp] = None
     stop_date: Optional[pd.Timestamp] = None
+    common: bool = False
+    common_init_order: Optional[Dict[str,Any]] = None
+    preview: bool = False
+
+    def filter_common_order(self,data):
+        """Use common filter base on the first order or filler order."""
+        if not self.common:
+            return
+
+        legacy_filters = LEGACY_FILTER
+        init_order = pd.DataFrame(self.common_init_order)
+        if init_order is None:
+            raise ValueError('Common init order is None!')
+        mask = (data[legacy_filters].eq(init_order[legacy_filters].iloc[0])).all(axis=1)
+        legecy_filtered_plan = data.loc[mask].reset_index(drop=True).copy()
+        if len(legecy_filtered_plan) <= 0:
+            raise ValueError('Legacy is empty')
+    
+        common_filters = COMMON_FILTER
+        orders = pd.DataFrame(None)
+        best_index=0
+        most_compat_plan = 0
+        indices = list(range(len(legecy_filtered_plan)))
+        random.shuffle(indices)
+        for index in indices:
+            init_order = legecy_filtered_plan.iloc[index]
+            mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
+            orders = data.loc[mask].reset_index(drop=True).copy()
+            if len(orders)>most_compat_plan:
+                best_index=index
+                most_compat_plan=len(orders)
+
+        init_order = legecy_filtered_plan.iloc[best_index]
+        mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
+        orders = data.loc[mask].reset_index(drop=True)
+        return orders
+        
 
     def __post_init__(self):
-        data = self.orders
-        if self.stop_date is not None:
+        data = self.orders.copy()
+        ic(data)
+        if self.stop_date:
             data = data[(data['due_date'] >= self.start_date) & (data['due_date'] <= self.stop_date)].reset_index(drop=True)
-            
-        filtered_data = self.legacy_filter_order(data)
-        
-        self.temp_size = min(self.ROLL_PAPER)
+        filters = {False: self.legacy_filter_order, True: self.filter_common_order}
+        filtered_data = ic(filters.get(self.common))(data) 
+        ic(filtered_data)
+        self.temp_size = min(ROLL_PAPER)
         self.ff_list = []
         self.ffa_list = []
         self.ffd_list = []
@@ -96,6 +134,8 @@ class HD(ProviderInterface):
 
     @staticmethod
     def legacy_filter_order(data):
+            plan_range = ic(PLAN_RANGE)
+            data = data.head(int(PLAN_RANGE))
             legacy_filters = LEGACY_FILTER
             ordplan = pd.DataFrame(None)
             best_index=0
