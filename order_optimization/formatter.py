@@ -47,15 +47,12 @@ def results_formatter(
 
 
 def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
-def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
     """
     For defining which order belong to which blade, and turn it into a model.
 
     return: Model
     """
     format_data = OptimizationPlan.objects.create()
-    blade_2_orders = []    
-    left_over_quantity = 0 
     blade_2_orders = []    
     left_over_quantity = 0 
     for item in data["output"]:
@@ -69,43 +66,34 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                     paper_roll=data["roll"],
                     blade_type="Blade 1",
                     order_leftover=(data["init_order_number"]*item['out'])-item["num_orders"],
-                    order_leftover=(data["init_order_number"]*item['out'])-item["num_orders"],
                 )
 
             case 2:
+                #get combined out from second blade
                 foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
+                #calculate out ratio base from the combined out
                 new_out_ratio = order['out']/foll_out
                 #Calculate new cut for each common with foll cut from first blade divide by out ratio 
                 foll_cut = data["foll_order_number"]*new_out_ratio
+                #add potential leftover from previous order
                 new_value = round(foll_cut + left_over_quantity)
+                #reset left over to zero
                 left_over_quantity = 0
 
+                #check if exceed the stock, then push it to leftover
                 if new_value > item['num_orders']:
+                    #push the diff to left over 
                     left_over_quantity += abs(item['num_orders']-new_value) 
+                    #set the current to all in stock
                     new_value = item['num_orders']
     
-
-                foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
-                new_out_ratio = item['out']/foll_out
-                #Calculate new cut for each common with foll cut from first blade divide by out ratio 
-                foll_cut = data["foll_order_number"]*new_out_ratio
-                new_value = round(foll_cut + left_over_quantity)
-                left_over_quantity = 0
-
-                if new_value > item['num_orders']:
-                    left_over_quantity += abs(item['num_orders']-new_value) 
-                    new_value = item['num_orders']
-    
-
                 blade2_order = PlanOrder.objects.create(
                     order=OrderList.objects.get(id=current_id),
-                    plan_quantity=new_value,
                     plan_quantity=new_value,
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 2",
                     order_leftover=item["num_orders"] - new_value,
-                    order_leftover=item["num_orders"] - new_value,
                 )
                 blade_2_orders.append(blade2_order)
 
@@ -114,13 +102,7 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
     format_data.blade_1.add(blade1_order)
     for order in blade_2_orders:
          format_data.blade_2.add(blade2_order)
-                blade_2_orders.append(blade2_order)
 
-    if left_over_quantity:
-         raise ValueError("Both orders are out of stock!")
-    format_data.blade_1.add(blade1_order)
-    for order in blade_2_orders:
-         format_data.blade_2.add(blade2_order)
     return format_data
 
 
