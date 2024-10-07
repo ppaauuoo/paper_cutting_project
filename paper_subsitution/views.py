@@ -20,7 +20,7 @@ def paper_subsitution_view(request):
     if request.method == 'POST':
         file_id = request.POST.get('file_id')
         df_data = get_orders_cache(file_id)
-        model = models.get(request.POST.get('models'))(df_data=df_data)
+        model = models.get(request.POST.get('models'))()
         test_input = {
             "front_sheet-O": [request.POST.get('front_sheet')],
             "c_wave-O": [request.POST.get("c_wave")],
@@ -29,6 +29,7 @@ def paper_subsitution_view(request):
             "back_sheet-O": [request.POST.get('back_sheet')]
         }
         prediction = model.predict(test_input)
+        ic(prediction)
 
     else:
         # If no POST request, set prediction to None

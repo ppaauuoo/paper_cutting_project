@@ -72,5 +72,18 @@
   </div>
 
 
+{% else %}
+
+    {% for model, predictions in prediction.items %}
+        <div class="model">
+            <h2>{{ model }}:</h2>
+            {% for item, details in predictions.items %}
+                <div class="prediction">
+                        {{ item }}: {{ details }}
+               </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+
 {% endif %}
 {% endblock %}
