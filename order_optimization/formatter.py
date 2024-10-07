@@ -72,7 +72,7 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                 #get combined out from second blade
                 foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
                 #calculate out ratio base from the combined out
-                new_out_ratio = order['out']/foll_out
+                new_out_ratio = item['out']/foll_out
                 #Calculate new cut for each common with foll cut from first blade divide by out ratio 
                 foll_cut = data["foll_order_number"]*new_out_ratio
                 #add potential leftover from previous order
@@ -123,7 +123,6 @@ def timezone_formatter(df: pd.DataFrame):
     return df
 
 
-def plan_orders_formatter() -> pd.DataFrame:
 def plan_orders_formatter() -> pd.DataFrame:
     """
     Request data from model and format it.
