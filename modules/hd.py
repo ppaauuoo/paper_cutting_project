@@ -54,12 +54,11 @@ class HD(ProviderInterface):
 
     def __post_init__(self):
         data = self.orders.copy()
-        ic(data)
+        data = self.format_data(data)
         if self.stop_date:
             data = data[(data['due_date'] >= self.start_date) & (data['due_date'] <= self.stop_date)].reset_index(drop=True)
         filters = {False: self.legacy_filter_order, True: self.filter_common_order}
         filtered_data = ic(filters.get(self.common))(data) 
-        ic(filtered_data)
         self.temp_size = min(ROLL_PAPER)
         self.ff_list = []
         self.ffa_list = []
@@ -99,7 +98,17 @@ class HD(ProviderInterface):
         
         self.heuristic_data = filtered_data[filtered_data['id'].isin(heuristic_data_id['id'])].reset_index(drop=True)
     
-    
+    @staticmethod
+    def format_data(data):
+        """Format due date for calculation purpose and filter out any unuseable data."""
+        ordplan = data.copy() 
+        ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%y")
+        ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
+        ordplan = ordplan[ordplan["length"] > 0]  # drop len = 0
+        ordplan = ordplan[ordplan["quantity"] > 0]  # drop quantity = 0
+
+        return ordplan 
+
     def is_fit(self, data_list, item):
         return sum([row[0] for row in data_list]) + item - self.temp_size < 0
 
@@ -134,8 +143,8 @@ class HD(ProviderInterface):
 
     @staticmethod
     def legacy_filter_order(data):
-            plan_range = ic(PLAN_RANGE)
-            data = data.head(int(PLAN_RANGE))
+            plan_range = DEADLINE_RANGE
+            data = data.head(int(plan_range))
             legacy_filters = LEGACY_FILTER
             ordplan = pd.DataFrame(None)
             best_index=0

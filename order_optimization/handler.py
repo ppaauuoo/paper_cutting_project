@@ -103,6 +103,7 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
 
 
 def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
+    ic()
     if is_foll_ok(
         results["output"], results["foll_order_number"]
     ):
@@ -252,11 +253,13 @@ def handle_auto_config(request, **kwargs):
     """
 
     again = cache.get("try_again", 0)
-    # out_range = OUT_RANGE[random.randint(0, len(OUT_RANGE)-1)]
-    out_range = 4
-    orders, size = auto_size_filter_logic(request)
-
-    if size is None or again > MAX_RETRY:
+    out_range = 5
+    file_id = request.POST.get("file_id")
+    start_date = request.POST.get("start_date")
+    stop_date = request.POST.get("stop_date")
+    orders = get_orders(request=request, file_id=file_id, start_date=start_date, stop_date=stop_date)
+    size = 66
+    if again > MAX_RETRY:
         raise ValueError("Logic error!")
     if orders is None:
         raise ValueError("Orders is empty!")
