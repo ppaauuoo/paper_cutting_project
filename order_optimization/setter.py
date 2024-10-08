@@ -1,12 +1,11 @@
-from typing import Dict, List
 import uuid
-
-from django.shortcuts import get_object_or_404
 import pandas as pd
+from typing import Dict, List, Callable
 
 from order_optimization.models import CSVFile, OrderList
 from ordplan_project.settings import CACHE_TIMEOUT, UNIT_CONVERTER
 
+from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from django.utils import timezone
 
@@ -22,17 +21,17 @@ def set_common(
     injecting the common orders and new fitness into results.
     """
     results["output"].pop(best_index)  # remove the old order
-    
+
     for item in results['output']:
         item['blade'] = 1
-    
+
     results["output"].extend(best_output)  # add the new one
 
     new_fitness = 0
     for index, item in enumerate(results["output"]):  # calculate new fitness
         new_fitness += item["cut_width"] * item["out"]
-        
-        
+
+
 
     results["fitness"] = new_fitness
     results["trim"] = abs(best_fitness)  # set new trim
@@ -57,7 +56,7 @@ def set_model(file_id: str) -> None:
     csv_file = set_csv_file(file_id)
     # Read from Excel file and create new records
     data = pd.read_excel(csv_file.file.path, engine="openpyxl")
-    order_instances = []
+    order_instances:List[OrderList] = []
 
     for _, row in data.iterrows():
         due_date = timezone.make_aware(
@@ -96,6 +95,8 @@ def set_model(file_id: str) -> None:
     if order_instances:
         OrderList.objects.bulk_create(order_instances)
         orders = pd.DataFrame(list(OrderList.objects.all().values()))
+    else:
+        orders = None
 
     # for column in orders.columns:
     #     if pd.api.types.is_datetime64_any_dtype(orders[column]):

@@ -4,14 +4,9 @@ from order_optimization.handler import handle_auto_config, handle_saving
 from django.contrib import messages
 
 def optimizer_controller(request)->None:
-    for i in range(0,50):
+    for i in range(0,100):
         try:
             handle_auto_config(request)
             handle_saving(request)
         except(ValueError):
             messages.error(request, "There's no orders available.")
-
-    
-    
-    
-    

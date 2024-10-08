@@ -53,10 +53,13 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
     return: Model
     """
     format_data = OptimizationPlan.objects.create()
-    blade_2_orders = []    
-    left_over_quantity = 0 
+    blade_2_orders = []
+    left_over_quantity = 0
+    filtered_orders = []
     for item in data["output"]:
         current_id = item["id"]
+
+        current_order = OrderList.objects.filter(id=current_id)[0]
         match item["blade"]:
             case 1:
                 blade1_order = PlanOrder.objects.create(
@@ -65,45 +68,54 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 1",
-                    order_leftover=(data["init_order_number"]*item['out'])-item["num_orders"],
+                    order_leftover=0,
                 )
+                current_order.quantity = 0
+                filtered_orders.append(current_order)
+
 
             case 2:
                 #get combined out from second blade
                 foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
                 #calculate out ratio base from the combined out
                 new_out_ratio = item['out']/foll_out
-                #Calculate new cut for each common with foll cut from first blade divide by out ratio 
+                #Calculate new cut for each common with foll cut from first blade divide by out ratio
                 foll_cut = data["foll_order_number"]*new_out_ratio
                 #add potential leftover from previous order
-                new_value = round(foll_cut + left_over_quantity)
+                plan_quantity = round(foll_cut + left_over_quantity)
+
+                new_quantity = round(current_order.quantity  - foll_cut - left_over_quantity)
                 #reset left over to zero
                 left_over_quantity = 0
 
                 #check if exceed the stock, then push it to leftover
-                if new_value > item['num_orders']:
-                    #push the diff to left over 
-                    left_over_quantity += abs(item['num_orders']-new_value) 
-                    #set the current to all in stock
-                    new_value = item['num_orders']
-    
+                if new_quantity < 0:
+                    left_over_quantity += abs(new_quantity)
+                    new_quantity = 0
+                    plan_quantity = item['num_orders']
+
                 blade2_order = PlanOrder.objects.create(
                     order=OrderList.objects.get(id=current_id),
-                    plan_quantity=new_value,
+                    plan_quantity=plan_quantity,
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 2",
-                    order_leftover=item["num_orders"] - new_value,
+                    order_leftover=new_quantity
                 )
                 blade_2_orders.append(blade2_order)
+                current_order.quantity = new_quantity
+                filtered_orders.append(current_order)
+
 
     if left_over_quantity:
          raise ValueError("Both orders are out of stock!")
+    for order in filtered_orders:
+        order.save()
     format_data.blade_1.add(blade1_order)
     for order in blade_2_orders:
-         format_data.blade_2.add(blade2_order)
+         format_data.blade_2.add(order)
 
-    return format_data
+    format_data.save()
 
 
 def timezone_formatter(df: pd.DataFrame):
@@ -164,4 +176,3 @@ def plan_orders_formatter() -> pd.DataFrame:
     df = df.fillna(0)
 
     return df
-

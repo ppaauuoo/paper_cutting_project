@@ -25,16 +25,16 @@ class GA(ModelInterface):
     selector: Dict[str, Any] | None = None
     set_progress: Callable | None = None
     current_generation: int = 0
-    _penalty:int = 0 
+    _penalty:int = 0
     _penalty_value:int = PENALTY_VALUE
     blade:Optional[int] = None
     seed:Optional[int] = None
     parent_selection_type:str ="sss"
     crossover_type:str ="uniform"
-    mutation_probability:Optional[List[int]]=field(default_factory=lambda: [0.25,0.05])
-    mutation_percent_genes:List[int] = field(default_factory=lambda: [25,5])
-    crossover_probability:float=None
-    
+    mutation_probability:Optional[List[float]]=field(default_factory=lambda: [0.25,0.05])
+    mutation_percent_genes:Optional[List[int]] = field(default_factory=lambda: [25,5])
+    crossover_probability:Optional[float]=None
+
     def __post_init__(self):
         if self.orders is None:
             raise ValueError("Orders is empty!")
@@ -63,7 +63,7 @@ class GA(ModelInterface):
             random_seed=self.seed
         )
 
-        
+
     def paper_type_logic(self, solution):
         init_type = None
         orders = self.orders
@@ -116,11 +116,11 @@ class GA(ModelInterface):
                             init = 1
                             continue
                         if self.orders['edge_type'][index]=='Y' and init==1:
-                            return                
-            
+                            return
+
             self._penalty += self._penalty_value * sum(solution)  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
-        
-        
+
+
         order_length = 0
         for index, out in enumerate(solution):
             if out >= 1:
@@ -131,7 +131,7 @@ class GA(ModelInterface):
     def paper_size_logic(self, _output):
         if _output > self._paper_size :  # ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น _penalty
             self._penalty += self._penalty_value * (
-                _output - self._paper_size 
+                _output - self._paper_size
             )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
 
     def paper_trim_logic(self, _fitness_values):
@@ -141,13 +141,13 @@ class GA(ModelInterface):
     def selector_logic(self, solution: List[int])->List[int]:
         if self.selector is None:
             return solution
-        
+
         try:
             solution[0] = self.selector["out"] #lock the first to be out (the first order is also the selector, manage by ORD)
         except KeyError:
             pass
 
-        if solution[0] == 0: 
+        if solution[0] == 0:
             solution[0] += 1
 
         return solution
@@ -181,7 +181,7 @@ class GA(ModelInterface):
         solution = ga_instance.best_solution()[0]
 
         _output = pd.DataFrame(
-            {   
+            {
                 "id": orders['id'].unique(),
                 "blade": 0,
                 "order_number": orders["order_number"],
@@ -230,7 +230,7 @@ class GA(ModelInterface):
         return output
 
     def show(self, ga_instance, _output):
-        _paper_size  = self._paper_size 
+        _paper_size  = self._paper_size
         print("Generation : ", ga_instance.generations_completed)
         print("Solution :")
 
@@ -252,7 +252,7 @@ class GA(ModelInterface):
     @property
     def output(self) -> DataFrame:
         return self._output
-    
+
     @property
     def fitness_values(self) -> float:
         return self._fitness_values
@@ -260,21 +260,19 @@ class GA(ModelInterface):
     @property
     def penalty(self) -> int:
         return self._penalty
-    
+
     @penalty.setter
     def penalty(self, penalty:int) -> None:
         self._penalty = penalty
 
     @property
     def PAPER_SIZE(self) -> float:
-        return self._paper_size 
+        return self._paper_size
 
     @PAPER_SIZE.setter
     def PAPER_SIZE (self, size: float):
         self._paper_size  = size
-    
+
     @property
     def run(self) -> Callable:
         return self.model.run
-
-
