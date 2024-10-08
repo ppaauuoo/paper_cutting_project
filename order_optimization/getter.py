@@ -22,7 +22,6 @@ def get_production_quantity(output_data):
     init_len = output_data[0]["cut_len"]
     init_out = output_data[0]["out"]
     init_num_orders = output_data[0]["num_orders"]
-    init_order_number = round(init_num_orders / init_out)
 
     foll_order_len: List[int] = []
     foll_out: List[int] = []
@@ -34,9 +33,9 @@ def get_production_quantity(output_data):
         foll_out.append(order["out"])
 
     foll_order_number = round(
-        (init_len * init_num_orders * foll_out[0]) / (foll_order_len[0] * init_out)
+        (init_len * init_num_orders) *sum(foll_out) / (foll_order_len[0] * init_out)
     )
-    return (init_order_number, foll_order_number)
+    return (init_num_orders, foll_order_number)
 
 def get_orders_cache(file_id: str) -> DataFrame:
     """
