@@ -3,9 +3,9 @@ import pandas as pd
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 
+from ordplan_project.settings import CACHE_TIMEOUT
 from order_optimization.setter import *
-
-from .models import CSVFile, OrderList
+from order_optimization.models import CSVFile, OrderList
 from order_optimization.container import ModelContainer, OrderContainer
 from modules.ordplan import ORD
 from modules.new_ga import GA
@@ -15,8 +15,28 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from icecream import ic
 
-from ordplan_project.settings import CACHE_TIMEOUT
+def get_production_quantity(output_data):
+    """
+    Calculate first order cut and second order cut.
+    """
+    init_len = output_data[0]["cut_len"]
+    init_out = output_data[0]["out"]
+    init_num_orders = output_data[0]["num_orders"]
+    init_order_number = round(init_num_orders / init_out)
 
+    foll_order_len: List[int] = []
+    foll_out: List[int] = []
+
+    for index, order in enumerate(output_data):
+        if index == 0 and len(output_data) > 1:
+            continue
+        foll_order_len.append(order["cut_len"])
+        foll_out.append(order["out"])
+
+    foll_order_number = round(
+        (init_len * init_num_orders * foll_out[0]) / (foll_order_len[0] * init_out)
+    )
+    return (init_order_number, foll_order_number)
 
 def get_orders_cache(file_id: str) -> DataFrame:
     """
@@ -43,18 +63,10 @@ def get_orders_cache(file_id: str) -> DataFrame:
 def get_orders(
     request,
     file_id: str,
-    size_value: float = 66.0,
-    deadline_scope: int = 0,
-    filter_value: int = 16,
-    tuning_values: int = 3,
-    filter_diff: bool = True,
     common: bool = False,
-    filler: Optional[str] = None,
-    first_date_only: bool = False,
     preview: bool = False,
     start_date: Optional[pd.Timestamp] = None,
     stop_date: Optional[pd.Timestamp] = None,
-    selector: Optional[Dict[str, Any]] = None,
     common_init_order: Optional[Dict[str,Any]] = None
 ) -> DataFrame:
     """
@@ -142,11 +154,7 @@ def get_common(
     orders = get_orders(
         request=request,
         file_id=file_id,
-        size_value=size_value,
-        deadline_scope=-1,
-        filter_diff=False,
         common=True,
-        selector={"order_id": item["id"]} if single else None,
         common_init_order=item
     )
     optimizer_instance = get_optimizer(

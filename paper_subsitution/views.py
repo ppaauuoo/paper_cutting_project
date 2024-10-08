@@ -4,10 +4,11 @@ from modules.cnb import CNB
 from icecream import ic
 from order_optimization.models import CSVFile
 from order_optimization.getter import get_orders_cache
+from typing import Dict, Callable
 
 def paper_subsitution_view(request):
     # Make prediction using the model
-    models = {'ydf': YDF, 'cnb': CNB}
+    models:Dict[str,Callable] = {'ydf': YDF, 'cnb': CNB}
     labels = {
             "front_sheet": ['KS231','KS161','KB230','KS121','KB160','KB120','KAC125','KI128','KA125','KL250','CM97','KAV150','KAC155','KAC185','KA155','CM127','WLK154','KL125','KA185','KA225','KI158','KAC225','KI188','WLK174','KM120'],
             "c_wave": ['CM127','CM147','CM112','None','CM197','CM100','CME100'],
@@ -20,7 +21,11 @@ def paper_subsitution_view(request):
     if request.method == 'POST':
         file_id = request.POST.get('file_id')
         df_data = get_orders_cache(file_id)
-        model = models.get(request.POST.get('models'))()
+        model = models.get(request.POST.get('models'))
+        if model is None:
+            raise ValueError("Model not found")
+
+        model_instance = model()
         test_input = {
             "front_sheet-O": [request.POST.get('front_sheet')],
             "c_wave-O": [request.POST.get("c_wave")],
@@ -28,7 +33,7 @@ def paper_subsitution_view(request):
             "b_wave-O": [request.POST.get("b_wave")],
             "back_sheet-O": [request.POST.get('back_sheet')]
         }
-        prediction = model.predict(test_input)
+        prediction = model_instance.predict(test_input)
         ic(prediction)
 
     else:

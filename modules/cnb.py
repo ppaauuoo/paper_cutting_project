@@ -1,6 +1,6 @@
 
 
-from typing import Optional
+from typing import Optional, Dict
 from sklearn.preprocessing import OrdinalEncoder
 import numpy as np
 from sklearn.naive_bayes import CategoricalNB
@@ -20,7 +20,7 @@ class CNB:
     def __post_init__(self):
         if self.models_dir is None:
             self.models_dir = os.path.abspath(os.path.join(".","modules/"  "cnb_models"))
-       
+
         self.nb_output = {}
 
     def build(self):
@@ -43,7 +43,7 @@ class CNB:
 
         self.df_data = df_cleaned
 
-   
+
         models_dir = self.models_dir
         ic(self.df_data[input])
         data = self.df_data[input]
@@ -57,15 +57,15 @@ class CNB:
             output_enc = OrdinalEncoder()
             output_enc.fit(label)
             y = output_enc.set_params(encoded_missing_value=-1).transform(label)
-            
+
             clf = CategoricalNB()
             clf.fit(X, y.ravel())
-            
+
             model_acc[f'{paper_type}']= f"{clf.score(X,y):.2%}"
 
             with open(f'{models_dir}/{paper_type}.pkl','wb') as f:
                 pickle.dump(clf,f)
-                
+
             with open(f'{models_dir}/{paper_type}_enc.pkl','wb') as f:
                 pickle.dump(output_enc,f)
 
@@ -74,7 +74,7 @@ class CNB:
 
         with open(f'{models_dir}/model_acc.pkl','wb') as f:
             pickle.dump(model_acc,f)
-            
+
     def get(self):
         models_dir = self.models_dir
         nb_input = self.nb_input
@@ -82,49 +82,49 @@ class CNB:
             model_acc = pickle.load(f)
 
         with open(f'{models_dir}/input_enc.pkl','rb') as f:
-            input_enc = pickle.load(f) 
+            input_enc = pickle.load(f)
 
         nb_input = input_enc.set_params(encoded_missing_value=-1).transform(nb_input)
         for paper_type in output:
             with open(f'{models_dir}/{paper_type}.pkl','rb') as f:
-                clf = pickle.load(f) 
-           
+                clf = pickle.load(f)
+
             with open(f'{models_dir}/{paper_type}_enc.pkl','rb') as f:
-                output_enc = pickle.load(f) 
+                output_enc = pickle.load(f)
 
             pred_proba = clf.predict_proba(nb_input)
-            
+
             # Get the predicted classes
             pred = clf.predict(nb_input)
-            
+
             # Prepare predictions for output
             predictions = []
             for i in range(len(pred_proba[0])):
                 class_label = output_enc.inverse_transform([[i]])[0]  # Reshape for inverse_transform
                 prob = pred_proba[0][i]
                 predictions.append((prob, class_label))
-            
+
             # Sort predictions by probability in descending order
             predictions.sort(key=lambda x: x[0], reverse=True)
-        
-            pred_output = {}
+
+            pred_output:Dict[int|str,str|Dict[str,str]] = {}
             for i, (prob, cls) in enumerate(predictions, start=1):
                 if prob <= 0.0001: break
                 if i > 10: break
                 cls_out = ''.join(cls)
                 pred_output[i]={ 'type':f'{cls_out}','proba': f'{prob:.2%}'}
-            pred_output['acc'] = model_acc[f'{paper_type}'] 
+            pred_output['acc'] = model_acc[f'{paper_type}']
             self.nb_output[f'{paper_type}']=pred_output
         return self.nb_output
 
     def show(self):
-        
+
         print('Predictions:\n')
-        
+
         # Print the dictionary contents with improved formatting
         for key, values in self.nb_output.items():
             print(f"{key}:")
-            
+
             for item, details in values.items():
                 if isinstance(details, dict):
                     proba = details.get('proba', 'N/A')
@@ -133,14 +133,14 @@ class CNB:
                     print(f"  {item}. Type: {paper_type} Probability: {proba}" )
                 else:
                     print(f"  {item}: {details}")
-            
-            print() 
+
+            print()
 
     def predict(self, data_dict):
-        nb_input = pd.DataFrame(data_dict, index=[0]) 
+        nb_input = pd.DataFrame(data_dict, index=[0])
         self.nb_input = nb_input
-        return self.get()        
- 
+        return self.get()
+
 def main():
     data_dict = {
     'front_sheet-O': 'KAC125',
@@ -152,7 +152,7 @@ def main():
 
     models_dir = os.path.abspath(os.path.join(".", "cnb_models"))
     CNB(models_dir=models_dir).build()
-    
- 
+
+
 if __name__ == "__main__":
     main()
