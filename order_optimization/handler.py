@@ -193,7 +193,7 @@ def handle_common(
     """
     if results is None:
         results = cache.get("optimization_results")
-    best_fitness = results["trim"]
+    best_trim = results["trim"]
     best_index: Optional[int] = None
     if not as_component:
         file_id = request.POST.get("selected_file_id")
@@ -211,20 +211,22 @@ def handle_common(
                 results=results,
             )
 
-            if abs(optimizer_instance.fitness_values) <= best_fitness:
+            if abs(optimizer_instance.fitness_values) <= best_trim:
                 best_fitness, best_output = get_outputs(optimizer_instance)
+                best_trim = abs(best_fitness)
                 best_index = index
 
         optimizer_instance = get_common(
             request=request, blade=2, file_id=file_id, item=item, results=results
         )
 
-        if abs(optimizer_instance.fitness_values) <= best_fitness:
+        if abs(optimizer_instance.fitness_values) <= best_trim:
             best_fitness, best_output = get_outputs(optimizer_instance)
+            best_trim = abs(best_fitness)
             best_index = index
 
     if best_index is not None:
-        results = set_common(results, best_index, best_output, best_fitness)
+        results = set_common(results, best_index, best_output, best_trim)
         messages.success(request, "Common order found.")
     else:
         messages.error(request, "No suitable common order found.")
