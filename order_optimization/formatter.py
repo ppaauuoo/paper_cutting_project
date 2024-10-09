@@ -108,12 +108,12 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
 
 
     if left_over_quantity:
-         raise ValueError("Both orders are out of stock!")
+        raise ValueError("Both order are out of stock!")
     for order in filtered_orders:
         order.save()
     format_data.blade_1.add(blade1_order)
     for order in blade_2_orders:
-         format_data.blade_2.add(order)
+        format_data.blade_2.add(order)
 
     format_data.save()
 
