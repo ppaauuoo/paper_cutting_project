@@ -17,11 +17,17 @@ class HD(ProviderInterface):
     common: bool = False
     common_init_order: Optional[Dict[str,Any]] = None
     preview: bool = False
+    is_build: bool = True 
     
     def __post_init__(self):
+        if self.orders.empty: raise ValueError('Orders Empty!')
+        if self.is_build:
+            self.build()
+        
+    def build(self):
         data = self.format_data(self.orders)
-        if self.stop_date:
-            data = data[(data['due_date'] >= self.start_date) & (data['due_date'] <= self.stop_date)].reset_index(drop=True)
+        data = self.date_range_limit(data)
+
         filters = {False: self.legacy_filter_order, True: self.filter_common_order}
         filtered_data = filters.get(self.common)(data)
         self.temp_size = min(ROLL_PAPER)
@@ -46,11 +52,13 @@ class HD(ProviderInterface):
 
         self.heuristic_data = filtered_data[filtered_data['id'].isin(heuristic_data_id['id'])].reset_index(drop=True)
 
+
+
     @staticmethod
     def format_data(data):
         """Format due date for calculation purpose and filter out any unuseable data."""
         ordplan = data.copy()
-        ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%y")
+        ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%Y")
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
         ordplan = ordplan[ordplan["length"] > 0]  # drop len = 0
         ordplan = ordplan[ordplan["quantity"] > 0]  # drop quantity = 0
@@ -88,6 +96,12 @@ class HD(ProviderInterface):
 
     def get(self) -> pd.DataFrame:
         return self.heuristic_data
+
+    def date_range_limit(self, data):
+        if self.stop_date and self.start_date:
+            data = data[(data['due_date'] >= self.start_date) & (data['due_date'] <= self.stop_date)].reset_index(drop=True)
+        return data
+ 
 
     def legacy_filter_order(self, data, plan_range:float = DEADLINE_RANGE,best_plan:pd.DataFrame = pd.DataFrame(None) ):
             used_data = data.head(int(plan_range)).copy()
