@@ -147,7 +147,7 @@ class HD(ProviderInterface):
             ordplan = pd.DataFrame(None)
             best_index=0
             most_compat_plan = 0
-            indices = list(range(len(used_data)))
+            indices = list(range(100))
             random.shuffle(indices)
 
             for index in indices:
