@@ -42,7 +42,7 @@ def handle_optimization(func):
             )
 
         results = handle_results(request, kwargs=kwargs)
-        results = handle_common_component(request, results=results)
+#       results = handle_common_component(request, results=results)
         results = handle_switcher(results)
 
         if is_trim_fit(results["trim"]) and is_foll_ok(results["output"], results["foll_order_number"]):
@@ -95,19 +95,6 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
     )
     return results
 
-
-def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
-    if is_foll_ok(
-        results["output"], results["foll_order_number"]
-    ):
-        return results
-    common = handle_common(request, results=results, as_component=True)
-    if common is not None:
-        ic(common)
-        results = common
-    return results
-
-
 def handle_switcher(results: Dict[str, Any]) -> Dict[str, Any]:
     if is_trim_fit(results["trim"]):
         return results
@@ -153,6 +140,7 @@ def handle_auto_retry(request):
     cache.delete("past_size")
     cache.set("optimization_results", best_result, CACHE_TIMEOUT)
     cache.delete("try_again")
+    raise ValueError('No More!')
     return
 
 
@@ -184,7 +172,16 @@ def handle_auto_config(request, **kwargs):
     )
     return kwargs
 
-
+def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
+    if is_foll_ok(
+        results["output"], results["foll_order_number"]
+    ):
+        return results
+    common = handle_common(request, results=results, as_component=True)
+    if common is not None:
+        ic(common)
+        results = common
+    return results
 def handle_common(
     request, results: Optional[Dict[str, Any]] = None, as_component: bool = False
 ) -> Optional[Dict[str,Any]]:
@@ -193,7 +190,7 @@ def handle_common(
     """
     if results is None:
         results = cache.get("optimization_results")
-    best_fitness = results["trim"]
+    best_trim = results["trim"]
     best_index: Optional[int] = None
     if not as_component:
         file_id = request.POST.get("selected_file_id")
@@ -211,20 +208,22 @@ def handle_common(
                 results=results,
             )
 
-            if abs(optimizer_instance.fitness_values) <= best_fitness:
+            if abs(optimizer_instance.fitness_values) <= best_trim:
                 best_fitness, best_output = get_outputs(optimizer_instance)
+                best_trim = abs(best_fitness)
                 best_index = index
 
         optimizer_instance = get_common(
             request=request, blade=2, file_id=file_id, item=item, results=results
         )
 
-        if abs(optimizer_instance.fitness_values) <= best_fitness:
+        if abs(optimizer_instance.fitness_values) <= best_trim:
             best_fitness, best_output = get_outputs(optimizer_instance)
+            best_trim = abs(best_fitness)
             best_index = index
 
     if best_index is not None:
-        results = set_common(results, best_index, best_output, best_fitness)
+        results = set_common(results, best_index, best_output, best_trim)
         messages.success(request, "Common order found.")
     else:
         messages.error(request, "No suitable common order found.")
@@ -245,8 +244,10 @@ def handle_saving(request):
     cache.delete(f"optimization_results")
     if data is None:
         raise ValueError("Output is empty!")
-
-    database_formatter(data)
+    try:    
+        database_formatter(data)
+    except ValueError as e:
+        raise ValueError(e)
 
 
 
