@@ -42,7 +42,7 @@ def handle_optimization(func):
             )
 
         results = handle_results(request, kwargs=kwargs)
-        results = handle_common_component(request, results=results)
+#       results = handle_common_component(request, results=results)
         results = handle_switcher(results)
 
         if is_trim_fit(results["trim"]) and is_foll_ok(results["output"], results["foll_order_number"]):
@@ -95,19 +95,6 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
     )
     return results
 
-
-def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
-    if is_foll_ok(
-        results["output"], results["foll_order_number"]
-    ):
-        return results
-    common = handle_common(request, results=results, as_component=True)
-    if common is not None:
-        ic(common)
-        results = common
-    return results
-
-
 def handle_switcher(results: Dict[str, Any]) -> Dict[str, Any]:
     if is_trim_fit(results["trim"]):
         return results
@@ -153,6 +140,7 @@ def handle_auto_retry(request):
     cache.delete("past_size")
     cache.set("optimization_results", best_result, CACHE_TIMEOUT)
     cache.delete("try_again")
+    raise ValueError('No More!')
     return
 
 
@@ -184,7 +172,16 @@ def handle_auto_config(request, **kwargs):
     )
     return kwargs
 
-
+def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
+    if is_foll_ok(
+        results["output"], results["foll_order_number"]
+    ):
+        return results
+    common = handle_common(request, results=results, as_component=True)
+    if common is not None:
+        ic(common)
+        results = common
+    return results
 def handle_common(
     request, results: Optional[Dict[str, Any]] = None, as_component: bool = False
 ) -> Optional[Dict[str,Any]]:
@@ -247,8 +244,10 @@ def handle_saving(request):
     cache.delete(f"optimization_results")
     if data is None:
         raise ValueError("Output is empty!")
-
-    database_formatter(data)
+    try:    
+        database_formatter(data)
+    except ValueError as e:
+        raise ValueError(e)
 
 
 
