@@ -6,6 +6,7 @@ from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from order_optimization.container import ModelContainer
 from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
 
+from icecream import ic
 
 
 def output_formatter(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
@@ -56,10 +57,11 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
     blade_2_orders = []
     left_over_quantity = 0
     filtered_orders = []
+    update_list=[]
     for item in data["output"]:
         current_id = item["id"]
 
-        current_order = OrderList.objects.filter(id=current_id)[0]
+        current_order = OrderList.objects.get(id=current_id)
         match item["blade"]:
             case 1:
                 blade1_order = PlanOrder.objects.create(
@@ -71,12 +73,11 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                     order_leftover=0,
                 )
                 current_order.quantity = 0
-                filtered_orders.append(current_order)
-
+                update_list.append(current_order)
 
             case 2:
                 #get combined out from second blade
-                foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
+                foll_out = sum(i['out'] for i in data["output"])-data["output"][0]['out']
                 #calculate out ratio base from the combined out
                 new_out_ratio = item['out']/foll_out
                 #Calculate new cut for each common with foll cut from first blade divide by out ratio
@@ -92,7 +93,7 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                 if new_quantity < 0:
                     left_over_quantity += abs(new_quantity)
                     new_quantity = 0
-                    plan_quantity = item['num_orders']
+                    plan_quantity = current_order.quantity
 
                 blade2_order = PlanOrder.objects.create(
                     order=OrderList.objects.get(id=current_id),
@@ -104,13 +105,19 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                 )
                 blade_2_orders.append(blade2_order)
                 current_order.quantity = new_quantity
-                filtered_orders.append(current_order)
+                update_list.append(current_order)
 
 
     if left_over_quantity:
+        ic()
         raise ValueError("Both order are out of stock!")
-    for order in filtered_orders:
-        order.save()
+
+    ic(update_list)
+    for order in update_list:
+        ic(order)
+        OrderList.objects.filter(id=order.id).update(quantity=order.quantity)
+
+
     format_data.blade_1.add(blade1_order)
     for order in blade_2_orders:
         format_data.blade_2.add(order)
@@ -120,7 +127,6 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
 
 def timezone_formatter(df: pd.DataFrame):
     """
-    Format any timezone column in dataframe to be timezone unaware.
     Format any timezone column in dataframe to be timezone unaware.
     """
 
