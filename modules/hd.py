@@ -150,7 +150,7 @@ class HD(ProviderInterface):
             most_compat_plan = 0
             indices = list(range(0,len(used_data)))
             random.shuffle(indices)
-            indices = indices.head(100)
+            indices = indices[:100]
 
             for index in indices:
                 init_order = used_data.iloc[index]
