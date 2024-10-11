@@ -5,7 +5,7 @@ from django.contrib import messages
 from tqdm import tqdm
 from icecream import ic
 def optimizer_controller(request)->None:
-    for i in tqdm(range(0,1)):
+    for i in tqdm(range(0,100)):
         try:
             handle_auto_config(request)
             handle_saving(request)
