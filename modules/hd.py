@@ -19,85 +19,32 @@ class HD(ProviderInterface):
     preview: bool = False
     
     def __post_init__(self):
-        data = self.orders.copy()
-        data = self.format_data(data)
+        data = self.format_data(self.orders)
         if self.stop_date:
             data = data[(data['due_date'] >= self.start_date) & (data['due_date'] <= self.stop_date)].reset_index(drop=True)
         filters = {False: self.legacy_filter_order, True: self.filter_common_order}
         filtered_data = filters.get(self.common)(data)
         self.temp_size = min(ROLL_PAPER)
-        self.ff_list = []
-        self.ffa_list = []
-        self.ffd_list = []
+        ff_list = []
+        ffa_list = []
 
         match(self.h_type):
             case 'ff':
-                self.ff_list = [[] for _ in range(self.x)]
+                ff_list = [[] for _ in range(self.x)]
+                for item, id in zip(filtered_data['width'], filtered_data['id']):
+                    ff_list = self.first_fit(ff_list, item, id)
+                data_df = self.df_formatter(ff_list)
             case 'ffa':
-                self.ffa_list = [[] for _ in range(self.x)]
+                ffa_list = [[] for _ in range(self.x)]
+                asc_filtered_data = filtered_data.sort_values('width', ascending=True)
+                for item, id in zip(asc_filtered_data['width'], asc_filtered_data['id']):
+                    ffa_list = self.first_fit(ffa_list, item, id)
+                data_df = self.df_formatter(ffa_list)
 
-        ff_list = self.ff_list
-        ffa_list = self.ffa_list
-        ffd_list = self.ffd_list
-        for item, id in zip(filtered_data['width'], filtered_data['id']):
-            ff_list = self.first_fit(ff_list, item, id)
-
-        # print(width_sum_formatter(ff_list))
-        ff_df = self.df_formatter(ff_list)
-
-        desc_filtered_data = filtered_data.sort_values('width', ascending=False)
-        for item, id in zip(desc_filtered_data['width'], desc_filtered_data['id']):
-            ffd_list = self.first_fit(ffd_list, item, id)
-
-        # print(width_sum_formatter(ffd_list))
-        ffd_df = self.df_formatter(ffd_list)
-
-        asc_filtered_data = filtered_data.sort_values('width', ascending=True)
-        for item, id in zip(asc_filtered_data['width'], asc_filtered_data['id']):
-            ffa_list = self.first_fit(ffa_list, item, id)
-
-        # print(width_sum_formatter(ffa_list))
-        ffa_df = self.df_formatter(ffa_list)
-
-        heuristic_data_id = pd.concat([ffd_df, ff_df, ffa_df])
+        heuristic_data_id = data_df
         heuristic_data_id = heuristic_data_id.drop_duplicates('id').reset_index(drop=True)
 
         self.heuristic_data = filtered_data[filtered_data['id'].isin(heuristic_data_id['id'])].reset_index(drop=True)
-
-
-    def filter_common_order(self,data):
-        """Use common filter base on the first order or filler order."""
-        if not self.common:
-            return
-
-        legacy_filters = LEGACY_FILTER
-        init_order = pd.DataFrame(self.common_init_order)
-        if init_order is None:
-            raise ValueError('Common init order is None!')
-        mask = (data[legacy_filters].eq(init_order[legacy_filters].iloc[0])).all(axis=1)
-        legecy_filtered_plan = data.loc[mask].reset_index(drop=True).copy()
-        if len(legecy_filtered_plan) <= 0:
-            raise ValueError('Legacy is empty')
-
-        common_filters = COMMON_FILTER
-        orders = pd.DataFrame(None)
-        best_index=0
-        most_compat_plan = 0
-        indices = list(range(len(legecy_filtered_plan)))
-        random.shuffle(indices)
-        for index in indices:
-            init_order = legecy_filtered_plan.iloc[index]
-            mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
-            orders = data.loc[mask].reset_index(drop=True).copy()
-            if len(orders)>most_compat_plan:
-                best_index=index
-                most_compat_plan=len(orders)
-
-        init_order = legecy_filtered_plan.iloc[best_index]
-        mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
-        orders = data.loc[mask].reset_index(drop=True)
-        return orders
-
 
     @staticmethod
     def format_data(data):
@@ -142,12 +89,9 @@ class HD(ProviderInterface):
     def get(self) -> pd.DataFrame:
         return self.heuristic_data
 
-    def legacy_filter_order(self, data, plan_range:float = DEADLINE_RANGE):
+    def legacy_filter_order(self, data, plan_range:float = DEADLINE_RANGE,best_plan:pd.DataFrame = pd.DataFrame(None) ):
             used_data = data.head(int(plan_range)).copy()
             legacy_filters = LEGACY_FILTER
-            ordplan = pd.DataFrame(None)
-            best_index=0
-            most_compat_plan = 0
             indices = list(range(0,len(used_data)))
             random.shuffle(indices)
             indices = indices[:100]
@@ -157,16 +101,44 @@ class HD(ProviderInterface):
                 # Create a mask for matching orders using all legacy filters
                 mask = (used_data[legacy_filters].eq(init_order[legacy_filters])).all(axis=1)
                 # Apply the mask and reset the index
-                ordplan = used_data.loc[mask].reset_index(drop=True)
-                if len(ordplan)>most_compat_plan:
-                   
-                    best_plan = ordplan
-                    most_compat_plan=len(ordplan)
+                plan = used_data.loc[mask].reset_index(drop=True)
+                if len(plan)>len(best_plan):
+                    best_plan = plan
                 
-                if most_compat_plan > PLAN_RANGE:
+                #early stop
+                if len(best_plan) >= PLAN_RANGE:
                     return best_plan
 
-            if most_compat_plan <= PLAN_RANGE:
+            if len(best_plan) < PLAN_RANGE:
                 return self.legacy_filter_order(data=data, plan_range=plan_range+PLAN_RANGE)
             return best_plan 
 
+    def filter_common_order(self,data):
+        """Use common filter base on the first order or filler order."""
+        if not self.common:
+            return
+
+        legacy_filters = LEGACY_FILTER
+        init_order = pd.DataFrame(self.common_init_order)
+        if init_order is None:
+            raise ValueError('Common init order is None!')
+        mask = (data[legacy_filters].eq(init_order[legacy_filters].iloc[0])).all(axis=1)
+        legecy_filtered_plan = data.loc[mask].reset_index(drop=True).copy()
+        if len(legecy_filtered_plan) <= 0:
+            raise ValueError('Legacy is empty')
+        best_plan:pd.DataFrame = pd.DataFrame(None)
+        common_filters = COMMON_FILTER
+        best_plan = pd.DataFrame(None)
+        best_index=0
+        indices = list(range(len(legecy_filtered_plan)))
+        random.shuffle(indices)
+        indices = indices[:100]
+        for index in indices:
+            init_order = legecy_filtered_plan.iloc[index]
+            mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
+            orders = data.loc[mask].reset_index(drop=True).copy()
+            
+            if len(orders)>len(best_plan):
+                best_plan = orders
+
+        return best_plan
