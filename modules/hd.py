@@ -17,41 +17,7 @@ class HD(ProviderInterface):
     common: bool = False
     common_init_order: Optional[Dict[str,Any]] = None
     preview: bool = False
-
-    def filter_common_order(self,data):
-        """Use common filter base on the first order or filler order."""
-        if not self.common:
-            return
-
-        legacy_filters = LEGACY_FILTER
-        init_order = pd.DataFrame(self.common_init_order)
-        if init_order is None:
-            raise ValueError('Common init order is None!')
-        mask = (data[legacy_filters].eq(init_order[legacy_filters].iloc[0])).all(axis=1)
-        legecy_filtered_plan = data.loc[mask].reset_index(drop=True).copy()
-        if len(legecy_filtered_plan) <= 0:
-            raise ValueError('Legacy is empty')
-
-        common_filters = COMMON_FILTER
-        orders = pd.DataFrame(None)
-        best_index=0
-        most_compat_plan = 0
-        indices = list(range(len(legecy_filtered_plan)))
-        random.shuffle(indices)
-        for index in indices:
-            init_order = legecy_filtered_plan.iloc[index]
-            mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
-            orders = data.loc[mask].reset_index(drop=True).copy()
-            if len(orders)>most_compat_plan:
-                best_index=index
-                most_compat_plan=len(orders)
-
-        init_order = legecy_filtered_plan.iloc[best_index]
-        mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
-        orders = data.loc[mask].reset_index(drop=True)
-        return orders
-
-
+    
     def __post_init__(self):
         data = self.orders.copy()
         data = self.format_data(data)
@@ -97,6 +63,41 @@ class HD(ProviderInterface):
         heuristic_data_id = heuristic_data_id.drop_duplicates('id').reset_index(drop=True)
 
         self.heuristic_data = filtered_data[filtered_data['id'].isin(heuristic_data_id['id'])].reset_index(drop=True)
+
+
+    def filter_common_order(self,data):
+        """Use common filter base on the first order or filler order."""
+        if not self.common:
+            return
+
+        legacy_filters = LEGACY_FILTER
+        init_order = pd.DataFrame(self.common_init_order)
+        if init_order is None:
+            raise ValueError('Common init order is None!')
+        mask = (data[legacy_filters].eq(init_order[legacy_filters].iloc[0])).all(axis=1)
+        legecy_filtered_plan = data.loc[mask].reset_index(drop=True).copy()
+        if len(legecy_filtered_plan) <= 0:
+            raise ValueError('Legacy is empty')
+
+        common_filters = COMMON_FILTER
+        orders = pd.DataFrame(None)
+        best_index=0
+        most_compat_plan = 0
+        indices = list(range(len(legecy_filtered_plan)))
+        random.shuffle(indices)
+        for index in indices:
+            init_order = legecy_filtered_plan.iloc[index]
+            mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
+            orders = data.loc[mask].reset_index(drop=True).copy()
+            if len(orders)>most_compat_plan:
+                best_index=index
+                most_compat_plan=len(orders)
+
+        init_order = legecy_filtered_plan.iloc[best_index]
+        mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
+        orders = data.loc[mask].reset_index(drop=True)
+        return orders
+
 
     @staticmethod
     def format_data(data):
@@ -147,8 +148,9 @@ class HD(ProviderInterface):
             ordplan = pd.DataFrame(None)
             best_index=0
             most_compat_plan = 0
-            indices = list(range(100))
+            indices = list(range(0,len(used_data)))
             random.shuffle(indices)
+            indices = indices.head(100)
 
             for index in indices:
                 init_order = used_data.iloc[index]
@@ -160,10 +162,11 @@ class HD(ProviderInterface):
                    
                     best_plan = ordplan
                     most_compat_plan=len(ordplan)
+                
+                if most_compat_plan > PLAN_RANGE:
+                    return best_plan
 
             if most_compat_plan <= PLAN_RANGE:
                 return self.legacy_filter_order(data=data, plan_range=plan_range+PLAN_RANGE)
             return best_plan 
 
-
-# In[5]:
