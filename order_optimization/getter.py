@@ -66,7 +66,7 @@ def get_orders(
     preview: bool = False,
     start_date: Optional[pd.Timestamp] = None,
     stop_date: Optional[pd.Timestamp] = None,
-    common_init_order: Optional[Dict[str,Any]] = None
+    common_init_order: Optional[Dict[str,Any]] = None,
 ) -> DataFrame:
     """
     Pass args to order processor.
@@ -148,7 +148,6 @@ def get_common(
     file_id: str,
     item: Dict[str, Any],
     results: Dict[str, Any],
-    single: bool = False,
 ):
     ic()
     size_value = (item["cut_width"] * item["out"]) + results["trim"]
