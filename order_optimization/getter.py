@@ -104,6 +104,7 @@ def get_optimizer(
     num_generations: int = 50,
     show_output: bool = False,
     blade:Optional[int] = None,
+    common: bool = False,
 ) -> ModelContainer:
     """
     Clear progress, request and run the optimizer.
@@ -118,7 +119,8 @@ def get_optimizer(
             showOutput=show_output,
             selector=get_selected_order(request),
             set_progress=set_progress,
-            blade=blade
+            blade=blade,
+            common=common
 
         ),
     )
@@ -157,6 +159,6 @@ def get_common(
         common_init_order=item
     )
     optimizer_instance = get_optimizer(
-        request=request, orders=orders, size_value=size_value, show_output=False, blade=blade
+            request=request, orders=orders, size_value=size_value, show_output=False, blade=blade, common=True
     )
     return optimizer_instance
