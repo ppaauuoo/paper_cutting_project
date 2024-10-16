@@ -103,8 +103,8 @@ class HD(ProviderInterface):
         return data
  
 
-    def legacy_filter_order(self, data, plan_range:float = DEADLINE_RANGE,best_plan:pd.DataFrame = pd.DataFrame(None) ):
-            used_data = data.head(int(plan_range)).copy()
+    def legacy_filter_order(self, data, data_range:float = DEADLINE_RANGE,best_plan:pd.DataFrame = pd.DataFrame(None) ):
+            used_data = data.head(int(data_range)).copy()
             legacy_filters = LEGACY_FILTER
             indices = list(range(0,len(used_data)))
             random.shuffle(indices)
@@ -124,7 +124,7 @@ class HD(ProviderInterface):
                     return best_plan
 
             if len(best_plan) < PLAN_RANGE:
-                return self.legacy_filter_order(data=data, plan_range=plan_range+PLAN_RANGE)
+                return self.legacy_filter_order(data=data, data_range=data_range+PLAN_RANGE)
             return best_plan 
 
     def filter_common_order(self,data):
