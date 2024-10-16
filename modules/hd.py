@@ -61,7 +61,7 @@ class HD(ProviderInterface):
         ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%Y")
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
         ordplan = ordplan[ordplan["length"] > 0]  # drop len = 0
-        ordplan = ordplan[ordplan["quantity"] > 0]  # drop quantity = 0
+        ordplan = ordplan[ordplan["quantity"] > 500]  # drop quantity = 500
 
         return ordplan
 
