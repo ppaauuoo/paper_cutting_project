@@ -42,8 +42,8 @@ def handle_optimization(func):
             )
 
         results = handle_results(request, kwargs=kwargs)
-#       results = handle_common_component(request, results=results)
         results = handle_switcher(results)
+        results = handle_common_component(request, results=results)
 
         if is_trim_fit(results["trim"]) and is_foll_ok(results["output"], results["foll_order_number"]):
             messages.success(request, "Optimizing finished.")
@@ -182,6 +182,7 @@ def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
         ic(common)
         results = common
     return results
+
 def handle_common(
     request, results: Optional[Dict[str, Any]] = None, as_component: bool = False
 ) -> Optional[Dict[str,Any]]:
@@ -192,26 +193,13 @@ def handle_common(
         results = cache.get("optimization_results")
     best_trim = results["trim"]
     best_index: Optional[int] = None
+
     if not as_component:
         file_id = request.POST.get("selected_file_id")
     else:
         file_id = request.POST.get("file_id")
 
     for index, item in enumerate(results["output"]):
-        if item["out"] > 1:
-            optimizer_instance = get_common(
-                request=request,
-                single=True,
-                blade=2,
-                file_id=file_id,
-                item=item,
-                results=results,
-            )
-
-            if abs(optimizer_instance.fitness_values) <= best_trim:
-                best_fitness, best_output = get_outputs(optimizer_instance)
-                best_trim = abs(best_fitness)
-                best_index = index
 
         optimizer_instance = get_common(
             request=request, blade=2, file_id=file_id, item=item, results=results
@@ -229,7 +217,7 @@ def handle_common(
         messages.error(request, "No suitable common order found.")
 
     if as_component:
-        return results
+        return handle_switcher(results)
 
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 

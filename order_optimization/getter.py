@@ -66,7 +66,7 @@ def get_orders(
     preview: bool = False,
     start_date: Optional[pd.Timestamp] = None,
     stop_date: Optional[pd.Timestamp] = None,
-    common_init_order: Optional[Dict[str,Any]] = None
+    common_init_order: Optional[Dict[str,Any]] = None,
 ) -> DataFrame:
     """
     Pass args to order processor.
@@ -104,6 +104,7 @@ def get_optimizer(
     num_generations: int = 50,
     show_output: bool = False,
     blade:Optional[int] = None,
+    common: bool = False,
 ) -> ModelContainer:
     """
     Clear progress, request and run the optimizer.
@@ -118,7 +119,8 @@ def get_optimizer(
             showOutput=show_output,
             selector=get_selected_order(request),
             set_progress=set_progress,
-            blade=blade
+            blade=blade,
+            common=common
 
         ),
     )
@@ -146,7 +148,6 @@ def get_common(
     file_id: str,
     item: Dict[str, Any],
     results: Dict[str, Any],
-    single: bool = False,
 ):
     ic()
     size_value = (item["cut_width"] * item["out"]) + results["trim"]
@@ -157,6 +158,6 @@ def get_common(
         common_init_order=item
     )
     optimizer_instance = get_optimizer(
-        request=request, orders=orders, size_value=size_value, show_output=False, blade=blade
+            request=request, orders=orders, size_value=size_value, show_output=False, blade=blade, common=True
     )
     return optimizer_instance

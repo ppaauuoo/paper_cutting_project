@@ -34,6 +34,7 @@ class GA(ModelInterface):
     mutation_probability:Optional[List[float]]=field(default_factory=lambda: [0.25,0.05])
     mutation_percent_genes:Optional[List[int]] = field(default_factory=lambda: [25,5])
     crossover_probability:Optional[float]=None
+    common: Optional[bool] = False
 
     def __post_init__(self):
         if self.orders is None:
@@ -129,6 +130,8 @@ class GA(ModelInterface):
             self._penalty += self._penalty_value * order_length  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
 
     def paper_size_logic(self, _output):
+        if not self.common:
+            return
         if _output > self._paper_size :  # ถ้าผลรวมมีค่ามากกว่า roll กำหนดขึ้น _penalty
             self._penalty += self._penalty_value * (
                 _output - self._paper_size
@@ -163,7 +166,9 @@ class GA(ModelInterface):
 
         self.paper_out_logic(solution)
 
+        
         _output = numpy.sum(solution * self.orders["width"])  # ผลรวมของตัดกว้างทั้งหมด
+        self.paper_size_logic(_output)
 
         _fitness_values = -self._paper_size  + _output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
         self.paper_trim_logic(_fitness_values)
