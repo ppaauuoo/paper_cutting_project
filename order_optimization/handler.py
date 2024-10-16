@@ -42,8 +42,8 @@ def handle_optimization(func):
             )
 
         results = handle_results(request, kwargs=kwargs)
-#       results = handle_common_component(request, results=results)
         results = handle_switcher(results)
+        results = handle_common_component(request, results=results)
 
         if is_trim_fit(results["trim"]) and is_foll_ok(results["output"], results["foll_order_number"]):
             messages.success(request, "Optimizing finished.")
@@ -229,7 +229,7 @@ def handle_common(
         messages.error(request, "No suitable common order found.")
 
     if as_component:
-        return results
+        return handle_switcher(results)
 
     return cache.set("optimization_results", results, CACHE_TIMEOUT)
 
