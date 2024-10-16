@@ -17,6 +17,7 @@ class HD(ProviderInterface):
     common: bool = False
     common_init_order: Optional[Dict[str,Any]] = None
     preview: bool = False
+
     is_build: bool = True 
     
     def __post_init__(self):
@@ -27,7 +28,7 @@ class HD(ProviderInterface):
     def build(self):
         data = self.format_data(self.orders)
         data = self.date_range_limit(data)
-
+        
         filters = {False: self.legacy_filter_order, True: self.filter_common_order}
         filtered_data = filters.get(self.common)(data)
         self.temp_size = min(ROLL_PAPER)
@@ -97,6 +98,7 @@ class HD(ProviderInterface):
     def get(self) -> pd.DataFrame:
         return self.heuristic_data
 
+
     def date_range_limit(self, data):
         if self.stop_date and self.start_date:
             data = data[(data['due_date'] >= self.start_date) & (data['due_date'] <= self.stop_date)].reset_index(drop=True)
@@ -105,6 +107,7 @@ class HD(ProviderInterface):
 
     def legacy_filter_order(self, data, data_range:float = DEADLINE_RANGE,best_plan:pd.DataFrame = pd.DataFrame(None) ):
             used_data = data.head(int(data_range)).copy()
+
             legacy_filters = LEGACY_FILTER
             indices = list(range(0,len(used_data)))
             random.shuffle(indices)
@@ -125,6 +128,7 @@ class HD(ProviderInterface):
 
             if len(best_plan) < PLAN_RANGE:
                 return self.legacy_filter_order(data=data, data_range=data_range+PLAN_RANGE)
+
             return best_plan 
 
     def filter_common_order(self,data):
@@ -133,7 +137,9 @@ class HD(ProviderInterface):
             return
 
         legacy_filters = LEGACY_FILTER
+
         init_order = pd.DataFrame([self.common_init_order])
+
         if init_order is None:
             raise ValueError('Common init order is None!')
         mask = (data[legacy_filters].eq(init_order[legacy_filters].iloc[0])).all(axis=1)
