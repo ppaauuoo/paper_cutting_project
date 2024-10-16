@@ -133,7 +133,7 @@ class HD(ProviderInterface):
             return
 
         legacy_filters = LEGACY_FILTER
-        init_order = pd.DataFrame(self.common_init_order)
+        init_order = pd.DataFrame([self.common_init_order])
         if init_order is None:
             raise ValueError('Common init order is None!')
         mask = (data[legacy_filters].eq(init_order[legacy_filters].iloc[0])).all(axis=1)
