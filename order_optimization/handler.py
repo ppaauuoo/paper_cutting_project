@@ -173,11 +173,8 @@ def handle_auto_config(request, **kwargs):
     return kwargs
 
 def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
-    if is_foll_ok(
-        results["output"], results["foll_order_number"]
-    ):
-        return results
     common = handle_common(request, results=results, as_component=True)
+    
     if common is not None:
         ic(common)
         results = common
