@@ -42,8 +42,13 @@ def handle_optimization(func):
             )
 
         results = handle_results(request, kwargs=kwargs)
+        ic(results)
         results = handle_switcher(results)
-        results = handle_common_component(request, results=results)
+        try:
+            results = handle_common_component(request, results=results)
+        except(ValueError) as e:
+            ic(e)
+            pass
 
         if is_trim_fit(results["trim"]) and is_foll_ok(results["output"], results["foll_order_number"]):
             messages.success(request, "Optimizing finished.")
