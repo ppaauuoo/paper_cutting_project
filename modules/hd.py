@@ -136,26 +136,26 @@ class HD(ProviderInterface):
         if not self.common:
             return
 
-        legacy_filters = LEGACY_FILTER
+        filters = LEGACY_FILTER.copy()
+        filters.append('length')
 
         init_order = pd.DataFrame([self.common_init_order])
-
+        init_order.rename(columns={'cut_len': 'length'}, inplace=True)
         if init_order is None:
             raise ValueError('Common init order is None!')
-        mask = (data[legacy_filters].eq(init_order[legacy_filters].iloc[0])).all(axis=1)
-        legecy_filtered_plan = data.loc[mask].reset_index(drop=True).copy()
-        if len(legecy_filtered_plan) <= 0:
-            raise ValueError('Legacy is empty')
+        mask = (data[filters].eq(init_order[filters].iloc[0])).all(axis=1)
+        filtered_plan = data.loc[mask].reset_index(drop=True).copy()
+        if len(filtered_plan) <= 0:
+            raise ValueError('Common Not Found')
         best_plan:pd.DataFrame = pd.DataFrame(None)
-        common_filters = COMMON_FILTER
         best_plan = pd.DataFrame(None)
         best_index=0
-        indices = list(range(len(legecy_filtered_plan)))
+        indices = list(range(len(filtered_plan)))
         random.shuffle(indices)
         indices = indices[:100]
         for index in indices:
-            init_order = legecy_filtered_plan.iloc[index]
-            mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
+            init_order = filtered_plan.iloc[index]
+            mask = (data[filters].eq(init_order[filters])).all(axis=1)
             orders = data.loc[mask].reset_index(drop=True).copy()
             
             if len(orders)>len(best_plan):
