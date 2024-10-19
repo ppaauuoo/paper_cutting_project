@@ -42,7 +42,6 @@ def handle_optimization(func):
             )
 
         results = handle_results(request, kwargs=kwargs)
-        ic(results)
         results = handle_switcher(results)
         try:
             results = handle_common_component(request, results=results)
@@ -105,7 +104,6 @@ def handle_switcher(results: Dict[str, Any]) -> Dict[str, Any]:
         return results
     switcher = LP(results).run().get()
     if switcher is not None:
-        ic(switcher)
         results["trim"] = switcher["new_trim"]
         results["roll"] = switcher["new_roll"]
     return results
@@ -181,7 +179,6 @@ def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
     common = handle_common(request, results=results, as_component=True)
     
     if common is not None:
-        ic(common)
         results = common
     return results
 

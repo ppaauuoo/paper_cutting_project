@@ -28,10 +28,9 @@ def get_production_quantity(output_data):
     foll_order_len = output_data[1]["cut_len"]
     foll_out = output_data[1]["out"]
 
-    ic(foll_out)
-    foll_order_number = ic(round(
+    foll_order_number = round(
         (init_len * init_num_orders *foll_out) / (foll_order_len * init_out)
-    ))
+    )
     return (init_num_orders, foll_order_number)
 
 def get_orders_cache(file_id: str) -> DataFrame:
@@ -146,7 +145,6 @@ def get_common(
     item: Dict[str, Any],
     results: Dict[str, Any],
 ):
-    ic()
     size_value = (item["cut_width"] * item["out"]) + results["trim"]
     orders = get_orders(
         request=request,
