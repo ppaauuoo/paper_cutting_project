@@ -16,18 +16,8 @@
                             x-on:click="aiLoading = true;">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
                             x-show="aiLoading"></span>
-                        <span class="btn-text" x-show="!aiLoading">AI</span>
+                        <span class="btn-text" x-show="!aiLoading">Run</span>
                         <span class="btn-text" x-show="aiLoading">loading...</span>
-                    </button>
-                </div>
-
-                <div x-data="{ autoloading: false }">
-                    <button type="submit" name="auto" class="btn btn-primary" id="autobtn"
-                            x-on:click="autoloading = true;">
-                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
-                            x-show="autoloading"></span>
-                        <span class="btn-text" x-show="!autoloading">Auto</span>
-                        <span class="btn-text" x-show="autoloading">loading...</span>
                     </button>
                 </div>
 

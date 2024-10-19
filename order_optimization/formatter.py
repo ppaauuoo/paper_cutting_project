@@ -1,7 +1,6 @@
 from typing import Any, Dict, List
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
-from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
 from order_optimization.container import ModelContainer
 from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
@@ -58,6 +57,7 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
     left_over_quantity = 0
     filtered_orders = []
     update_list=[]
+    blade1_order = None
     for item in data["output"]:
         current_id = item["id"]
 

@@ -23,17 +23,13 @@ def get_production_quantity(output_data):
     init_out = output_data[0]["out"]
     init_num_orders = output_data[0]["num_orders"]
 
-    foll_order_len: List[int] = []
-    foll_out: List[int] = []
-
-    for index, order in enumerate(output_data):
-        if index == 0 and len(output_data) > 1:
-            continue
-        foll_order_len.append(order["cut_len"])
-        foll_out.append(order["out"])
+    if len(output_data) <= 1:
+        return (init_num_orders, init_num_orders) 
+    foll_order_len = output_data[1]["cut_len"]
+    foll_out = output_data[1]["out"]
 
     foll_order_number = round(
-        (init_len * init_num_orders) *sum(foll_out) / (foll_order_len[0] * init_out)
+        (init_len * init_num_orders *foll_out) / (foll_order_len * init_out)
     )
     return (init_num_orders, foll_order_number)
 
@@ -136,8 +132,8 @@ def get_outputs(optimizer_instance: ModelContainer) -> Tuple[float, List[Dict]]:
     Extract values from optimizer instance.
     """
     fitness_values = optimizer_instance.fitness_values
-    # output_data = optimizer_instance.output.drop_duplicates().to_dict("records")
-    output_data = optimizer_instance.output.to_dict("records")
+    output_df = optimizer_instance.output.reset_index()
+    output_data = output_df.to_dict("records")
 
     return fitness_values, output_data
 
@@ -149,7 +145,6 @@ def get_common(
     item: Dict[str, Any],
     results: Dict[str, Any],
 ):
-    ic()
     size_value = (item["cut_width"] * item["out"]) + results["trim"]
     orders = get_orders(
         request=request,

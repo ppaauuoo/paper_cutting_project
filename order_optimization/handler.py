@@ -43,7 +43,11 @@ def handle_optimization(func):
 
         results = handle_results(request, kwargs=kwargs)
         results = handle_switcher(results)
-        results = handle_common_component(request, results=results)
+        try:
+            results = handle_common_component(request, results=results)
+        except(ValueError) as e:
+            ic(e)
+            pass
 
         if is_trim_fit(results["trim"]) and is_foll_ok(results["output"], results["foll_order_number"]):
             messages.success(request, "Optimizing finished.")
@@ -100,7 +104,6 @@ def handle_switcher(results: Dict[str, Any]) -> Dict[str, Any]:
         return results
     switcher = LP(results).run().get()
     if switcher is not None:
-        ic(switcher)
         results["trim"] = switcher["new_trim"]
         results["roll"] = switcher["new_roll"]
     return results
@@ -173,13 +176,9 @@ def handle_auto_config(request, **kwargs):
     return kwargs
 
 def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
-    if is_foll_ok(
-        results["output"], results["foll_order_number"]
-    ):
-        return results
     common = handle_common(request, results=results, as_component=True)
+    
     if common is not None:
-        ic(common)
         results = common
     return results
 
@@ -209,6 +208,7 @@ def handle_common(
             best_fitness, best_output = get_outputs(optimizer_instance)
             best_trim = abs(best_fitness)
             best_index = index
+            break
 
     if best_index is not None:
         results = set_common(results, best_index, best_output, best_trim)
