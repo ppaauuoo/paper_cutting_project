@@ -211,6 +211,7 @@ def handle_common(
             best_fitness, best_output = get_outputs(optimizer_instance)
             best_trim = abs(best_fitness)
             best_index = index
+            break
 
     if best_index is not None:
         results = set_common(results, best_index, best_output, best_trim)

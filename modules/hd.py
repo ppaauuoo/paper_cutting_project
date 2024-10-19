@@ -124,7 +124,7 @@ class HD(ProviderInterface):
                 
                 #early stop
                 if len(best_plan) >= PLAN_RANGE:
-                    return best_plan
+                    break
 
             if len(best_plan) < PLAN_RANGE:
                 return self.legacy_filter_order(data=data, data_range=data_range+PLAN_RANGE)
@@ -160,5 +160,9 @@ class HD(ProviderInterface):
             
             if len(orders)>len(best_plan):
                 best_plan = orders
+            
+            #early stop
+            if len(best_plan) >= PLAN_RANGE:
+                break
 
         return best_plan
