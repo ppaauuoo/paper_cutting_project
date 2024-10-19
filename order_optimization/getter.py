@@ -134,7 +134,9 @@ def get_outputs(optimizer_instance: ModelContainer) -> Tuple[float, List[Dict]]:
     """
     fitness_values = optimizer_instance.fitness_values
     # output_data = optimizer_instance.output.drop_duplicates().to_dict("records")
-    output_data = optimizer_instance.output.to_dict("records")
+    output_df = optimizer_instance.output
+    df = output_df.loc[:, ~output_df.columns.duplicated()]
+    output_data = df.to_dict("records")
 
     return fitness_values, output_data
 
