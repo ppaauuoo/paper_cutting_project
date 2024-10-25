@@ -46,7 +46,7 @@ def results_formatter(
     }
 
 
-def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
+def database_formatter(data: Dict[str, Any]) -> None:
     """
     For defining which order belong to which blade, and turn it into a model.
 
@@ -55,8 +55,7 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
     format_data = OptimizationPlan.objects.create()
     blade_2_orders = []
     left_over_quantity = 0
-    filtered_orders = []
-    update_list=[]
+    update_list = []
     blade1_order = None
     for item in data["output"]:
         current_id = item["id"]
@@ -76,20 +75,26 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                 update_list.append(current_order)
 
             case 2:
-                #get combined out from second blade
-                foll_out = sum(i['out'] for i in data["output"])-data["output"][0]['out']
-                #calculate out ratio base from the combined out
-                new_out_ratio = item['out']/foll_out
-                #Calculate new cut for each common with foll cut from first blade divide by out ratio
-                foll_cut = data["foll_order_number"]*new_out_ratio
-                #add potential leftover from previous order
+                # get combined out from second blade
+                foll_out = (
+                    sum(i["out"]
+                        for i in data["output"]) - data["output"][0]["out"]
+                )
+                # calculate out ratio base from the combined out
+                new_out_ratio = item["out"] / foll_out
+                # Calculate new cut for each common
+                # with foll cut from first blade divide by out ratio
+                foll_cut = data["foll_order_number"] * new_out_ratio
+                # add potential leftover from previous order
                 plan_quantity = round(foll_cut + left_over_quantity)
 
-                new_quantity = round(current_order.quantity  - foll_cut - left_over_quantity)
-                #reset left over to zero
+                new_quantity = round(
+                    current_order.quantity - foll_cut - left_over_quantity
+                )
+                # reset left over to zero
                 left_over_quantity = 0
 
-                #check if exceed the stock, then push it to leftover
+                # check if exceed the stock, then push it to leftover
                 if new_quantity < 0:
                     left_over_quantity += abs(new_quantity)
                     new_quantity = 0
@@ -101,12 +106,11 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
                     out=item["out"],
                     paper_roll=data["roll"],
                     blade_type="Blade 2",
-                    order_leftover=new_quantity
+                    order_leftover=new_quantity,
                 )
                 blade_2_orders.append(blade2_order)
                 current_order.quantity = new_quantity
                 update_list.append(current_order)
-
 
     if left_over_quantity:
         ic()
@@ -116,7 +120,6 @@ def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
     for order in update_list:
         ic(order)
         OrderList.objects.filter(id=order.id).update(quantity=order.quantity)
-
 
     format_data.blade_1.add(blade1_order)
     for order in blade_2_orders:
@@ -130,8 +133,7 @@ def timezone_formatter(df: pd.DataFrame):
     Format any timezone column in dataframe to be timezone unaware.
     """
 
-
-    datetime_cols = df.select_dtypes(include=['datetime64[ns, UTC]']).columns
+    datetime_cols = df.select_dtypes(include=["datetime64[ns, UTC]"]).columns
 
     for col in datetime_cols:
         if is_datetime(df[col]):
@@ -170,7 +172,8 @@ def plan_orders_formatter() -> pd.DataFrame:
     )
 
     # Create a dictionary with order_id as the key
-    optimized_order_dict = {order["id"]: order for order in optimized_order_list}
+    optimized_order_dict = {order["id"]: order
+                            for order in optimized_order_list}
 
     # Combine results
     for order in optimized_output:
