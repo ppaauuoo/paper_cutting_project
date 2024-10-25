@@ -4,7 +4,7 @@ from icecream import ic
 
 
 def optimizer_controller(request) -> None:
-    for i in tqdm(range(0, 1)):
+    for i in tqdm(range(0, 50)):
         try:
             handle_auto_config(request)
             handle_saving(request)

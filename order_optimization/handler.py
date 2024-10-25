@@ -1,5 +1,3 @@
-import random
-
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from icecream import ic
@@ -9,24 +7,28 @@ from django.core.cache import cache
 
 from order_optimization.setter import set_common
 from order_optimization.models import OptimizationPlan, OrderList
-from order_optimization.getter import get_common, get_orders, get_outputs, get_optimizer, get_production_quantity
+from order_optimization.getter import (
+    get_common,
+    get_orders,
+    get_outputs,
+    get_optimizer,
+    get_production_quantity,
+)
 from ordplan_project.settings import (
-    MIN_TRIM,
-    ROLL_PAPER,
-    FILTER,
     CACHE_TIMEOUT,
     MAX_RETRY,
     MAX_TRIM,
     MIN_TRIM,
+    PENALTY_VALUE
 )
 from order_optimization.formatter import (
     database_formatter,
-    output_formatter,
     plan_orders_formatter,
     results_formatter,
 )
 
 from modules.lp import LP
+
 
 def handle_optimization(func):
     """
@@ -46,14 +48,17 @@ def handle_optimization(func):
         except ValueError as e:
             ic(e)
             return handle_auto_retry(request)
+
         results = handle_switcher(results)
         try:
             results = handle_common_component(request, results=results)
-        except(ValueError) as e:
+        except ValueError as e:
             ic(e)
             pass
 
-        if is_trim_fit(results["trim"]) and is_foll_ok(results["output"], results["foll_order_number"]):
+        if is_trim_fit(results["trim"]) and is_foll_ok(
+            results["output"], results["foll_order_number"]
+        ):
             messages.success(request, "Optimizing finished.")
             cache.delete("past_size")
             cache.delete("try_again")
@@ -68,9 +73,6 @@ def handle_optimization(func):
             return handle_auto_retry(request)
 
         cache.delete("try_again")
-        messages.error(
-            request, "Optimizing finished with unsatisfied result, please try again."
-        )
         return cache.set("optimization_results", best_result, CACHE_TIMEOUT)
 
     return wrapper
@@ -104,6 +106,7 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
         foll_order_number=foll_order_number,
     )
     return results
+
 
 def handle_switcher(results: Dict[str, Any]) -> Dict[str, Any]:
     if is_trim_fit(results["trim"]):
@@ -144,19 +147,21 @@ def handle_auto_retry(request):
         cache.set("try_again", again, CACHE_TIMEOUT)
         return handle_auto_config(request)
 
-    messages.error(request, "Error : Auto config malfunctioned, please contact admin.")
+    messages.error(
+        request, "Error : Auto config malfunctioned, please contact admin.")
     best_result = cache.get("best_result")
     cache.delete("past_size")
     cache.set("optimization_results", best_result, CACHE_TIMEOUT)
     cache.delete("try_again")
-    raise ValueError('No More!')
+    raise ValueError("No More!")
     return
 
 
 @handle_optimization
 def handle_auto_config(request, **kwargs):
     """
-    Automatically defines values needed for requesting orders and send it to optimizer.
+    Automatically defines values needed for requesting orders
+    and send it to optimizer.
     """
 
     again = cache.get("try_again", 0)
@@ -164,7 +169,9 @@ def handle_auto_config(request, **kwargs):
     file_id = request.POST.get("file_id")
     start_date = request.POST.get("start_date")
     stop_date = request.POST.get("stop_date")
-    orders = get_orders(request=request, file_id=file_id, start_date=start_date, stop_date=stop_date)
+    orders = get_orders(
+        request=request, file_id=file_id, start_date=start_date, stop_date=stop_date
+    )
     size = 66
     if again > MAX_RETRY:
         raise ValueError("Logic error!")
@@ -181,16 +188,18 @@ def handle_auto_config(request, **kwargs):
     )
     return kwargs
 
+
 def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
     common = handle_common(request, results=results, as_component=True)
-    
+
     if common is not None:
         results = common
     return results
 
+
 def handle_common(
     request, results: Optional[Dict[str, Any]] = None, as_component: bool = False
-) -> Optional[Dict[str,Any]]:
+) -> Optional[Dict[str, Any]]:
     """
     Request orders base from the past results with common logic and run an optimizer.
     """
@@ -199,17 +208,15 @@ def handle_common(
     best_trim = results["trim"]
     best_index: Optional[int] = None
 
-    if not as_component:
-        file_id = request.POST.get("selected_file_id")
-    else:
+    if as_component:
         file_id = request.POST.get("file_id")
+    else:
+        file_id = request.POST.get("selected_file_id")
 
     for index, item in enumerate(results["output"]):
-
         optimizer_instance = get_common(
             request=request, blade=2, file_id=file_id, item=item, results=results
         )
-
         if abs(optimizer_instance.fitness_values) <= best_trim:
             best_fitness, best_output = get_outputs(optimizer_instance)
             best_trim = abs(best_fitness)
@@ -218,9 +225,6 @@ def handle_common(
 
     if best_index is not None:
         results = set_common(results, best_index, best_output, best_trim)
-        messages.success(request, "Common order found.")
-    else:
-        messages.error(request, "No suitable common order found.")
 
     if as_component:
         return handle_switcher(results)
@@ -235,15 +239,13 @@ def handle_saving(request):
     file_id = request.POST.get("file_id")
     cache.delete(f"order_cache_{file_id}")
     data = cache.get("optimization_results", None)
-    cache.delete(f"optimization_results")
+    cache.delete("optimization_results")
     if data is None:
         raise ValueError("Output is empty!")
-    try:    
+    try:
         database_formatter(data)
     except ValueError as e:
         raise ValueError(e)
-
-
 
 
 def handle_reset(request):
@@ -262,6 +264,7 @@ def handle_export(request):
     df = plan_orders_formatter()
     # Save the DataFrame to a file
     df.to_excel(
-        f'media/exports/orders_export_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx',
+        f'media/exports/orders_export_{
+            datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx',
         index=False,
     )

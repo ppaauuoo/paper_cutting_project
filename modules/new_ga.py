@@ -1,16 +1,15 @@
-from django.conf import settings
-
 from dataclasses import dataclass, field
 from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
 from typing import Callable, Dict, Any, List, Optional
-from icecream import ic
 
 from order_optimization.container import ModelInterface
 
 from ordplan_project.settings import MIN_TRIM, PENALTY_VALUE
+
+from icecream import ic
 
 
 @dataclass
@@ -68,31 +67,28 @@ class GA(ModelInterface):
         )
 
     def paper_type_logic(self, solution):
-        init_type = None
-        orders = self.orders
-        match orders["edge_type"][self.get_first_solution(solution)]:
-            case "X":
-                init_type = 1
-            case "N":
-                init_type = 2
-            case "W":
-                init_type = 2
+        EDGE_TYPE = {
+            'X': 1,
+            'N': 2,
+            'W': 2
+        }
 
-        if init_type is None:
+        first_index = self.get_first_solution(solution)
+        init_type = EDGE_TYPE.get(self.orders["edge_type"][first_index], 0)
+
+        if not init_type:
             return
 
         for index, out in enumerate(solution):
             if out >= 1:
-                match init_type:
-                    case 1:
-                        if orders["edge_type"][index] not in [
-                            "X",
-                            "Y",
-                        ]:  # Changed OR to AND condition
-                            self._penalty += self._penalty_value
-                    case 2:
-                        if orders["edge_type"][index] == "X":
-                            self._penalty += self._penalty_value
+                edge_type = self.orders["edge_type"][index]
+                if init_type == 1 and edge_type not in [
+                    "X",
+                    "Y",
+                ]:
+                    self._penalty += self._penalty_value
+                if init_type == 2 and edge_type == "X":
+                    self._penalty += self._penalty_value
 
     def least_order_logic(self, solution):
         init_order = None
