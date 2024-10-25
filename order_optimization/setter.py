@@ -31,10 +31,23 @@ def set_common(
     for index, item in enumerate(results["output"]):  # calculate new fitness
         new_fitness += item["cut_width"] * item["out"]
 
+    init_len = 0
+    init_out = 0
+    foll_len = 0
+    foll_out = 0
+    for index, item in enumerate(results["output"]):  # calculate new fitness
+        if index==0:
+            init_len=item['cut_len']
+            init_out=item['out']
+            continue
+        foll_len = item['cut_len']
+        foll_out += item['out']
 
+    new_foll_number = round((init_len*results['init_order_number']*foll_out)/(foll_len*init_out))
 
     results["fitness"] = new_fitness
     results["trim"] = abs(best_fitness)  # set new trim
+    results["foll_order_number"] = new_foll_number
     return results
 
 
