@@ -41,7 +41,11 @@ def handle_optimization(func):
                 request, "Error 404: No orders were found. Please try again."
             )
 
-        results = handle_results(request, kwargs=kwargs)
+        try:
+            results = handle_results(request, kwargs=kwargs)
+        except ValueError as e:
+            ic(e)
+            return handle_auto_retry(request)
         results = handle_switcher(results)
         try:
             results = handle_common_component(request, results=results)
@@ -87,6 +91,8 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
         show_output=False,
     )
     fitness_values, output_data = get_outputs(optimizer_instance)
+    if fitness_values >= PENALTY_VALUE:
+        raise ValueError("Fitness Error!")
     init_order_number, foll_order_number = get_production_quantity(output_data)
 
     results = results_formatter(
