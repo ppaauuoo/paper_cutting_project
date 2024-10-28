@@ -10,18 +10,20 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+from pathlib import Path
+
 ROLL_PAPER = [66, 68, 70, 73, 74, 75, 79, 82, 85, 88, 91, 93, 95, 97]
-FILTER = [16,8,4]
-OUT_RANGE = [7,5,3]
-TUNING_VALUE = [3,2]
+FILTER = [16, 8, 4]
+OUT_RANGE = [7, 5, 3]
+TUNING_VALUE = [3, 2]
 CACHE_TIMEOUT = 300  # Cache timeout in seconds (e.g., 5 min)
 MAX_RETRY = 5
 MAX_TRIM = 3
 MIN_TRIM = 1
 PENALTY_VALUE = 1000
-UNIT_CONVERTER = 25.4 #MM _TO_INCH
+UNIT_CONVERTER = 25.4  # MM _TO_INCH
 DEADLINE_RANGE = 500
-PLAN_RANGE = DEADLINE_RANGE/5
+PLAN_RANGE = DEADLINE_RANGE / 5
 COMMON_FILTER = [
     "front_sheet",
     "c_wave",
@@ -44,7 +46,6 @@ LEGACY_FILTER = [
     "back_sheet",
 ]
 
-from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -66,17 +67,17 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'livereload',
+    "livereload",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    'order_optimization',
-    'paper_subsitution',
+    "order_optimization",
+    "paper_subsitution",
     "django_htmx",
-
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
@@ -87,7 +88,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'livereload.middleware.LiveReloadScript',
+    "livereload.middleware.LiveReloadScript",
     "django_htmx.middleware.HtmxMiddleware",
 ]
 
@@ -158,8 +159,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Default primary key field type
@@ -168,11 +169,11 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
+    "django.contrib.auth.backends.ModelBackend",
 ]
 
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/login/"
 
-TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+TEST_RUNNER = "django.test.runner.DiscoverRunner"

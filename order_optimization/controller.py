@@ -8,14 +8,15 @@ from ordplan_project.settings import (
 
 
 def optimizer_controller(request) -> None:
-    LENGTH = 50
-    for i in tqdm(range(0, LENGTH)):
-        progress = cache.get("api_progress", 0)
+    LENGTH = 10
+    cache.delete("api_progress")
+    for i in tqdm(range(1, LENGTH+1)):
+        cache.get("api_progress", 0)
         try:
             handle_auto_config(request)
             handle_saving(request)
         except ValueError as e:
             ic(e)
             pass
-        cache.set("api_progress", progress/LENGTH*100, CACHE_TIMEOUT)
-    cache.delete("api_progress")
+        current_progress = i/LENGTH*100
+        cache.set("api_progress", current_progress, CACHE_TIMEOUT)

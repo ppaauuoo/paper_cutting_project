@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 from icecream import ic
 
-from django.contrib import messages
 from django.core.cache import cache
 
 from order_optimization.setter import set_common
@@ -29,6 +28,8 @@ from order_optimization.formatter import (
 
 from modules.lp import LP
 
+FILE_ID = '1'
+
 
 def handle_optimization(func):
     """
@@ -39,10 +40,8 @@ def handle_optimization(func):
     def wrapper(request, *args, **kwargs):
         kwargs = func(request)
         if not kwargs:
-            return messages.error(
-                request, "Error 404: No orders were found. Please try again."
-            )
 
+            return
         try:
             results = handle_results(request, kwargs=kwargs)
         except ValueError as e:
@@ -59,7 +58,6 @@ def handle_optimization(func):
         if is_trim_fit(results["trim"]) and is_foll_ok(
             results["output"], results["foll_order_number"]
         ):
-            messages.success(request, "Optimizing finished.")
             cache.delete("past_size")
             cache.delete("try_again")
             cache.set("optimization_results", results, CACHE_TIMEOUT)
@@ -147,8 +145,6 @@ def handle_auto_retry(request):
         cache.set("try_again", again, CACHE_TIMEOUT)
         return handle_auto_config(request)
 
-    messages.error(
-        request, "Error : Auto config malfunctioned, please contact admin.")
     best_result = cache.get("best_result")
     cache.delete("past_size")
     cache.set("optimization_results", best_result, CACHE_TIMEOUT)
@@ -166,11 +162,13 @@ def handle_auto_config(request, **kwargs):
 
     again = cache.get("try_again", 0)
     out_range = 5
-    file_id = request.POST.get("file_id")
+    file_id = FILE_ID
     start_date = request.POST.get("start_date")
+
     stop_date = request.POST.get("stop_date")
     orders = get_orders(
-        request=request, file_id=file_id, start_date=start_date, stop_date=stop_date
+        request=request, file_id=file_id,
+        start_date=start_date, stop_date=stop_date
     )
     size = 66
     if again > MAX_RETRY:
@@ -189,7 +187,8 @@ def handle_auto_config(request, **kwargs):
     return kwargs
 
 
-def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
+def handle_common_component(request,
+                            results: Dict[str, Any]) -> Dict[str, Any]:
     common = handle_common(request, results=results, as_component=True)
 
     if common is not None:
@@ -198,10 +197,12 @@ def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_common(
-    request, results: Optional[Dict[str, Any]] = None, as_component: bool = False
+    request, results: Optional[Dict[str, Any]] = None,
+    as_component: bool = False
 ) -> Optional[Dict[str, Any]]:
     """
-    Request orders base from the past results with common logic and run an optimizer.
+    Request orders base from the past results
+    with common logic and run an optimizer.
     """
     if results is None:
         results = cache.get("optimization_results")
@@ -209,13 +210,15 @@ def handle_common(
     best_index: Optional[int] = None
 
     if as_component:
-        file_id = request.POST.get("file_id")
+        # file_id = request.POST.get("file_id")
+        file_id = FILE_ID
     else:
         file_id = request.POST.get("selected_file_id")
 
     for index, item in enumerate(results["output"]):
         optimizer_instance = get_common(
-            request=request, blade=2, file_id=file_id, item=item, results=results
+            request=request, blade=2, file_id=file_id,
+            item=item, results=results
         )
         if abs(optimizer_instance.fitness_values) <= best_trim:
             best_fitness, best_output = get_outputs(optimizer_instance)
@@ -234,9 +237,10 @@ def handle_common(
 
 def handle_saving(request):
     """
-    Pull data from cache to save into the model and updating both cache and model.
+    Pull data from cache to save into the model
+    and updating both cache and model.
     """
-    file_id = request.POST.get("file_id")
+    file_id = FILE_ID
     cache.delete(f"order_cache_{file_id}")
     data = cache.get("optimization_results", None)
     cache.delete("optimization_results")
