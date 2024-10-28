@@ -1,6 +1,6 @@
 import uuid
 import pandas as pd
-from typing import Dict, List, Callable
+from typing import Dict, List
 
 from order_optimization.models import CSVFile, OrderList
 from ordplan_project.settings import CACHE_TIMEOUT, UNIT_CONVERTER
@@ -22,8 +22,8 @@ def set_common(
     """
     results["output"].pop(best_index)  # remove the old order
 
-    for item in results['output']:
-        item['blade'] = 1
+    for item in results["output"]:
+        item["blade"] = 1
 
     results["output"].extend(best_output)  # add the new one
 
@@ -36,14 +36,17 @@ def set_common(
     foll_len = 0
     foll_out = 0
     for index, item in enumerate(results["output"]):  # calculate new fitness
-        if index==0:
-            init_len=item['cut_len']
-            init_out=item['out']
+        if index == 0:
+            init_len = item["cut_len"]
+            init_out = item["out"]
             continue
-        foll_len = item['cut_len']
-        foll_out += item['out']
+        foll_len = item["cut_len"]
+        foll_out += item["out"]
 
-    new_foll_number = round((init_len*results['init_order_number']*foll_out)/(foll_len*init_out))
+    new_foll_number = round(
+        (init_len * results["init_order_number"]
+         * foll_out) / (foll_len * init_out)
+    )
 
     results["fitness"] = new_fitness
     results["trim"] = abs(best_fitness)  # set new trim
@@ -69,13 +72,14 @@ def set_model(file_id: str) -> None:
     csv_file = set_csv_file(file_id)
     # Read from Excel file and create new records
     data = pd.read_excel(csv_file.file.path, engine="openpyxl")
-    order_instances:List[OrderList] = []
+    order_instances: List[OrderList] = []
 
     for _, row in data.iterrows():
         due_date = timezone.make_aware(
             pd.to_datetime(row["กำหนดส่ง"], format="%m/%d/%y")
         )
-        order_id = f"{row['เลขที่ใบสั่งขาย']}-{row['ชนิดส่วนประกอบ']}-{uuid.uuid4()}"
+        order_id = f"{row['เลขที่ใบสั่งขาย']
+                      }-{row['ชนิดส่วนประกอบ']}-{uuid.uuid4()}"
 
         # if OrderList.objects.filter(id=order_id).exists():
         #     continue
