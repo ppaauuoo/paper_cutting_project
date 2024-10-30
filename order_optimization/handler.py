@@ -247,7 +247,7 @@ def handle_saving(request):
     if data is None:
         raise ValueError("Output is empty!")
     try:
-        database_formatter(data)
+        handle_database(data)
     except ValueError as e:
         raise ValueError(e)
 
@@ -272,3 +272,68 @@ def handle_export(request):
             datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx',
         index=False,
     )
+
+
+def handle_database(data: Dict[str, Any]) -> None:
+
+    if len(data["output"]) <= 1 and data["output"][0]["blade"] != 1:
+        raise ValueError(data["output"])
+        return
+
+    blade2_params_list = []
+    left_over_quantity = 0
+
+    for item in data["output"]:
+        current_id = item["id"]
+
+        current_order = OrderList.objects.get(id=current_id)
+        match item["blade"]:
+            case 1:
+                current_order.quantity = 0
+                blade1_params = {
+                    "order": current_order,
+                    "plan_quantity": data["init_order_number"],
+                    "out": item["out"],
+                    "paper_roll": data["roll"],
+                    "blade_type": "Blade 1",
+                    "order_leftover": 0,
+                }
+
+            case 2:
+                # get combined out from second blade
+                foll_out = sum(i["out"] for i in data["output"][1:])
+                # calculate out ratio base from the combined out
+                new_out_ratio = item["out"] / foll_out
+                # Calculate new cut for each common
+                # with foll cut from first blade divide by out ratio
+                foll_cut = data["foll_order_number"] * new_out_ratio
+                # add potential leftover from previous order
+                plan_quantity = round(foll_cut + left_over_quantity)
+                # reset left over to zero
+                left_over_quantity = 0
+
+                new_quantity = round(current_order.quantity - plan_quantity)
+
+                # check if exceed the stock, then push it to leftover
+                if new_quantity < 0:
+                    left_over_quantity += abs(new_quantity)
+                    new_quantity = 0
+                    plan_quantity = current_order.quantity
+
+                current_order.quantity = new_quantity
+                blade2_params = {
+                    "order": current_order,
+                    "plan_quantity": plan_quantity,
+                    "out": item["out"],
+                    "paper_roll": data["roll"],
+                    "blade_type": "Blade 2",
+                    "order_leftover": new_quantity,
+                }
+
+                blade2_params_list.append(blade2_params)
+
+    if left_over_quantity:
+        raise ValueError("order are out of stock!")
+        return
+
+    database_formatter(blade1_params, blade2_params_list)
