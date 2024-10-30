@@ -1,11 +1,10 @@
+from icecream import ic
 from typing import Any, Dict, List
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
 from order_optimization.container import ModelContainer
 from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
-
-from icecream import ic
 
 
 def output_formatter(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
@@ -46,7 +45,7 @@ def results_formatter(
     }
 
 
-def database_formatter(data: Dict[str, Any]) -> None:
+def database_formatter(blade1_params, blade2_params_list) -> None:
     """
     For defining which order belong to which blade, and turn it into a model.
 
@@ -54,71 +53,21 @@ def database_formatter(data: Dict[str, Any]) -> None:
     """
     format_data = OptimizationPlan.objects.create()
     blade_2_orders = []
-    left_over_quantity = 0
     update_list = []
     blade1_order = None
-    for item in data["output"]:
-        current_id = item["id"]
 
-        current_order = OrderList.objects.get(id=current_id)
-        match item["blade"]:
-            case 1:
-                blade1_order = PlanOrder.objects.create(
-                    order=OrderList.objects.get(id=current_id),
-                    plan_quantity=data["init_order_number"],
-                    out=item["out"],
-                    paper_roll=data["roll"],
-                    blade_type="Blade 1",
-                    order_leftover=0,
-                )
-                current_order.quantity = 0
-                update_list.append(current_order)
+    blade1_order = PlanOrder.objects.create(**blade1_params)
+    update_list.append(blade1_params['order'])
 
-            case 2:
-                # get combined out from second blade
-                foll_out = (
-                    sum(i["out"]
-                        for i in data["output"]) - data["output"][0]["out"]
-                )
-                # calculate out ratio base from the combined out
-                new_out_ratio = item["out"] / foll_out
-                # Calculate new cut for each common
-                # with foll cut from first blade divide by out ratio
-                foll_cut = data["foll_order_number"] * new_out_ratio
-                # add potential leftover from previous order
-                plan_quantity = round(foll_cut + left_over_quantity)
+    for blade2_params in blade2_params_list:
+        blade2_order = PlanOrder.objects.create(
+            **blade2_params
+        )
+        blade_2_orders.append(blade2_order)
+        update_list.append(blade2_params['order'])
 
-                new_quantity = round(
-                    current_order.quantity - foll_cut - left_over_quantity
-                )
-                # reset left over to zero
-                left_over_quantity = 0
-
-                # check if exceed the stock, then push it to leftover
-                if new_quantity < 0:
-                    left_over_quantity += abs(new_quantity)
-                    new_quantity = 0
-                    plan_quantity = current_order.quantity
-
-                blade2_order = PlanOrder.objects.create(
-                    order=OrderList.objects.get(id=current_id),
-                    plan_quantity=plan_quantity,
-                    out=item["out"],
-                    paper_roll=data["roll"],
-                    blade_type="Blade 2",
-                    order_leftover=new_quantity,
-                )
-                blade_2_orders.append(blade2_order)
-                current_order.quantity = new_quantity
-                update_list.append(current_order)
-
-    if left_over_quantity:
-        ic()
-        raise ValueError("Both order are out of stock!")
-
-    ic(update_list)
     for order in update_list:
-        ic(order)
+        ic(order.quantity)
         OrderList.objects.filter(id=order.id).update(quantity=order.quantity)
 
     format_data.blade_1.add(blade1_order)
