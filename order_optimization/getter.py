@@ -11,8 +11,6 @@ from modules.hd import HD
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from icecream import ic
-
 
 def get_production_quantity(output_data):
     """
@@ -55,7 +53,6 @@ def get_orders_cache(file_id: str) -> DataFrame:
 
 
 def get_orders(
-    request,
     file_id: str,
     common: bool = False,
     preview: bool = False,
@@ -69,9 +66,11 @@ def get_orders(
     return: processed orders.
     """
 
+    orders = get_orders_cache(file_id)
+
     return OrderContainer(
         provider=HD(
-            orders=get_orders_cache(file_id),
+            orders=orders,
             common=common,
             start_date=start_date,
             stop_date=stop_date,
@@ -143,7 +142,7 @@ def get_common(
 ):
     size_value = (item["cut_width"] * item["out"]) + results["trim"]
     orders = get_orders(
-        request=request, file_id=file_id, common=True, common_init_order=item
+        file_id=file_id, common=True, common_init_order=item
     )
     optimizer_instance = get_optimizer(
         request=request,
