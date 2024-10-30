@@ -9,8 +9,9 @@ from ordplan_project.settings import (
 
 def optimizer_controller(request) -> None:
     LENGTH = 100
+    REPEAT_ERROR = round(LENGTH*20/100)
     cache.delete("api_progress")
-    count = 0
+    e_count = 0
     for i in tqdm(range(1, LENGTH+1)):
         cache.get("api_progress", 0)
         try:
@@ -18,12 +19,13 @@ def optimizer_controller(request) -> None:
             handle_saving(request)
         except ValueError as e:
             ic(e)
-            pass
+            e_count += 1
         except RecursionError as e:
             ic(e)
-            if count > 10:
-                raise RecursionError
-            count += 1
-            pass
+            e_count += 1
+
+        if e_count > REPEAT_ERROR:
+            raise Exception("Error Exceed.")
+            break
         current_progress = i/LENGTH*100
         cache.set("api_progress", current_progress, CACHE_TIMEOUT)
