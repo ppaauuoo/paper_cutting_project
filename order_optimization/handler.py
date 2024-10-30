@@ -18,7 +18,7 @@ from ordplan_project.settings import (
     MAX_RETRY,
     MAX_TRIM,
     MIN_TRIM,
-    PENALTY_VALUE
+    PENALTY_VALUE,
 )
 from order_optimization.formatter import (
     database_formatter,
@@ -28,7 +28,7 @@ from order_optimization.formatter import (
 
 from modules.lp import LP
 
-FILE_ID = '1'
+FILE_ID = "1"
 
 
 def handle_optimization(func):
@@ -149,7 +149,7 @@ def handle_auto_retry(request):
     cache.delete("past_size")
     cache.set("optimization_results", best_result, CACHE_TIMEOUT)
     cache.delete("try_again")
-    raise ValueError("No More!")
+    # raise ValueError("No More!")
     return
 
 
@@ -163,13 +163,12 @@ def handle_auto_config(request, **kwargs):
     again = cache.get("try_again", 0)
     out_range = 5
     file_id = FILE_ID
-    start_date = request.POST.get("start_date")
 
+    start_date = request.POST.get("start_date")
     stop_date = request.POST.get("stop_date")
+
     orders = get_orders(
-        request=request, file_id=file_id,
-        start_date=start_date, stop_date=stop_date
-    )
+        file_id=file_id, start_date=start_date, stop_date=stop_date)
     size = 66
     if again > MAX_RETRY:
         raise ValueError("Logic error!")
@@ -187,8 +186,7 @@ def handle_auto_config(request, **kwargs):
     return kwargs
 
 
-def handle_common_component(request,
-                            results: Dict[str, Any]) -> Dict[str, Any]:
+def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
     common = handle_common(request, results=results, as_component=True)
 
     if common is not None:
@@ -197,8 +195,7 @@ def handle_common_component(request,
 
 
 def handle_common(
-    request, results: Optional[Dict[str, Any]] = None,
-    as_component: bool = False
+    request, results: Optional[Dict[str, Any]] = None, as_component: bool = False
 ) -> Optional[Dict[str, Any]]:
     """
     Request orders base from the past results
@@ -206,6 +203,8 @@ def handle_common(
     """
     if results is None:
         results = cache.get("optimization_results")
+    if len(results["output"]) <= 1:
+        return results
     best_trim = results["trim"]
     best_index: Optional[int] = None
 
@@ -217,8 +216,7 @@ def handle_common(
 
     for index, item in enumerate(results["output"]):
         optimizer_instance = get_common(
-            request=request, blade=2, file_id=file_id,
-            item=item, results=results
+            request=request, blade=2, file_id=file_id, item=item, results=results
         )
         if abs(optimizer_instance.fitness_values) <= best_trim:
             best_fitness, best_output = get_outputs(optimizer_instance)
