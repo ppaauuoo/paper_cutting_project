@@ -145,18 +145,18 @@ def handle_auto_retry(request):
         cache.set("try_again", again, CACHE_TIMEOUT)
         return handle_auto_config(request)
 
-    best_result = cache.get("best_result")
+    # best_result = cache.get("best_result")
     cache.delete("past_size")
-    cache.set("optimization_results", best_result, CACHE_TIMEOUT)
+    # cache.set("optimization_results", best_result, CACHE_TIMEOUT)
+    cache.delete("optimization_results")
     cache.delete("try_again")
-    # raise ValueError("No More!")
-    return
+    raise ValueError("No Satisfiable Solution Found")
 
 
 @handle_optimization
 def handle_auto_config(request, **kwargs):
     """
-    Automatically defines values needed for requesting orders
+    # Automatically defines values needed for requesting orders
     and send it to optimizer.
     """
 
