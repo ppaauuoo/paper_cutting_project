@@ -1,3 +1,4 @@
+from icecream import ic
 import uuid
 import pandas as pd
 from typing import Dict, List
@@ -43,10 +44,12 @@ def set_common(
         foll_len = item["cut_len"]
         foll_out += item["out"]
 
-    new_foll_number = round(
-        (init_len * results["init_order_number"]
-         * foll_out) / (foll_len * init_out)
-    )
+    try:
+        new_foll_number = round((
+            init_len * results["init_order_number"] * foll_out) / (
+                foll_len * init_out))
+    except ZeroDivisionError:
+        raise ValueError(foll_len, init_out)
 
     results["fitness"] = new_fitness
     results["trim"] = abs(best_fitness)  # set new trim
