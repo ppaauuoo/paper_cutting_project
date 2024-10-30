@@ -9,14 +9,19 @@ from ordplan_project.settings import (
 
 def optimizer_controller(request) -> None:
     LENGTH = 100
-    REPEAT_ERROR = round(LENGTH*20/100)
+    REPEAT_ERROR = round(LENGTH*10/100)
     cache.delete("api_progress")
     e_count = 0
     for i in tqdm(range(1, LENGTH+1)):
         cache.get("api_progress", 0)
         try:
             handle_auto_config(request)
-            handle_saving(request)
+            try:
+                handle_saving(request)
+                e_count = 0
+            except ValueError:
+                raise
+
         except ValueError as e:
             ic(e)
             e_count += 1
