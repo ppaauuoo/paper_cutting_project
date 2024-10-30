@@ -1,3 +1,4 @@
+from icecream import ic
 from typing import Any, Optional, Dict
 from dataclasses import dataclass
 import pandas as pd
@@ -9,7 +10,6 @@ from ordplan_project.settings import (
     ROLL_PAPER,
 )
 import random
-from icecream import ic
 
 
 @dataclass
@@ -35,8 +35,9 @@ class HD(ProviderInterface):
         data = self.format_data(self.orders)
         data = self.date_range_limit(data)
 
-        filters = {False: self.legacy_filter_order, True: self.filter_common_order}
-        filtered_data = filters.get(self.common)(data)
+        filters = {False: self.legacy_filter_order,
+                   True: self.filter_common_order}
+        post_data = filters.get(self.common)(data)
         self.temp_size = min(ROLL_PAPER)
         ff_list = []
         ffa_list = []
@@ -44,32 +45,30 @@ class HD(ProviderInterface):
         match (self.h_type):
             case "ff":
                 ff_list = [[] for _ in range(self.x)]
-                for item, id in zip(filtered_data["width"], filtered_data["id"]):
+                for item, id in zip(post_data["width"], post_data["id"]):
                     ff_list = self.first_fit(ff_list, item, id)
                 data_df = self.df_formatter(ff_list)
             case "ffa":
                 ffa_list = [[] for _ in range(self.x)]
-                asc_filtered_data = filtered_data.sort_values("width", ascending=True)
-                for item, id in zip(
-                    asc_filtered_data["width"], asc_filtered_data["id"]
-                ):
+                asc_p_data = post_data.sort_values("width", ascending=True)
+                for item, id in zip(asc_p_data["width"], asc_p_data["id"]):
                     ffa_list = self.first_fit(ffa_list, item, id)
                 data_df = self.df_formatter(ffa_list)
 
-        heuristic_data_id = data_df
-        heuristic_data_id = heuristic_data_id.drop_duplicates("id").reset_index(
-            drop=True
-        )
+        heuristic_data_id = data_df.drop_duplicates(
+            "id").reset_index(drop=True)
 
-        self.heuristic_data = filtered_data[
-            filtered_data["id"].isin(heuristic_data_id["id"])
+        self.heuristic_data = post_data[
+            post_data["id"].isin(heuristic_data_id["id"])
         ].reset_index(drop=True)
 
     @staticmethod
     def format_data(data):
-        """Format due date for calculation purpose and filter out any unuseable data."""
+        """Format due date for calculation purpose
+        and filter out any unuseable data."""
         ordplan = data.copy()
-        ordplan["due_date"] = pd.to_datetime(ordplan["due_date"], format="%m/%d/%Y")
+        ordplan["due_date"] = pd.to_datetime(
+            ordplan["due_date"], format="%m/%d/%Y")
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
         ordplan = ordplan[ordplan["length"] > 0]  # drop len = 0
         ordplan = ordplan[ordplan["quantity"] > 500]  # drop quantity = 500
@@ -86,7 +85,8 @@ class HD(ProviderInterface):
     def width_sum_formatter(self, data_list):
         output = ""
         for index, _ in enumerate(data_list):
-            output += str(round(sum(self.get_width(data_list[index])), 4)) + " | "
+            output += str(
+                round(sum(self.get_width(data_list[index])), 4)) + " | "
         return output
 
     @staticmethod
@@ -112,6 +112,8 @@ class HD(ProviderInterface):
                 (data["due_date"] >= self.start_date)
                 & (data["due_date"] <= self.stop_date)
             ].reset_index(drop=True)
+        if len(data) < PLAN_RANGE:
+            raise ValueError('No Orders in Date Range.')
         return data
 
     def legacy_filter_order(
@@ -122,7 +124,7 @@ class HD(ProviderInterface):
     ):
         used_data = data.head(int(data_range)).copy()
 
-        legacy_filters = LEGACY_FILTER
+        leg_filters = LEGACY_FILTER
         indices = list(range(0, len(used_data)))
         random.shuffle(indices)
         indices = indices[:100]
@@ -130,24 +132,20 @@ class HD(ProviderInterface):
         for index in indices:
             init_order = used_data.iloc[index]
             # Create a mask for matching orders using all legacy filters
-            mask = (used_data[legacy_filters].eq(init_order[legacy_filters])).all(
-                axis=1
-            )
+            mask = (used_data[leg_filters].eq(
+                init_order[leg_filters])).all(axis=1)
             # Apply the mask and reset the index
             plan = used_data.loc[mask].reset_index(drop=True)
+
             if len(plan) > len(best_plan):
                 best_plan = plan
+                return best_plan
 
             # early stop
             if len(best_plan) >= PLAN_RANGE:
                 break
 
-        if len(best_plan) < PLAN_RANGE:
-            return self.legacy_filter_order(
-                data=data, data_range=data_range + PLAN_RANGE
-            )
-
-        return best_plan
+        # return best_plan
 
     def filter_common_order(self, data):
         """Use common filter base on the first order or filler order."""
@@ -165,9 +163,7 @@ class HD(ProviderInterface):
         filtered_plan = data.loc[mask].reset_index(drop=True).copy()
         if len(filtered_plan) <= 0:
             raise ValueError("Common Not Found")
-        best_plan: pd.DataFrame = pd.DataFrame(None)
         best_plan = pd.DataFrame(None)
-        best_index = 0
         indices = list(range(len(filtered_plan)))
         random.shuffle(indices)
         indices = indices[:100]
@@ -178,9 +174,10 @@ class HD(ProviderInterface):
 
             if len(orders) > len(best_plan):
                 best_plan = orders
+                return best_plan
 
             # early stop
             if len(best_plan) >= PLAN_RANGE:
                 break
 
-        return best_plan
+        # return best_plan
