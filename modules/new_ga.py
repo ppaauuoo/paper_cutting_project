@@ -21,7 +21,7 @@ class GA(ModelInterface):
     showOutput: bool = False
     save_solutions: bool = False
     showZero: bool = False
-    selector: Dict[str, Any] | None = None
+    selector: Optional[Dict[str, Any]] = None
     set_progress: Callable | None = None
     current_generation: int = 0
     _penalty: int = 0
@@ -75,6 +75,8 @@ class GA(ModelInterface):
 
         first_index = self.get_first_solution(solution)
         init_type = EDGE_TYPE.get(self.orders["edge_type"][first_index], 0)
+        if self.selector:
+            init_type = EDGE_TYPE.get(self.selector['type'], 0)
 
         if not init_type:
             return
@@ -108,16 +110,24 @@ class GA(ModelInterface):
         return 0
 
     def paper_out_logic(self, solution):
-        if sum(solution) > 5:
-            if sum(solution) <= 6:
+        current_out = sum(solution)
+        if self.selector:
+            current_out += self.selector['out']
+        if current_out > 5:
+            if current_out <= 6:
                 orders = self.orders
                 init = 0
+                if self.selector and self.selector['type'] == 'X':
+                    init = -1
                 for index, out in enumerate(solution):
                     if out >= 1:
                         if orders["edge_type"][index] == "X" and init == 0:
                             init = 1
                             continue
                         if orders["edge_type"][index] == "Y" and init == 1:
+                            return
+
+                        if orders["edge_type"][index] == "Y" and init == -1:
                             return
 
             self._penalty += self._penalty_value * sum(
@@ -161,14 +171,12 @@ class GA(ModelInterface):
     def fitness_function(self, ga_instance, solution, solution_idx):
         self._penalty = 0
 
-        solution = self.selector_logic(solution)
+        # solution = self.selector_logic(solution)
 
         self.paper_type_logic(solution)
-
-        self.least_order_logic(solution)
-
         self.paper_out_logic(solution)
 
+        self.least_order_logic(solution)
         # ผลรวมของตัดกว้างทั้งหมด
         _output = numpy.sum(solution * self.orders["width"])
         self.paper_size_logic(_output)
