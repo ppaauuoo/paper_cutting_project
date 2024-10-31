@@ -41,6 +41,7 @@ class HD(ProviderInterface):
         self.temp_size = min(ROLL_PAPER)
         ff_list = []
         ffa_list = []
+        ffd_list = []
 
         match (self.h_type):
             case "ff":
@@ -54,6 +55,12 @@ class HD(ProviderInterface):
                 for item, id in zip(asc_p_data["width"], asc_p_data["id"]):
                     ffa_list = self.first_fit(ffa_list, item, id)
                 data_df = self.df_formatter(ffa_list)
+            case "ffd":
+                ffd_list = [[] for _ in range(round(self.x))]
+                asc_p_data = post_data.sort_values("width", ascending=False)
+                for item, id in zip(asc_p_data["width"], asc_p_data["id"]):
+                    ffd_list = self.first_fit(ffd_list, item, id)
+                data_df = self.df_formatter(ffd_list)
 
         heuristic_data_id = data_df.drop_duplicates(
             "id").reset_index(drop=True)
