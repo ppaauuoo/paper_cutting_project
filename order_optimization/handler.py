@@ -86,7 +86,6 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
         request=request,
         orders=orders,
         size_value=kwargs.get("size_value", 66),
-        out_range=kwargs.get("out_range", 6),
         num_generations=kwargs.get("num_generations", 50),
         show_output=False,
     )
@@ -161,7 +160,6 @@ def handle_auto_config(request, **kwargs):
     """
 
     again = cache.get("try_again", 0)
-    out_range = 5
     file_id = FILE_ID
 
     start_date = request.POST.get("start_date")
@@ -180,7 +178,6 @@ def handle_auto_config(request, **kwargs):
             "orders": orders,
             "size_value": size,
             "num_generations": 50,
-            "out_range": out_range,
         }
     )
     return kwargs

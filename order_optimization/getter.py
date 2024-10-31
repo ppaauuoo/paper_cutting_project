@@ -94,7 +94,6 @@ def get_optimizer(
     request,
     orders: DataFrame,
     size_value: float,
-    out_range: int = 5,
     num_generations: int = 50,
     show_output: bool = False,
     blade: Optional[int] = None,
@@ -109,7 +108,6 @@ def get_optimizer(
         model=GA(
             orders,
             size=size_value,
-            out_range=out_range,
             num_generations=num_generations,
             showOutput=show_output,
             set_progress=set_progress,
