@@ -9,15 +9,13 @@ from order_optimization.container import ModelInterface
 
 from ordplan_project.settings import MIN_TRIM, PENALTY_VALUE
 
-from icecream import ic
-
 
 @dataclass
 class GA(ModelInterface):
     orders: DataFrame
     size: float = 66
     num_generations: int = 50
-    out_range: int = 5
+    out_range: int = 4
     showOutput: bool = False
     save_solutions: bool = False
     showZero: bool = False
