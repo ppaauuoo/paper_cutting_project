@@ -1,7 +1,7 @@
 from icecream import ic
 import uuid
 import pandas as pd
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from order_optimization.models import CSVFile, OrderList
 from ordplan_project.settings import CACHE_TIMEOUT, UNIT_CONVERTER
@@ -12,7 +12,7 @@ from django.utils import timezone
 
 
 def set_common(
-    results: Dict,
+    results: Dict[str, Any],
     best_index: int,
     best_output: List[Dict],
     best_fitness: float,
@@ -22,6 +22,7 @@ def set_common(
     injecting the common orders and new fitness into results.
     """
     results["output"].pop(best_index)  # remove the old order
+    results["init_order_number"] = results['output'][0]['num_orders']
 
     for item in results["output"]:
         item["blade"] = 1
