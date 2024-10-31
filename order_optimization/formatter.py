@@ -1,4 +1,3 @@
-from icecream import ic
 from typing import Any, Dict, List
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
@@ -67,7 +66,6 @@ def database_formatter(blade1_params, blade2_params_list) -> None:
         update_list.append(blade2_params['order'])
 
     for order in update_list:
-        ic(order.quantity)
         OrderList.objects.filter(id=order.id).update(quantity=order.quantity)
 
     format_data.blade_1.add(blade1_order)
@@ -100,14 +98,13 @@ def plan_orders_formatter() -> pd.DataFrame:
     # Get all PlanOrder objects as a list of dictionaries
     optimized_output = list(
         PlanOrder.objects.all().values(
+            "order_id",
             "blade_1_orders__id",
             "blade_2_orders__id",
-            "order_id",
-            "plan_quantity",
-            "out",
             "blade_type",
             "paper_roll",
-            "order_leftover",
+            "out",
+            "plan_quantity",
             "order_leftover",
         )
     )
@@ -117,7 +114,24 @@ def plan_orders_formatter() -> pd.DataFrame:
 
     # Get corresponding OrderList objects
     optimized_order_list = list(
-        OrderList.objects.filter(id__in=optimized_output_ids).values()
+        OrderList.objects.filter(id__in=optimized_output_ids).values(
+            "quantity",
+            "width",
+            "length",
+            "edge_type",
+            "due_date",
+            "front_sheet",
+            "c_wave",
+            "middle_sheet",
+            "b_wave",
+            "back_sheet",
+            "level",
+            "left_edge_cut",
+            "middle_edge_cut",
+            "right_edge_cut",
+            "component_type",
+            "id",
+            )
     )
 
     # Create a dictionary with order_id as the key
