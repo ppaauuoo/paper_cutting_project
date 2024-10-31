@@ -45,27 +45,30 @@ def handle_optimization(func):
         try:
             results = handle_results(request, kwargs=kwargs)
         except ValueError as e:
-            ic(e)
+            raise e
             return handle_auto_retry(request)
 
         results = handle_switcher(results)
         try:
             results = handle_common_component(request, results=results)
         except ValueError as e:
-            ic(e)
+            raise e
             pass
 
-        if is_trim_fit(results["trim"]) and is_foll_ok(
-            results["output"], results["foll_order_number"]
-        ):
-            cache.delete("past_size")
-            cache.delete("try_again")
-            cache.set("optimization_results", results, CACHE_TIMEOUT)
-            return
-
         best_result = cache.get("best_result", {"trim": 1000})
+        log = ""
+        if is_trim_fit(results["trim"]):
+            if is_foll_ok(results["output"], results["foll_order_number"]):
+                cache.delete("try_again")
+                cache.set("optimization_results", results, CACHE_TIMEOUT)
+                return
+            log = "stock not ok"
+        else:
+            log = f'trim not ok trim:{results["trim"]}'
+
         if results["trim"] < best_result["trim"]:
             cache.set("best_result", results, CACHE_TIMEOUT)
+            cache.set("log", log, CACHE_TIMEOUT)
 
         if "auto" or "ai" in request.POST:
             return handle_auto_retry(request)
@@ -144,10 +147,9 @@ def handle_auto_retry(request):
         cache.set("try_again", again, CACHE_TIMEOUT)
         return handle_auto_config(request)
 
-    # best_result = cache.get("best_result")
-    cache.delete("past_size")
-    # cache.set("optimization_results", best_result, CACHE_TIMEOUT)
-    cache.delete("optimization_results")
+    best_result = cache.get("best_result")
+    cache.set("optimization_results", best_result, CACHE_TIMEOUT)
+    # cache.delete("optimization_results")
     cache.delete("try_again")
     raise ValueError("No Satisfiable Solution Found")
 
@@ -192,7 +194,7 @@ def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_common(
-    request, results: Optional[Dict[str, Any]] = None, as_component: bool = False
+    request, results: Optional[Dict[str, Any]], as_component: Optional[bool]
 ) -> Optional[Dict[str, Any]]:
     """
     Request orders base from the past results
