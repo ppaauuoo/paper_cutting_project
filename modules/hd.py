@@ -8,6 +8,7 @@ from ordplan_project.settings import (
     LEGACY_FILTER,
     DEADLINE_RANGE,
     ROLL_PAPER,
+    COMMON_FILTER
 )
 import random
 
@@ -174,9 +175,10 @@ class HD(ProviderInterface):
         indices = list(range(len(filtered_plan)))
         random.shuffle(indices)
         indices = indices[:100]
+        common_filters = COMMON_FILTER
         for index in indices:
             init_order = filtered_plan.iloc[index]
-            mask = (data[filters].eq(init_order[filters])).all(axis=1)
+            mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
             orders = data.loc[mask].reset_index(drop=True).copy()
 
             if len(orders) > len(best_plan):
