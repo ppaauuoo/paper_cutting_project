@@ -93,13 +93,14 @@ class GA(ModelInterface):
                     self._penalty += self._penalty_value
 
     def least_order_logic(self, solution):
-        init_order = None
         orders = self.orders
 
-        init_order = orders["quantity"][self.get_first_solution(solution)]
+        init_quantity = orders["quantity"][self.get_first_solution(solution)]
+        if self.selector:
+            init_quantity = self.selector['num_orders']/2
 
         for index, out in enumerate(solution):
-            if out >= 1 and orders["quantity"][index] < init_order:
+            if out >= 1 and orders["quantity"][index] < init_quantity:
                 self._penalty += self._penalty_value
 
     @staticmethod
