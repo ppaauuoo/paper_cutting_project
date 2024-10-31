@@ -1,36 +1,47 @@
 from order_optimization.handler import handle_auto_config, handle_saving
-from tqdm import tqdm
-from icecream import ic
 from django.core.cache import cache
 from ordplan_project.settings import (
     CACHE_TIMEOUT,
-    )
+)
+
+from rich.progress import Progress
+import time
 
 
 def optimizer_controller(request) -> None:
     LENGTH = 100
-    REPEAT_ERROR = round(LENGTH*10/100)
+    REPEAT_ERROR = round(LENGTH * 10 / 100)
     cache.delete("api_progress")
     e_count = 0
-    for i in tqdm(range(1, LENGTH+1)):
-        cache.get("api_progress", 0)
-        try:
-            handle_auto_config(request)
+
+    with Progress() as progress:
+        task1 = progress.add_task("[red]Optimizing...", total=LENGTH)
+        while not progress.finished:
+            current_progress = cache.get("api_progress", 0)
             try:
-                handle_saving(request)
-                e_count = 0
-            except ValueError:
-                raise
+                handle_auto_config(request)
+                try:
+                    handle_saving(request)
+                    e_count = 0
+                except ValueError:
+                    raise
 
-        except ValueError as e:
-            ic(e)
-            e_count += 1
-        except RecursionError as e:
-            ic(e)
-            e_count += 1
+            except ValueError as e:
+                progress.console.print(e)
+                result = cache.get("optimization_results", 0)
+                log = cache.get("log", 0)
+                if result:
+                    progress.console.print(result)
+                progress.console.print(log)
+                e_count += 1
+            except RecursionError as e:
+                progress.console.print(e)
+                e_count += 1
 
-        if e_count > REPEAT_ERROR:
-            raise Exception("Error Exceed.")
-            break
-        current_progress = i/LENGTH*100
-        cache.set("api_progress", current_progress, CACHE_TIMEOUT)
+            progress.update(task1, advance=1)
+            if e_count > REPEAT_ERROR:
+                progress.console.print("[red]Error Exceed.")
+                progress.stop
+                break
+            current_progress = progress.tasks[task1].completed / LENGTH
+            cache.set("api_progress", current_progress, CACHE_TIMEOUT)
