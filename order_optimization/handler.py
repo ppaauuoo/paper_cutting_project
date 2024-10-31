@@ -122,11 +122,15 @@ def is_foll_ok(output: List[Dict[str, Any]], foll_order_number: int):
     """
     Check if second order's cut exceed the second order's stock or not.
     """
+    foll_stock = 0
+    if len(output) <= 1:
+        return True
     for index, order in enumerate(output):
         if index == 0:
             continue
-        if order["num_orders"] < foll_order_number:
-            return False
+        foll_stock += order["num_orders"]
+    if foll_stock < foll_order_number:
+        return False
     return True
 
 
