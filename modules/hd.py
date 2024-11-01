@@ -8,7 +8,7 @@ from ordplan_project.settings import (
     LEGACY_FILTER,
     DEADLINE_RANGE,
     ROLL_PAPER,
-    COMMON_FILTER
+    COMMON_FILTER,
 )
 import random
 
@@ -81,6 +81,7 @@ class HD(ProviderInterface):
             ordplan["due_date"], format="%m/%d/%Y")
         ordplan.fillna(0, inplace=True)  # fix error values ex. , -> NA
         ordplan = ordplan[ordplan["length"] > 0]  # drop len = 0
+        ordplan = ordplan[ordplan["width"] > 0]  # drop len = 0
         ordplan = ordplan[ordplan["quantity"] > 500]  # drop quantity = 500
 
         return ordplan
@@ -123,7 +124,7 @@ class HD(ProviderInterface):
                 & (data["due_date"] <= self.stop_date)
             ].reset_index(drop=True)
         if len(data) < PLAN_RANGE:
-            raise ValueError('No Orders in Date Range.')
+            raise ValueError("No Orders in Date Range.")
         return data
 
     def legacy_filter_order(
@@ -132,7 +133,7 @@ class HD(ProviderInterface):
         data_range: float = DEADLINE_RANGE,
         best_plan: pd.DataFrame = pd.DataFrame(None),
     ):
-        used_data = data.head(int(data_range)).copy()
+        used_data = data.head(int(data_range))
 
         leg_filters = LEGACY_FILTER
         indices = list(range(0, len(used_data)))
@@ -145,7 +146,12 @@ class HD(ProviderInterface):
             mask = (used_data[leg_filters].eq(
                 init_order[leg_filters])).all(axis=1)
             # Apply the mask and reset the index
-            plan = used_data.loc[mask].reset_index(drop=True)
+            plan = (
+                used_data.loc[mask]
+                .reset_index(drop=True)
+                .groupby("width").head(2)
+                # .drop_duplicates(subset=["width", "length"])
+            )
 
             if len(plan) > len(best_plan):
                 best_plan = plan
@@ -163,6 +169,7 @@ class HD(ProviderInterface):
             return
 
         filters = LEGACY_FILTER.copy()
+        # speed up filtering by cutout unused length
         filters.append("length")
 
         init_order = pd.DataFrame([self.common_init_order])
@@ -180,8 +187,10 @@ class HD(ProviderInterface):
         common_filters = COMMON_FILTER
         for index in indices:
             init_order = filtered_plan.iloc[index]
-            mask = (data[common_filters].eq(init_order[common_filters])).all(axis=1)
-            orders = data.loc[mask].reset_index(drop=True).copy()
+            mask = (data[common_filters].eq(
+                init_order[common_filters])).all(axis=1)
+            orders = data.loc[mask].reset_index(
+                drop=True).groupby("width").head(2)
 
             if len(orders) > len(best_plan):
                 best_plan = orders
