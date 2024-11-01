@@ -150,8 +150,9 @@ class GA(ModelInterface):
             )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
 
     def paper_trim_logic(self, _fitness_values):
-        if abs(_fitness_values) <= MIN_TRIM:
-            self._penalty += self._penalty_value
+        trim = abs(_fitness_values)
+        if trim <= MIN_TRIM:
+            self._penalty += self._penalty_value * trim
 
     def selector_logic(self, solution: List[int]) -> List[int]:
         if self.selector is None:
