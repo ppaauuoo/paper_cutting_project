@@ -2,7 +2,7 @@ from pandas import DataFrame
 import pandas as pd
 from django.core.cache import cache
 
-from ordplan_project.settings import CACHE_TIMEOUT
+from ordplan_project.settings import CACHE_TIMEOUT, ROLL_PAPER
 from order_optimization.setter import set_csv_file, set_model, set_progress
 from order_optimization.models import OrderList
 from order_optimization.container import ModelContainer, OrderContainer
@@ -93,7 +93,7 @@ def get_selected_order(request) -> Dict[str, Any] | None:
 def get_optimizer(
     request,
     orders: DataFrame,
-    size_value: float,
+    size_value: Optional[float] = None,
     num_generations: int = 50,
     show_output: bool = False,
     blade: Optional[int] = None,

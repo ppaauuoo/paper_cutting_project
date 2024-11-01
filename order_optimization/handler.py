@@ -88,7 +88,6 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
     optimizer_instance = get_optimizer(
         request=request,
         orders=orders,
-        size_value=kwargs.get("size_value", 66),
         num_generations=kwargs.get("num_generations", 50),
         show_output=False,
     )
@@ -173,7 +172,6 @@ def handle_auto_config(request, **kwargs):
 
     orders = get_orders(
         file_id=file_id, start_date=start_date, stop_date=stop_date)
-    size = 66
     if again > MAX_RETRY:
         raise ValueError("Logic error!")
     if orders is None:
@@ -182,8 +180,6 @@ def handle_auto_config(request, **kwargs):
     kwargs.update(
         {
             "orders": orders,
-            "size_value": size,
-            "num_generations": 50,
         }
     )
     return kwargs

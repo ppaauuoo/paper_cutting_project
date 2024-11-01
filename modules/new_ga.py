@@ -3,17 +3,18 @@ from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
+import random
 from typing import Callable, Dict, Any, List, Optional
 
 from order_optimization.container import ModelInterface
 
-from ordplan_project.settings import MIN_TRIM, PENALTY_VALUE
+from ordplan_project.settings import MIN_TRIM, PENALTY_VALUE, ROLL_PAPER
 
 
 @dataclass
 class GA(ModelInterface):
     orders: DataFrame
-    size: float = 66
+    size: Optional[float]
     num_generations: int = 50
     out_range: int = 4
     showOutput: bool = False
@@ -170,6 +171,8 @@ class GA(ModelInterface):
 
     def fitness_function(self, ga_instance, solution, solution_idx):
         self._penalty = 0
+        if not self.size:
+            self._paper_size = random.sample(ROLL_PAPER, 1)[0]
 
         # solution = self.selector_logic(solution)
 
