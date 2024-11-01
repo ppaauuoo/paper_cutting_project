@@ -40,13 +40,11 @@ def handle_optimization(func):
     def wrapper(request, *args, **kwargs):
         kwargs = func(request)
         if not kwargs:
-
             return
         try:
             results = handle_results(request, kwargs=kwargs)
         except ValueError as e:
             raise e
-            return handle_auto_retry(request)
 
         results = handle_switcher(results)
         try:
@@ -55,7 +53,6 @@ def handle_optimization(func):
             raise e
             pass
 
-        best_result = cache.get("best_result", {"trim": 1000})
         log = ""
         if is_trim_fit(results["trim"]):
             if is_foll_ok(results["output"], results["foll_order_number"]):
@@ -64,17 +61,12 @@ def handle_optimization(func):
                 return
             log = "stock not ok"
         else:
-            log = f'trim not ok trim:{results["trim"]}'
+            log = f'trim not ok trim:{round(results["trim"])}'
 
-        if results["trim"] < best_result["trim"]:
-            cache.set("best_result", results, CACHE_TIMEOUT)
-            cache.set("log", log, CACHE_TIMEOUT)
-
-        if "auto" or "ai" in request.POST:
-            return handle_auto_retry(request)
-
+        cache.set("log", log, CACHE_TIMEOUT)
         cache.delete("try_again")
-        return cache.set("optimization_results", best_result, CACHE_TIMEOUT)
+        cache.set("optimization_results", results, CACHE_TIMEOUT)
+        raise ValueError("No Satisfiable Solution Found")
 
     return wrapper
 
