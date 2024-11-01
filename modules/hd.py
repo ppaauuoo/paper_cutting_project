@@ -56,12 +56,14 @@ class HD(ProviderInterface):
                 for item, id in zip(asc_p_data["width"], asc_p_data["id"]):
                     ffa_list = self.first_fit(ffa_list, item, id)
                 data_df = self.df_formatter(ffa_list)
-            case "ffd":
-                ffd_list = [[] for _ in range(round(self.x))]
-                asc_p_data = post_data.sort_values("width", ascending=False)
-                for item, id in zip(asc_p_data["width"], asc_p_data["id"]):
+            # case "ffd":
+                ffd_list = [[] for _ in range(round(self.x * 20 / 100))]
+                dsc_p_data = post_data.sort_values("width", ascending=False)
+                for item, id in zip(dsc_p_data["width"], dsc_p_data["id"]):
                     ffd_list = self.first_fit(ffd_list, item, id)
-                data_df = self.df_formatter(ffd_list)
+                # data_df = self.df_formatter(ffd_list)
+                ffd_df = self.df_formatter(ffd_list)
+                data_df = pd.concat([data_df, ffd_df], ignore_index=True)
 
         heuristic_data_id = data_df.drop_duplicates(
             "id").reset_index(drop=True)
