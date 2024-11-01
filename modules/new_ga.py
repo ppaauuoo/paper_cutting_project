@@ -16,7 +16,7 @@ class GA(ModelInterface):
     orders: DataFrame
     size: Optional[float]
     num_generations: int = 50
-    out_range: int = 4
+    out_range: int = 3
     showOutput: bool = False
     save_solutions: bool = False
     showZero: bool = False
@@ -66,16 +66,12 @@ class GA(ModelInterface):
         )
 
     def paper_type_logic(self, solution):
-        EDGE_TYPE = {
-            'X': 1,
-            'N': 2,
-            'W': 2
-        }
+        EDGE_TYPE = {"X": 1, "N": 2, "W": 2}
 
         first_index = self.get_first_solution(solution)
         init_type = EDGE_TYPE.get(self.orders["edge_type"][first_index], 0)
         if self.selector:
-            init_type = EDGE_TYPE.get(self.selector['type'], 0)
+            init_type = EDGE_TYPE.get(self.selector["type"], 0)
 
         if not init_type:
             return
@@ -96,7 +92,7 @@ class GA(ModelInterface):
 
         init_quantity = orders["quantity"][self.get_first_solution(solution)]
         if self.selector:
-            init_quantity = self.selector['num_orders']/2
+            init_quantity = self.selector["num_orders"] / 2
 
         for index, out in enumerate(solution):
             if out >= 1 and orders["quantity"][index] < init_quantity:
@@ -112,12 +108,12 @@ class GA(ModelInterface):
     def paper_out_logic(self, solution):
         current_out = sum(solution)
         if self.selector:
-            current_out += self.selector['out']
+            current_out += self.selector["out"]
         if current_out > 5:
             if current_out <= 6:
                 orders = self.orders
                 init = 0
-                if self.selector and self.selector['type'] == 'X':
+                if self.selector and self.selector["type"] == "X":
                     init = -1
                 for index, out in enumerate(solution):
                     if out >= 1:

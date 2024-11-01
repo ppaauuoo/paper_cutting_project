@@ -5,7 +5,6 @@ from ordplan_project.settings import (
 )
 
 from rich.progress import Progress
-import time
 
 
 def optimizer_controller(request) -> None:
@@ -23,22 +22,21 @@ def optimizer_controller(request) -> None:
                 try:
                     handle_saving(request)
                     e_count = 0
+                    progress.update(task1, advance=1)
                 except ValueError:
                     raise
 
             except ValueError as e:
-                progress.console.print(e)
                 result = cache.get("optimization_results", 0)
                 log = cache.get("log", 0)
                 if result:
                     progress.console.print(result)
-                progress.console.print(log)
+                progress.console.print(e, log)
                 e_count += 1
             except RecursionError as e:
                 progress.console.print(e)
                 e_count += 1
 
-            progress.update(task1, advance=1)
             if e_count > REPEAT_ERROR:
                 progress.console.print("[red]Error Exceed.")
                 progress.stop
