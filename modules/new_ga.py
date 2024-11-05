@@ -60,7 +60,7 @@ class GA(ModelInterface):
             crossover_probability=self.crossover_probability,
             on_generation=self.on_gen,
             save_solutions=self.save_solutions,
-            stop_criteria="saturate_7",
+            stop_criteria="reach_1",
             suppress_warnings=True,
             random_seed=self.seed,
         )
@@ -74,7 +74,7 @@ class GA(ModelInterface):
             init_type = EDGE_TYPE.get(self.selector["type"], 0)
 
         if not init_type:
-            return
+            return 1
 
         for index, out in enumerate(solution):
             if out >= 1:
@@ -83,9 +83,10 @@ class GA(ModelInterface):
                     "X",
                     "Y",
                 ]:
-                    self._penalty += self._penalty_value
+                    return 0
                 if init_type == 2 and edge_type == "X":
-                    self._penalty += self._penalty_value
+                    return 0
+        return 1
 
     def least_order_logic(self, solution):
         orders = self.orders
@@ -96,7 +97,8 @@ class GA(ModelInterface):
 
         for index, out in enumerate(solution):
             if out >= 1 and orders["quantity"][index] < init_quantity:
-                self._penalty += self._penalty_value
+                return 0
+        return 1
 
     @staticmethod
     def get_first_solution(solution) -> int:
@@ -130,9 +132,9 @@ class GA(ModelInterface):
         for index, out in enumerate(solution):
             if out >= 1:
                 order_length += 1
-        if order_length > 2:
-            self._penalty += self._penalty_value * \
-                order_length  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
+        if order_length > 2 or order_length <= 0:
+            return 0
+        return 1
 
     def paper_out_logic(self, solution):
         current_out = sum(solution)
@@ -141,66 +143,41 @@ class GA(ModelInterface):
         if current_out > 5:
 
             if self.x_y_out_logic(solution, current_out):
-                return
-
-            self._penalty += self._penalty_value * sum(
-                solution
-            )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
+                return 1
+            return 0
+        return 1
 
     def paper_size_logic(self, _output):
         if not self.common:
-            return
+            return 1
         if _output > self._paper_size:
-            self._penalty += self._penalty_value * (
-                _output - self._paper_size
-            )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
+            return 0
+        return 1
 
-    def paper_trim_logic(self, _fitness_values):
-        trim = abs(_fitness_values)
-        if trim <= MIN_TRIM:
-            self._penalty += self._penalty_value * trim
-        if trim >= MAX_TRIM:
-            self._penalty += self._penalty_value * trim
-            self._paper_size = random.sample(ROLL_PAPER, 1)[0]
-        # if _fitness_values >= 0:
-        #     self._paper_size = random.sample(ROLL_PAPER, 1)[0]
-
-    def selector_logic(self, solution: List[int]) -> List[int]:
-        if self.selector is None:
-            return solution
-
-        try:
-            solution[0] = self.selector["out"]
-        except KeyError:
-            pass
-
-        if solution[0] == 0:
-            solution[0] += 1
-
-        return solution
+    def paper_trim_logic(self, total):
+        if total <= min(ROLL_PAPER)+MIN_TRIM:
+            return 0
+        if total >= max(ROLL_PAPER)+MAX_TRIM:
+            return 0
+        return 1
 
     def fitness_function(self, ga_instance, solution, solution_idx):
-        self._penalty = 0
+        score = 0
         if not self.size or not self._paper_size:
-            # self._paper_size = random.sample(ROLL_PAPER, 1)[0]
             self._paper_size = numpy.min(ROLL_PAPER)
+        total = numpy.sum(solution * self.orders["width"])
 
-        # solution = self.selector_logic(solution)
+        score += 1 * self.paper_type_logic(solution)
+        score += 5 * self.paper_out_logic(solution)
+        score += 4 * self.paper_len_logic(solution)
+        score += 2 * self.least_order_logic(solution)
+        score += 3 * self.paper_size_logic(total)
+        score += 6 * self.paper_trim_logic(total)
 
-        self.paper_type_logic(solution)
-        self.paper_out_logic(solution)
-        self.paper_len_logic(solution)
+        fitness = score/21
+        fitness = numpy.square(fitness)
 
-        self.least_order_logic(solution)
-        # ผลรวมของตัดกว้างทั้งหมด
-        _output = numpy.sum(solution * self.orders["width"])
-        self.paper_size_logic(_output)
-
-        _fitness_values = (
-            -self._paper_size + _output
-        )  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
-        self.paper_trim_logic(_fitness_values)
-        return _fitness_values - self._penalty  # ลบด้วย _penalty
+        return fitness
 
     def on_gen(self, ga_instance):
 
@@ -216,7 +193,6 @@ class GA(ModelInterface):
         _output = pd.DataFrame(
             {
                 "id": orders["id"].unique(),
-
                 "order_number": orders["order_number"],
                 "num_orders": orders["quantity"],
                 "component_type": orders["component_type"],
@@ -243,7 +219,9 @@ class GA(ModelInterface):
 
         _output = self.blade_logic(_output)
 
-        self._fitness_values = ga_instance.best_solution()[1]
+        total = (_output['cut_width'] * _output['out']).sum()
+
+        self._fitness_values = -min(ROLL_PAPER)+total
         self._output = _output
 
         if self.showOutput:
