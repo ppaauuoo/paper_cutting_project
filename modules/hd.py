@@ -164,6 +164,7 @@ class HD(ProviderInterface):
         # return best_plan
 
     def filter_common_order(self, data):
+
         """Use common filter base on the first order or filler order."""
         if not self.common:
             return
@@ -181,6 +182,7 @@ class HD(ProviderInterface):
         if len(filtered_plan) <= 0:
             raise ValueError("Common Not Found")
         best_plan = pd.DataFrame(None)
+
         indices = list(range(len(filtered_plan)))
         random.shuffle(indices)
         indices = indices[:100]
@@ -197,6 +199,7 @@ class HD(ProviderInterface):
                 return best_plan
 
             # early stop
+
             if len(best_plan) >= PLAN_RANGE:
                 break
 

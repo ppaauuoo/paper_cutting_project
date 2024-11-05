@@ -216,6 +216,7 @@ class GA(ModelInterface):
         _output = pd.DataFrame(
             {
                 "id": orders["id"].unique(),
+
                 "order_number": orders["order_number"],
                 "num_orders": orders["quantity"],
                 "component_type": orders["component_type"],

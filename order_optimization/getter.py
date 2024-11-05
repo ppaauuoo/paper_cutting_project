@@ -22,11 +22,14 @@ def get_production_quantity(output_data):
 
     if len(output_data) <= 1:
         return (init_num_orders, init_num_orders)
+
     foll_order_len = output_data[1]["cut_len"]
     foll_out = output_data[1]["out"]
 
     foll_order_number = round(
-        (init_len * init_num_orders * foll_out) / (foll_order_len * init_out)
+
+      (init_len * init_num_orders * foll_out) / (foll_order_len * init_out)
+
     )
     return (init_num_orders, foll_order_number)
 
