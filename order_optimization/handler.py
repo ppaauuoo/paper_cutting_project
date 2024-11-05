@@ -61,7 +61,8 @@ def handle_optimization(func):
                 return
             log = "stock not ok"
         else:
-            log = f'trim not ok trim:{round(results["trim"])}'
+            log = f'trim not ok roll:{results["roll"]} trim:{
+                round(results["fitness"])}'
 
         cache.set("log", log, CACHE_TIMEOUT)
         cache.delete("try_again")

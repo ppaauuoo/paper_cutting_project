@@ -8,15 +8,15 @@ from typing import Callable, Dict, Any, List, Optional
 
 from order_optimization.container import ModelInterface
 
-from ordplan_project.settings import MIN_TRIM, PENALTY_VALUE, ROLL_PAPER
+from ordplan_project.settings import MAX_TRIM, MIN_TRIM, PENALTY_VALUE, ROLL_PAPER
 
 
 @dataclass
 class GA(ModelInterface):
     orders: DataFrame
     size: Optional[float]
-    num_generations: int = 50
-    out_range: int = 3
+    num_generations: int = 100
+    out_range: int = 6
     showOutput: bool = False
     save_solutions: bool = False
     showZero: bool = False
@@ -105,31 +105,27 @@ class GA(ModelInterface):
                 return index
         return 0
 
-    def paper_out_logic(self, solution):
-        current_out = sum(solution)
-        if self.selector:
-            current_out += self.selector["out"]
-        if current_out > 5:
-            if current_out <= 6:
-                orders = self.orders
-                init = 0
-                if self.selector and self.selector["type"] == "X":
-                    init = -1
-                for index, out in enumerate(solution):
-                    if out >= 1:
-                        if orders["edge_type"][index] == "X" and init == 0:
-                            init = 1
-                            continue
-                        if orders["edge_type"][index] == "Y" and init == 1:
-                            return
+    def x_y_out_logic(self, solution, current_out):
+        if current_out <= 6:
+            orders = self.orders
+            init = 0
 
-                        if orders["edge_type"][index] == "Y" and init == -1:
-                            return
+            if self.selector:
+                if self.selector["type"] == "X":
+                    init = 1
+                else:
+                    return False
 
-            self._penalty += self._penalty_value * sum(
-                solution
-            )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
+            for index, out in enumerate(solution):
+                if out >= 1:
+                    if orders["edge_type"][index] == "X" and init == 0:
+                        init = 1
+                        continue
+                    if orders["edge_type"][index] == "Y" and init == 1:
+                        return True
+        return False
 
+    def paper_len_logic(self, solution):
         order_length = 0
         for index, out in enumerate(solution):
             if out >= 1:
@@ -137,6 +133,19 @@ class GA(ModelInterface):
         if order_length > 2:
             self._penalty += self._penalty_value * \
                 order_length  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
+
+    def paper_out_logic(self, solution):
+        current_out = sum(solution)
+        if self.selector:
+            current_out += self.selector["out"]
+        if current_out > 5:
+
+            if self.x_y_out_logic(solution, current_out):
+                return
+
+            self._penalty += self._penalty_value * sum(
+                solution
+            )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
 
     def paper_size_logic(self, _output):
         if not self.common:
@@ -150,6 +159,11 @@ class GA(ModelInterface):
         trim = abs(_fitness_values)
         if trim <= MIN_TRIM:
             self._penalty += self._penalty_value * trim
+        if trim >= MAX_TRIM:
+            self._penalty += self._penalty_value * trim
+            self._paper_size = random.sample(ROLL_PAPER, 1)[0]
+        # if _fitness_values >= 0:
+        #     self._paper_size = random.sample(ROLL_PAPER, 1)[0]
 
     def selector_logic(self, solution: List[int]) -> List[int]:
         if self.selector is None:
@@ -167,13 +181,15 @@ class GA(ModelInterface):
 
     def fitness_function(self, ga_instance, solution, solution_idx):
         self._penalty = 0
-        if not self.size:
-            self._paper_size = random.sample(ROLL_PAPER, 1)[0]
+        if not self.size or not self._paper_size:
+            # self._paper_size = random.sample(ROLL_PAPER, 1)[0]
+            self._paper_size = numpy.min(ROLL_PAPER)
 
         # solution = self.selector_logic(solution)
 
         self.paper_type_logic(solution)
         self.paper_out_logic(solution)
+        self.paper_len_logic(solution)
 
         self.least_order_logic(solution)
         # ผลรวมของตัดกว้างทั้งหมด
