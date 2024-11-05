@@ -1,11 +1,6 @@
-import random
 import pytest
-import os
 import pandas as pd
-from django.test import Client
 from modules.hd import HD
-from tempfile import NamedTemporaryFile
-from icecream import ic
 
 
 @pytest.fixture
@@ -35,38 +30,41 @@ def test_data() -> pd.DataFrame:
             "middle_edge_cut": [1, 1, 2, 1, 1, 1, 0],
             "right_edge_cut": [1, 1, 1, 1, 1, 1, 0],
             "component_type": [1, 1, 1, 1, 1, 1, 0],
-            "quantity": [1, 1, 1, 1, 1, 1, 1],
+            "quantity": [600, 600, 600, 600, 600, 600, 600],
         }
     )
+
 
 @pytest.mark.django_db
 def test_empty_data():
     test_data = pd.DataFrame(None)
     with pytest.raises(ValueError):
-        hd_instance = HD(orders=test_data)
+        HD(orders=test_data)
+
 
 @pytest.mark.django_db
 def test_format(test_data):
-    hd_instance = HD(orders=test_data,is_build=False)
+    hd_instance = HD(orders=test_data, is_build=False)
     test_data = hd_instance.format_data(test_data)
     assert len(test_data) == 6
-    
+
+
 @pytest.mark.django_db
 def test_stop_data(test_data):
     start_date = pd.to_datetime("8/4/2023", format="%m/%d/%Y")
     stop_date = pd.to_datetime("8/14/2023", format="%m/%d/%Y")
-    hd_instance = HD(orders=test_data,is_build=False,stop_date=stop_date, start_date=start_date)
+    hd_instance = HD(
+        orders=test_data, is_build=False, stop_date=stop_date, start_date=start_date
+    )
     test_data = hd_instance.format_data(test_data)
     data = hd_instance.date_range_limit(test_data)
-    assert len(data) == 2 
+    assert len(data) == 2
+
 
 @pytest.mark.django_db
 def test_empty_start_date(test_data):
     stop_date = pd.to_datetime("8/14/2023", format="%m/%d/%Y")
-    hd_instance = HD(orders=test_data,is_build=False,stop_date=stop_date) 
+    hd_instance = HD(orders=test_data, is_build=False, stop_date=stop_date)
     test_data = hd_instance.format_data(test_data)
     data = hd_instance.date_range_limit(test_data)
-    assert len(data) == 6 
-
-
-
+    assert len(data) == 6
