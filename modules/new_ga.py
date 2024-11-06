@@ -3,7 +3,6 @@ from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
-import random
 from typing import Callable, Dict, Any, List, Optional
 
 from order_optimization.container import ModelInterface
@@ -15,8 +14,8 @@ from ordplan_project.settings import MAX_TRIM, MIN_TRIM, PENALTY_VALUE, ROLL_PAP
 class GA(ModelInterface):
     orders: DataFrame
     size: Optional[float]
-    num_generations: int = 100
-    out_range: int = 6
+    num_generations: int = 1000
+    out_range: int = 4
     showOutput: bool = False
     save_solutions: bool = False
     showZero: bool = False
@@ -36,12 +35,12 @@ class GA(ModelInterface):
         default_factory=lambda: [25, 5])
     crossover_probability: Optional[float] = None
     common: Optional[bool] = False
+    total: float = 0
+    fitness: float = 0
 
     def __post_init__(self):
         if self.orders is None:
             raise ValueError("Orders is empty!")
-        self.orders = self.orders[self.orders["quantity"] > 0].reset_index(
-            drop=True)
         self._paper_size = self.size
         self.model = pygad.GA(
             num_generations=self.num_generations,
@@ -59,6 +58,7 @@ class GA(ModelInterface):
             mutation_percent_genes=self.mutation_percent_genes,
             crossover_probability=self.crossover_probability,
             on_generation=self.on_gen,
+            on_stop=self.on_stop,
             save_solutions=self.save_solutions,
             stop_criteria="reach_1",
             suppress_warnings=True,
@@ -70,10 +70,11 @@ class GA(ModelInterface):
 
         first_index = self.get_first_solution(solution)
         init_type = EDGE_TYPE.get(self.orders["edge_type"][first_index], 0)
+
         if self.selector:
             init_type = EDGE_TYPE.get(self.selector["type"], 0)
 
-        if not init_type:
+        if init_type == 0:
             return 1
 
         for index, out in enumerate(solution):
@@ -120,12 +121,14 @@ class GA(ModelInterface):
 
             for index, out in enumerate(solution):
                 if out >= 1:
+                    if orders["edge_type"][index] != "X" and init == 0 and index == 0:
+                        return False
                     if orders["edge_type"][index] == "X" and init == 0:
                         init = 1
                         continue
-                    if orders["edge_type"][index] == "Y" and init == 1:
-                        return True
-        return False
+                    if orders["edge_type"][index] != "Y" and init == 1:
+                        return False
+        return True
 
     def paper_len_logic(self, solution):
         order_length = 0
@@ -155,31 +158,40 @@ class GA(ModelInterface):
         return 1
 
     def paper_trim_logic(self, total):
-        if total <= min(ROLL_PAPER)+MIN_TRIM:
+        if total < min(ROLL_PAPER) - MAX_TRIM:
             return 0
-        if total >= max(ROLL_PAPER)+MAX_TRIM:
+        if total > max(ROLL_PAPER) + MAX_TRIM:
             return 0
         return 1
 
     def fitness_function(self, ga_instance, solution, solution_idx):
         score = 0
+        self.total = 0
+        self.total += sum(
+            solution[i] * self.orders["width"][i] for i in range(len(self.orders))
+        )
         if not self.size or not self._paper_size:
             self._paper_size = numpy.min(ROLL_PAPER)
-        total = numpy.sum(solution * self.orders["width"])
 
         score += 1 * self.paper_type_logic(solution)
-        score += 5 * self.paper_out_logic(solution)
-        score += 4 * self.paper_len_logic(solution)
-        score += 2 * self.least_order_logic(solution)
-        score += 3 * self.paper_size_logic(total)
-        score += 6 * self.paper_trim_logic(total)
+        score += 2 * self.paper_out_logic(solution)
+        score += 3 * self.paper_len_logic(solution)
+        score += 4 * self.least_order_logic(solution)
+        score += 5 * self.paper_size_logic(self.total)
+        score += 6 * self.paper_trim_logic(self.total)
+        self.fitness = score / 21
+        # self.fitness = numpy.square(self.fitness)
 
-        fitness = score/21
-        fitness = numpy.square(fitness)
-
-        return fitness
+        return self.fitness
 
     def on_gen(self, ga_instance):
+
+        self.current_generation += 1
+        if self.set_progress:
+            progress = (self.current_generation / self.num_generations) * 100
+            self.set_progress(progress)
+
+    def on_stop(self, ga_instance, solution):
 
         self.current_generation += 1
         if self.set_progress:
@@ -213,19 +225,9 @@ class GA(ModelInterface):
             }
         )
 
-        if not self.showZero:
-            _output = _output[_output["out"] >= 1]
-        _output = _output.reset_index(drop=True)
+        _output = _output[_output["out"] >= 1].reset_index(drop=True)
 
-        _output = self.blade_logic(_output)
-
-        total = (_output['cut_width'] * _output['out']).sum()
-
-        self._fitness_values = -min(ROLL_PAPER)+total
-        self._output = _output
-
-        if self.showOutput:
-            self.show(ga_instance, _output)
+        self._output = self.blade_logic(_output)
 
     def blade_logic(self, output: DataFrame) -> DataFrame:
         blade_list: List[Dict[str, int]] = []
@@ -239,49 +241,13 @@ class GA(ModelInterface):
         output = pd.concat([output, blade_df], axis=1)
         return output
 
-    def show(self, ga_instance, _output):
-        _paper_size = self._paper_size
-        print("Generation : ", ga_instance.generations_completed)
-        print("Solution :")
-
-        with pd.option_context(
-            "display.max_columns",
-            None,
-            "display.width",
-            None,
-            "display.colheader_justify",
-            "left",
-        ):
-            print(_output.to_string(index=False))
-
-        print("Roll :", _paper_size)
-        print("Used :", _paper_size + self._fitness_values)
-        print("Trim :", abs(self._fitness_values))
-        print("\n")
-
     @property
     def output(self) -> DataFrame:
         return self._output
 
     @property
-    def fitness_values(self) -> float:
-        return self._fitness_values
-
-    @property
-    def penalty(self) -> int:
-        return self._penalty
-
-    @penalty.setter
-    def penalty(self, penalty: int) -> None:
-        self._penalty = penalty
-
-    @property
     def PAPER_SIZE(self) -> float:
         return self._paper_size
-
-    @PAPER_SIZE.setter
-    def PAPER_SIZE(self, size: float):
-        self._paper_size = size
 
     @property
     def run(self) -> Callable:
