@@ -60,7 +60,7 @@ class GA(ModelInterface):
             on_generation=self.on_gen,
             on_stop=self.on_stop,
             save_solutions=self.save_solutions,
-            stop_criteria="reach_1",
+            stop_criteria="saturate_10",
             suppress_warnings=True,
             random_seed=self.seed,
         )
@@ -165,7 +165,6 @@ class GA(ModelInterface):
         return 1
 
     def fitness_function(self, ga_instance, solution, solution_idx):
-        score = 0
         self.total = 0
         self.total += sum(
             solution[i] * self.orders["width"][i] for i in range(len(self.orders))
@@ -173,15 +172,44 @@ class GA(ModelInterface):
         if not self.size or not self._paper_size:
             self._paper_size = numpy.min(ROLL_PAPER)
 
-        score += 1 * self.paper_type_logic(solution)
-        score += 2 * self.paper_out_logic(solution)
-        score += 3 * self.paper_len_logic(solution)
-        score += 4 * self.least_order_logic(solution)
-        score += 5 * self.paper_size_logic(self.total)
-        score += 6 * self.paper_trim_logic(self.total)
-        self.fitness = score / 21
-        # self.fitness = numpy.square(self.fitness)
+        # Calculate individual scores
+        type_score = self.paper_type_logic(solution)
+        out_score = self.paper_out_logic(solution)
+        len_score = self.paper_len_logic(solution)
+        order_score = self.least_order_logic(solution)
+        size_score = self.paper_size_logic(self.total)
+        trim_score = self.paper_trim_logic(self.total)
 
+        # Dynamic weighting based on importance
+        weights = [3, 6, 5, 4, 1, 2]
+        weighted_score = (
+            type_score * weights[0]
+            + out_score * weights[1]
+            + len_score * weights[2]
+            + order_score * weights[3]
+            + size_score * weights[4]
+            + trim_score * weights[5]
+        )
+
+        # Introduce a penalty for poor solutions (example threshold)
+        penalty = 0
+        # threshold = 0
+        # if any(
+        #     score == threshold
+        #     for score in [
+        #         type_score,
+        #         out_score,
+        #         len_score,
+        #         order_score,
+        #         size_score,
+        #         trim_score,
+        #     ]
+        # ):
+        #     penalty = 1  # Apply a penalty to discourage poor solutions
+
+        # Calculate fitness
+        self.fitness = (weighted_score - penalty) / (sum(weights) + penalty)
+        # self.fitness = numpy.square(self.fitness)
         return self.fitness
 
     def on_gen(self, ga_instance):
