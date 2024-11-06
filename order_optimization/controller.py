@@ -23,11 +23,11 @@ def optimizer_controller(request) -> None:
                 handle_auto_config(request)
                 try:
                     handle_saving(request)
-                    success_rate = round(1/(e_count+1)*100)
+                    success_rate = round(1 / (e_count + 1) * 100)
                     success_rates.append(success_rate)
-                    progress.console.print('Success Rate:', success_rate)
-                    progress.console.print('Totle Rate:',
-                                           round(np.mean(success_rates)))
+                    progress.console.print("Success Rate:", success_rate)
+                    progress.console.print(
+                        "Total Rate:", round(np.mean(success_rates)))
                     e_count = 0
                     progress.update(task1, advance=1)
                 except ValueError:
@@ -37,7 +37,7 @@ def optimizer_controller(request) -> None:
                 result = cache.get("optimization_results", 0)
                 log = cache.get("log", 0)
                 if result:
-                    if result['fitness'] > 97:
+                    if result["fitness"] > 97:
                         progress.console.print(result)
                 progress.console.print(e, log)
                 e_count += 1

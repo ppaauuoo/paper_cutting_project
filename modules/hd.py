@@ -56,7 +56,7 @@ class HD(ProviderInterface):
                 for item, id in zip(asc_p_data["width"], asc_p_data["id"]):
                     ffa_list = self.first_fit(ffa_list, item, id)
                 data_df = self.df_formatter(ffa_list)
-            # case "ffd":
+                # case "ffd":
                 ffd_list = [[] for _ in range(round(self.x * 20 / 100))]
                 dsc_p_data = post_data.sort_values("width", ascending=False)
                 for item, id in zip(dsc_p_data["width"], dsc_p_data["id"]):
@@ -149,7 +149,8 @@ class HD(ProviderInterface):
             plan = (
                 used_data.loc[mask]
                 .reset_index(drop=True)
-                .groupby("width").head(2)
+                .groupby("width")
+                .head(2)
                 # .drop_duplicates(subset=["width", "length"])
             )
 
@@ -164,7 +165,6 @@ class HD(ProviderInterface):
         # return best_plan
 
     def filter_common_order(self, data):
-
         """Use common filter base on the first order or filler order."""
         if not self.common:
             return

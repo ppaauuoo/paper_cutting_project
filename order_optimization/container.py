@@ -1,10 +1,15 @@
 from abc import ABC, abstractmethod
 from pandas import DataFrame
+from typing import Callable
+
 
 class ModelInterface(ABC):
+    total: float
+    fitness: float
 
+    @property
     @abstractmethod
-    def run(self) -> None:
+    def run(self) -> Callable:
         pass
 
     @property
@@ -14,26 +19,21 @@ class ModelInterface(ABC):
 
     @property
     @abstractmethod
-    def fitness_values(self) -> float:
-        pass
-
-    @property
-    @abstractmethod
     def PAPER_SIZE(self) -> float:
         pass
+
 
 class ModelContainer:
     def __init__(
         self,
-        model: ModelInterface ,
+        model: ModelInterface,
     ):
         self.model = model
-    
-    def run (self) -> None:
+        self.total = model.total
+        self.fitness = model.fitness
+
+    def run(self) -> None:
         self.model.run()
-    @property
-    def fitness_values(self) -> float:
-        return self.model.fitness_values
 
     @property
     def output(self) -> DataFrame:
@@ -44,7 +44,6 @@ class ModelContainer:
         return self.model.PAPER_SIZE
 
 
-
 class ProviderInterface(ABC):
     @abstractmethod
     def get(self) -> DataFrame:
@@ -52,11 +51,8 @@ class ProviderInterface(ABC):
 
 
 class OrderContainer:
-    def __init__(
-        self,
-        provider: ProviderInterface
-    ):
+    def __init__(self, provider: ProviderInterface):
         self.provider = provider
-    
+
     def get(self) -> DataFrame:
         return self.provider.get()

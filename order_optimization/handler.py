@@ -61,7 +61,7 @@ def handle_optimization(func):
                 return
             log = "stock not ok"
         else:
-            log = f'trim not ok roll:{results["roll"]} fitness:{
+            log = f'trim not ok roll:{results["roll"]} total used:{
                 round(results["fitness"])}'
 
         cache.set("log", log, CACHE_TIMEOUT)
@@ -210,7 +210,7 @@ def handle_common(
         optimizer_instance = get_common(
             request=request, blade=2, file_id=file_id, item=item, results=results
         )
-        if abs(optimizer_instance.fitness_values) <= best_trim:
+        if abs(optimizer_instance.fitness) <= best_trim:
             best_fitness, best_output = get_outputs(optimizer_instance)
             best_trim = abs(best_fitness)
             best_index = index

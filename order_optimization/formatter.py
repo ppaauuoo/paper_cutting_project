@@ -2,8 +2,8 @@ from typing import Any, Dict, List
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
-from order_optimization.container import ModelContainer
 from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
+from modules.new_ga import GA
 
 
 def output_formatter(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
@@ -24,7 +24,7 @@ def output_formatter(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
 
 
 def results_formatter(
-    optimizer_instance: ModelContainer,
+    optimizer_instance: GA,
     output_data: List[Dict[str, Any]],
     size_value: int,
     fitness_values: float,
@@ -56,15 +56,12 @@ def database_formatter(blade1_params, blade2_params_list) -> None:
     blade1_order = None
 
     blade1_order = PlanOrder.objects.create(**blade1_params)
-    update_list.append(blade1_params['order'])
+    update_list.append(blade1_params["order"])
 
     for blade2_params in blade2_params_list:
-        blade2_order = PlanOrder.objects.create(
-            **blade2_params
-        )
+        blade2_order = PlanOrder.objects.create(**blade2_params)
         blade_2_orders.append(blade2_order)
-        update_list.append(blade2_params['order'])
-
+        update_list.append(blade2_params["order"])
 
     for order in update_list:
         OrderList.objects.filter(id=order.id).update(quantity=order.quantity)
@@ -132,12 +129,11 @@ def plan_orders_formatter() -> pd.DataFrame:
             "right_edge_cut",
             "component_type",
             "id",
-            )
+        )
     )
 
     # Create a dictionary with order_id as the key
-    optimized_order_dict = {order["id"]: order
-                            for order in optimized_order_list}
+    optimized_order_dict = {order["id"]: order for order in optimized_order_list}
 
     # Combine results
     for order in optimized_output:
