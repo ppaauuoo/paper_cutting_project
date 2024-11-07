@@ -128,7 +128,9 @@ def get_outputs(op_instance: GA) -> Tuple[float, List[Dict]]:
     total = -min(ROLL_PAPER) + op_instance.total
     output_df = op_instance.output.reset_index()
     output_data = output_df.to_dict("records")
-    if op_instance.fitness < 0.5:
+    if len(output_data) <= 0:
+        raise ValueError("Solution not found.")
+    if op_instance.fitness < 0.7:
         raise ValueError(
             f"Solution not satisfied. fitness: {
                 op_instance.fitness}"
