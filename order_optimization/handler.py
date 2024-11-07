@@ -56,10 +56,13 @@ def handle_optimization(func):
         log = ""
         if is_trim_fit(results["trim"]):
             if is_foll_ok(results["output"], results["foll_order_number"]):
-                cache.delete("try_again")
-                cache.set("optimization_results", results, CACHE_TIMEOUT)
-                return
-            log = "stock not ok"
+                if is_out_ok(results["output"]):
+                    cache.delete("try_again")
+                    cache.set("optimization_results", results, CACHE_TIMEOUT)
+                    return
+                log = "out not ok"
+            else:
+                log = "stock not ok"
         else:
             log = f'trim not ok roll:{results["roll"]} total used:{
                 round(results["fitness"])}'
@@ -70,6 +73,15 @@ def handle_optimization(func):
         raise ValueError("No Satisfiable Solution Found")
 
     return wrapper
+
+
+def is_out_ok(output: List[Dict[str, int]]):
+    """
+    Check if out ok.
+    """
+    acc_out = sum(item["out"]
+                  for item in output)  # Accumulate values from the output
+    return acc_out < 7
 
 
 def handle_results(request, kwargs) -> Dict[str, Any]:
