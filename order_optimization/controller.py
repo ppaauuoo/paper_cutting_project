@@ -23,6 +23,8 @@ def optimizer_controller(request) -> None:
                 handle_auto_config(request)
                 try:
                     handle_saving(request)
+                    result = cache.get("optimization_results", 0)
+                    progress.console.print(result)
                     success_rate = round(1 / (e_count + 1) * 100)
                     success_rates.append(success_rate)
                     progress.console.print("Success Rate:", success_rate)
@@ -35,15 +37,16 @@ def optimizer_controller(request) -> None:
 
             except ValueError as e:
                 result = cache.get("optimization_results", 0)
-                log = cache.get("log", 0)
+                log = cache.get("log")
                 if result:
-                    if result["fitness"] > 97:
-                        progress.console.print(result)
+                    progress.console.print(result)
                 progress.console.print(e, log)
                 e_count += 1
             except RecursionError as e:
                 progress.console.print(e)
                 e_count += 1
+
+            cache.delete("log")
 
             # if e_count > REPEAT_ERROR:
             #     progress.console.print("[red]Error Exceed.")

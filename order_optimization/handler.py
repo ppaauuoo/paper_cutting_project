@@ -48,9 +48,9 @@ def handle_optimization(func):
 
         results = handle_switcher(results)
         try:
-            results = handle_common_component(request, results=results)
-        except ValueError as e:
-            raise e
+            common_results = handle_common_component(request, results=results)
+            results = common_results
+        except ValueError:
             pass
 
         log = ""
@@ -65,7 +65,7 @@ def handle_optimization(func):
                 log = "stock not ok"
         else:
             log = f'trim not ok roll:{results["roll"]} total used:{
-                round(results["fitness"])}'
+                round(results["total"])}'
 
         cache.set("log", log, CACHE_TIMEOUT)
         cache.delete("try_again")
@@ -91,21 +91,18 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
         raise ValueError("Orders is empty!")
 
     optimizer_instance = get_optimizer(
-        request=request,
         orders=orders,
         num_generations=kwargs.get("num_generations", 50),
         show_output=False,
     )
-    fitness_values, output_data = get_outputs(optimizer_instance)
-    if fitness_values >= PENALTY_VALUE:
-        raise ValueError("Fitness Error!")
+    total, output_data = get_outputs(optimizer_instance)
     init_order_number, foll_order_number = get_production_quantity(output_data)
 
     results = results_formatter(
         optimizer_instance=optimizer_instance,
         output_data=output_data,
         size_value=kwargs.get("size_value", 66),
-        fitness_values=fitness_values,
+        total=total,
         init_order_number=init_order_number,
         foll_order_number=foll_order_number,
     )
@@ -192,10 +189,9 @@ def handle_auto_config(request, **kwargs):
 
 def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
     common = handle_common(request, results=results, as_component=True)
-
-    if common is not None:
-        results = common
-    return results
+    if common is None:
+        return results
+    return common
 
 
 def handle_common(
@@ -209,8 +205,8 @@ def handle_common(
         results = cache.get("optimization_results")
     if len(results["output"]) <= 1:
         return results
+    best_index = None
     best_trim = results["trim"]
-    best_index: Optional[int] = None
 
     if as_component:
         # file_id = request.POST.get("file_id")
@@ -219,12 +215,12 @@ def handle_common(
         file_id = request.POST.get("selected_file_id")
 
     for index, item in enumerate(results["output"]):
-        optimizer_instance = get_common(
-            request=request, blade=2, file_id=file_id, item=item, results=results
+        optimizer_instance, common_trim = get_common(
+            blade=2, file_id=file_id, item=item, results=results
         )
-        if abs(optimizer_instance.fitness) <= best_trim:
-            best_fitness, best_output = get_outputs(optimizer_instance)
-            best_trim = abs(best_fitness)
+        if common_trim <= best_trim:
+            best_total, best_output = get_outputs(optimizer_instance)
+            best_trim = common_trim
             best_index = index
             break
 

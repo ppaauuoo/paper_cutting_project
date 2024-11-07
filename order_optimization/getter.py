@@ -92,7 +92,6 @@ def get_selected_order(request) -> Dict[str, Any] | None:
 
 
 def get_optimizer(
-    request,
     orders: DataFrame,
     size_value: Optional[float] = None,
     num_generations: int = 50,
@@ -125,7 +124,7 @@ def get_outputs(op_instance: GA) -> Tuple[float, List[Dict]]:
 
     return: total, output_data
     """
-    total = -min(ROLL_PAPER) + op_instance.total
+    total = op_instance.total
     output_df = op_instance.output.reset_index()
     output_data = output_df.to_dict("records")
     if len(output_data) <= 0:
@@ -140,21 +139,20 @@ def get_outputs(op_instance: GA) -> Tuple[float, List[Dict]]:
 
 
 def get_common(
-    request,
     blade: int,
     file_id: str,
     item: Dict[str, Any],
     results: Dict[str, Any],
 ):
-    size_value = (item["cut_width"] * item["out"]) + results["trim"]
+    common_space = (item["cut_width"] * item["out"]) + results["trim"]
     orders = get_orders(file_id=file_id, common=True, common_init_order=item)
     optimizer_instance = get_optimizer(
-        request=request,
         orders=orders,
-        size_value=size_value,
+        size_value=common_space,
         show_output=False,
         blade=blade,
         common=True,
         selector=item,
     )
-    return optimizer_instance
+    common_trim = common_space-optimizer_instance.total
+    return optimizer_instance, common_trim

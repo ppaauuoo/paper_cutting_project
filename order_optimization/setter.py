@@ -15,29 +15,27 @@ def set_common(
     results: Dict[str, Any],
     best_index: int,
     best_output: List[Dict],
-    best_fitness: float,
+    best_trim: float,
 ) -> Dict:
     """
     Remove the order that got chosen to be swapped by common orders, then
-    injecting the common orders and new fitness into results.
+    injecting the common orders and new total into results.
     """
     results["output"].pop(best_index)  # remove the old order
-    results["init_order_number"] = results['output'][0]['num_orders']
+    new_init_order_number = results["output"][0]["num_orders"]
 
     for item in results["output"]:
         item["blade"] = 1
 
     results["output"].extend(best_output)  # add the new one
 
-    new_fitness = 0
-    for index, item in enumerate(results["output"]):  # calculate new fitness
-        new_fitness += item["cut_width"] * item["out"]
-
+    new_total = 0
     init_len = 0
     init_out = 0
     foll_len = 0
     foll_out = 0
-    for index, item in enumerate(results["output"]):  # calculate new fitness
+    for index, item in enumerate(results["output"]):
+        new_total += item["cut_width"] * item["out"]
         if index == 0:
             init_len = item["cut_len"]
             init_out = item["out"]
@@ -46,14 +44,16 @@ def set_common(
         foll_out += item["out"]
 
     try:
-        new_foll_number = round((
-            init_len * results["init_order_number"] * foll_out) / (
-                foll_len * init_out))
+        new_foll_number = round(
+            (init_len * results["init_order_number"]
+             * foll_out) / (foll_len * init_out)
+        )
     except ZeroDivisionError:
-        raise ValueError(foll_len, init_out)
+        raise ValueError("Common Quantity Error : ", foll_len, init_out)
 
-    results["fitness"] = new_fitness
-    results["trim"] = abs(best_fitness)  # set new trim
+    results["init_order_number"] = new_init_order_number
+    results["total"] = new_total
+    results["trim"] = best_trim
     results["foll_order_number"] = new_foll_number
     return results
 
