@@ -15,7 +15,7 @@ class GA(ModelInterface):
     orders: DataFrame
     size: Optional[float]
     num_generations: int = 1000
-    out_range: int = 4
+    out_range: int = 5
     showOutput: bool = False
     save_solutions: bool = False
     showZero: bool = False
@@ -26,7 +26,7 @@ class GA(ModelInterface):
     _penalty_value: int = PENALTY_VALUE
     blade: Optional[int] = None
     seed: Optional[int] = None
-    parent_selection_type: str = "sss"
+    parent_selection_type: str = "nsga2"
     crossover_type: str = "uniform"
     mutation_probability: Optional[List[float]] = field(
         default_factory=lambda: [0.25, 0.05]
@@ -84,8 +84,10 @@ class GA(ModelInterface):
                     "X",
                     "Y",
                 ]:
+                    self._penalty += 100
                     return 0
                 if init_type == 2 and edge_type == "X":
+                    self._penalty += 100
                     return 0
         return 1
 
@@ -98,6 +100,7 @@ class GA(ModelInterface):
 
         for index, out in enumerate(solution):
             if out >= 1 and orders["quantity"][index] < init_quantity:
+                self._penalty += 100
                 return 0
         return 1
 
@@ -121,12 +124,13 @@ class GA(ModelInterface):
 
             for index, out in enumerate(solution):
                 if out >= 1:
-                    if orders["edge_type"][index] != "X" and init == 0 and index == 0:
+                    order_edge = orders["edge_type"][index]
+                    if order_edge != "X" and init == 0 and index == 0:
                         return False
-                    if orders["edge_type"][index] == "X" and init == 0:
+                    if order_edge == "X" and init == 0:
                         init = 1
                         continue
-                    if orders["edge_type"][index] != "Y" and init == 1:
+                    if order_edge != "Y" and init == 1:
                         return False
         return True
 
@@ -136,6 +140,7 @@ class GA(ModelInterface):
             if out >= 1:
                 order_length += 1
         if order_length > 2 or order_length <= 0:
+            self._penalty += 100
             return 0
         return 1
 
@@ -147,28 +152,30 @@ class GA(ModelInterface):
 
             if self.x_y_out_logic(solution, current_out):
                 return 1
+            self._penalty += 100 * current_out
             return 0
         return 1
 
-    def paper_size_logic(self, _output):
+    def paper_size_logic(self, output):
         if not self.common:
             return 1
-        if _output > self._paper_size:
+        if output > self._paper_size:
+            self._penalty += 100 * output
             return 0
         return 1
 
     def paper_trim_logic(self, total):
         if total < min(ROLL_PAPER) - MAX_TRIM:
+            self._penalty += 100 * abs(1000 / (total + 1))
             return 0
         if total > max(ROLL_PAPER) + MAX_TRIM:
+            self._penalty += 100 * total
             return 0
         return 1
 
     def fitness_function(self, ga_instance, solution, solution_idx):
-        self.total = 0
-        self.total += sum(
-            solution[i] * self.orders["width"][i] for i in range(len(self.orders))
-        )
+        total = sum(solution[i] * self.orders["width"][i]
+                    for i in range(len(solution)))
         if not self.size or not self._paper_size:
             self._paper_size = numpy.min(ROLL_PAPER)
 
@@ -177,8 +184,8 @@ class GA(ModelInterface):
         out_score = self.paper_out_logic(solution)
         len_score = self.paper_len_logic(solution)
         order_score = self.least_order_logic(solution)
-        size_score = self.paper_size_logic(self.total)
-        trim_score = self.paper_trim_logic(self.total)
+        size_score = self.paper_size_logic(total)
+        trim_score = self.paper_trim_logic(total)
 
         # Dynamic weighting based on importance
         weights = [3, 6, 5, 4, 1, 2]
@@ -191,26 +198,10 @@ class GA(ModelInterface):
             + trim_score * weights[5]
         )
 
-        # Introduce a penalty for poor solutions (example threshold)
-        penalty = 0
-        # threshold = 0
-        # if any(
-        #     score == threshold
-        #     for score in [
-        #         type_score,
-        #         out_score,
-        #         len_score,
-        #         order_score,
-        #         size_score,
-        #         trim_score,
-        #     ]
-        # ):
-        #     penalty = 1  # Apply a penalty to discourage poor solutions
-
         # Calculate fitness
-        self.fitness = (weighted_score - penalty) / (sum(weights) + penalty)
-        # self.fitness = numpy.square(self.fitness)
-        return self.fitness
+        self.fitness = weighted_score / sum(weights)
+        self.fitness = numpy.square(self.fitness)
+        return [self.fitness, -self._penalty]
 
     def on_gen(self, ga_instance):
 
@@ -221,14 +212,9 @@ class GA(ModelInterface):
 
     def on_stop(self, ga_instance, solution):
 
-        self.current_generation += 1
-        if self.set_progress:
-            progress = (self.current_generation / self.num_generations) * 100
-            self.set_progress(progress)
-
         orders = self.orders
 
-        solution = ga_instance.best_solution()[0]
+        best_solution = ga_instance.best_solution()[0]
 
         _output = pd.DataFrame(
             {
@@ -249,11 +235,18 @@ class GA(ModelInterface):
                 "left_line": orders["left_edge_cut"],
                 "center_line": orders["middle_edge_cut"],
                 "right_line": orders["right_edge_cut"],
-                "out": solution,
+                "out": best_solution,
             }
         )
 
         _output = _output[_output["out"] >= 1].reset_index(drop=True)
+
+        # Convert to numpy arrays
+        out_array = numpy.array(_output["out"])
+        cut_width_array = numpy.array(_output["cut_width"])
+
+        # Calculate the sum of the products
+        self.total = numpy.sum(out_array * cut_width_array)
 
         self._output = self.blade_logic(_output)
 
