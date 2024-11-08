@@ -124,15 +124,14 @@ def get_optimizer(
 
 
 def get_outputs(optimizer_instance:
-                ModelContainer) -> Tuple[float, List[Dict]]:
+                ModelContainer) -> List[Dict]:
     """
     Extract values from optimizer instance.
     """
-    fitness_values = optimizer_instance.fitness_values
     output_df = optimizer_instance.output.reset_index()
     output_data = output_df.to_dict("records")
 
-    return fitness_values, output_data
+    return output_data
 
 
 def get_common(

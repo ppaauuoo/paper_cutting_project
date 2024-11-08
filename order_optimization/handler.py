@@ -62,7 +62,7 @@ def handle_optimization(func):
             log = "stock not ok"
         else:
             log = f'trim not ok roll:{results["roll"]} trim:{
-                round(results["fitness"])}'
+                round(results["total"])}'
 
         cache.set("log", log, CACHE_TIMEOUT)
         cache.delete("try_again")
@@ -84,16 +84,13 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
         num_generations=kwargs.get("num_generations", 50),
         show_output=False,
     )
-    fitness_values, output_data = get_outputs(optimizer_instance)
-    if fitness_values >= PENALTY_VALUE:
-        raise ValueError("Fitness Error!")
+    output_data = get_outputs(optimizer_instance)
     init_order_number, foll_order_number = get_production_quantity(output_data)
 
     results = results_formatter(
         optimizer_instance=optimizer_instance,
         output_data=output_data,
         size_value=kwargs.get("size_value", 66),
-        fitness_values=fitness_values,
         init_order_number=init_order_number,
         foll_order_number=foll_order_number,
     )
@@ -211,8 +208,8 @@ def handle_common(
             request=request, blade=2, file_id=file_id, item=item, results=results
         )
         if abs(optimizer_instance.fitness_values) <= best_trim:
-            best_fitness, best_output = get_outputs(optimizer_instance)
-            best_trim = abs(best_fitness)
+            best_output = get_outputs(optimizer_instance)
+            best_trim = optimizer_instance.fitness_values
             best_index = index
             break
 

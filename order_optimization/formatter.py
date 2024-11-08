@@ -27,7 +27,6 @@ def results_formatter(
     optimizer_instance: ModelContainer,
     output_data: List[Dict[str, Any]],
     size_value: int,
-    fitness_values: float,
     init_order_number: int,
     foll_order_number: int,
 ) -> Dict[str, Any]:
@@ -37,8 +36,8 @@ def results_formatter(
     return {
         "output": output_data,
         "roll": optimizer_instance.PAPER_SIZE,
-        "fitness": size_value + fitness_values,
-        "trim": abs(fitness_values),
+        "total": optimizer_instance.total,
+        "trim": optimizer_instance.fitness_values,
         "init_order_number": init_order_number,
         "foll_order_number": foll_order_number,
     }
