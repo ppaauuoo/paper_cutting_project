@@ -46,82 +46,36 @@ def results_formatter(
     }
 
 
-def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
-def database_formatter(data: Dict[str, Any]) -> OptimizationPlan:
+def database_formatter(blade1_params, blade2_params_list) -> None:
     """
     For defining which order belong to which blade, and turn it into a model.
 
     return: Model
     """
     format_data = OptimizationPlan.objects.create()
-    blade_2_orders = []    
-    left_over_quantity = 0 
-    blade_2_orders = []    
-    left_over_quantity = 0 
-    for item in data["output"]:
-        current_id = item["id"]
-        match item["blade"]:
-            case 1:
-                blade1_order = PlanOrder.objects.create(
-                    order=OrderList.objects.get(id=current_id),
-                    plan_quantity=data["init_order_number"],
-                    out=item["out"],
-                    paper_roll=data["roll"],
-                    blade_type="Blade 1",
-                    order_leftover=(data["init_order_number"]*item['out'])-item["num_orders"],
-                    order_leftover=(data["init_order_number"]*item['out'])-item["num_orders"],
-                )
+    blade_2_orders = []
+    update_list = []
+    blade1_order = None
 
-            case 2:
-                foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
-                new_out_ratio = order['out']/foll_out
-                #Calculate new cut for each common with foll cut from first blade divide by out ratio 
-                foll_cut = data["foll_order_number"]*new_out_ratio
-                new_value = round(foll_cut + left_over_quantity)
-                left_over_quantity = 0
+    blade1_order = PlanOrder.objects.create(**blade1_params)
+    update_list.append(blade1_params['order'])
 
-                if new_value > item['num_orders']:
-                    left_over_quantity += abs(item['num_orders']-new_value) 
-                    new_value = item['num_orders']
-    
+    for blade2_params in blade2_params_list:
+        blade2_order = PlanOrder.objects.create(
+            **blade2_params
+        )
+        blade_2_orders.append(blade2_order)
+        update_list.append(blade2_params['order'])
 
-                foll_out = sum(item['out'] for item in data["output"])-data["output"][0]['out']
-                new_out_ratio = item['out']/foll_out
-                #Calculate new cut for each common with foll cut from first blade divide by out ratio 
-                foll_cut = data["foll_order_number"]*new_out_ratio
-                new_value = round(foll_cut + left_over_quantity)
-                left_over_quantity = 0
 
-                if new_value > item['num_orders']:
-                    left_over_quantity += abs(item['num_orders']-new_value) 
-                    new_value = item['num_orders']
-    
+    for order in update_list:
+        OrderList.objects.filter(id=order.id).update(quantity=order.quantity)
 
-                blade2_order = PlanOrder.objects.create(
-                    order=OrderList.objects.get(id=current_id),
-                    plan_quantity=new_value,
-                    plan_quantity=new_value,
-                    out=item["out"],
-                    paper_roll=data["roll"],
-                    blade_type="Blade 2",
-                    order_leftover=item["num_orders"] - new_value,
-                    order_leftover=item["num_orders"] - new_value,
-                )
-                blade_2_orders.append(blade2_order)
-
-    if left_over_quantity:
-         raise ValueError("Both orders are out of stock!")
     format_data.blade_1.add(blade1_order)
     for order in blade_2_orders:
-         format_data.blade_2.add(blade2_order)
-                blade_2_orders.append(blade2_order)
+        format_data.blade_2.add(order)
 
-    if left_over_quantity:
-         raise ValueError("Both orders are out of stock!")
-    format_data.blade_1.add(blade1_order)
-    for order in blade_2_orders:
-         format_data.blade_2.add(blade2_order)
-    return format_data
+    format_data.save()
 
 
 def timezone_formatter(df: pd.DataFrame):
@@ -130,8 +84,7 @@ def timezone_formatter(df: pd.DataFrame):
     Format any timezone column in dataframe to be timezone unaware.
     """
 
-
-    datetime_cols = df.select_dtypes(include=['datetime64[ns, UTC]']).columns
+    datetime_cols = df.select_dtypes(include=["datetime64[ns, UTC]"]).columns
 
     for col in datetime_cols:
         if is_datetime(df[col]):
@@ -150,14 +103,13 @@ def plan_orders_formatter() -> pd.DataFrame:
     # Get all PlanOrder objects as a list of dictionaries
     optimized_output = list(
         PlanOrder.objects.all().values(
+            "order_id",
             "blade_1_orders__id",
             "blade_2_orders__id",
-            "order_id",
-            "plan_quantity",
-            "out",
             "blade_type",
             "paper_roll",
-            "order_leftover",
+            "out",
+            "plan_quantity",
             "order_leftover",
         )
     )
@@ -167,11 +119,29 @@ def plan_orders_formatter() -> pd.DataFrame:
 
     # Get corresponding OrderList objects
     optimized_order_list = list(
-        OrderList.objects.filter(id__in=optimized_output_ids).values()
+        OrderList.objects.filter(id__in=optimized_output_ids).values(
+            "quantity",
+            "width",
+            "length",
+            "edge_type",
+            "due_date",
+            "front_sheet",
+            "c_wave",
+            "middle_sheet",
+            "b_wave",
+            "back_sheet",
+            "level",
+            "left_edge_cut",
+            "middle_edge_cut",
+            "right_edge_cut",
+            "component_type",
+            "id",
+            )
     )
 
     # Create a dictionary with order_id as the key
-    optimized_order_dict = {order["id"]: order for order in optimized_order_list}
+    optimized_order_dict = {order["id"]: order
+                            for order in optimized_order_list}
 
     # Combine results
     for order in optimized_output:

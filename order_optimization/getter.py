@@ -1,21 +1,37 @@
 from pandas import DataFrame
 import pandas as pd
-
-from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 
-from order_optimization.setter import *
-
-from .models import CSVFile, OrderList
+from ordplan_project.settings import CACHE_TIMEOUT, ROLL_PAPER
+from order_optimization.setter import set_csv_file, set_model, set_progress
+from order_optimization.models import OrderList
 from order_optimization.container import ModelContainer, OrderContainer
-from modules.ordplan import ORD
-from modules.ga import GA
+from modules.new_ga import GA
+from modules.hd import HD
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from icecream import ic
 
-from ordplan_project.settings import CACHE_TIMEOUT
+def get_production_quantity(output_data):
+    """
+    Calculate first order cut and second order cut.
+    """
+    init_len = output_data[0]["cut_len"]
+    init_out = output_data[0]["out"]
+    init_num_orders = output_data[0]["num_orders"]
+
+    if len(output_data) <= 1:
+        return (init_num_orders, init_num_orders)
+
+    foll_order_len = output_data[1]["cut_len"]
+    foll_out = output_data[1]["out"]
+
+    foll_order_number = round(
+
+      (init_len * init_num_orders * foll_out) / (foll_order_len * init_out)
+
+    )
+    return (init_num_orders, foll_order_number)
 
 
 def get_orders_cache(file_id: str) -> DataFrame:
@@ -32,7 +48,6 @@ def get_orders_cache(file_id: str) -> DataFrame:
 
     if order_records.exists():
         orders = pd.DataFrame(order_records.values())
-        # orders["due_date"] = pd.to_datetime(orders["due_date"]).dt.strftime("%m/%d/%y")
         cache.set(f"order_cache_{file_id}", orders, CACHE_TIMEOUT)
     else:
         set_model(file_id)
@@ -41,21 +56,12 @@ def get_orders_cache(file_id: str) -> DataFrame:
 
 
 def get_orders(
-    request,
     file_id: str,
-    size_value: float = 66.0,
-    deadline_scope: int = 0,
-    filter_value: int = 16,
-    tuning_values: int = 3,
-    filter_diff: bool = True,
     common: bool = False,
-    filler: Optional[str] = None,
-    first_date_only: bool = False,
     preview: bool = False,
     start_date: Optional[pd.Timestamp] = None,
     stop_date: Optional[pd.Timestamp] = None,
-    selector: Optional[Dict[str, Any]] = None,
-    common_init_order: Optional[Dict[str,Any]] = None
+    common_init_order: Optional[Dict[str, Any]] = None,
 ) -> DataFrame:
     """
     Pass args to order processor.
@@ -63,19 +69,12 @@ def get_orders(
     return: processed orders.
     """
 
+    orders = get_orders_cache(file_id)
+
     return OrderContainer(
-        provider=ORD(
-            orders=get_orders_cache(file_id),
-            deadline_scope=deadline_scope,
-            _filter_diff=filter_diff,
-            filter_value=filter_value,
-            size=size_value,
-            tuning_values=tuning_values,
+        provider=HD(
+            orders=orders,
             common=common,
-            filler=filler,
-            selector=selector if selector else get_selected_order(request),
-            first_date_only=first_date_only,
-            preview=preview,
             start_date=start_date,
             stop_date=stop_date,
             common_init_order=common_init_order,
@@ -97,11 +96,12 @@ def get_selected_order(request) -> Dict[str, Any] | None:
 def get_optimizer(
     request,
     orders: DataFrame,
-    size_value: float,
-    out_range: int = 3,
+    size_value: Optional[float] = None,
     num_generations: int = 50,
     show_output: bool = False,
-    blade:Optional[int] = None,
+    blade: Optional[int] = None,
+    common: bool = False,
+    selector: Dict[str, Any] = None,
 ) -> ModelContainer:
     """
     Clear progress, request and run the optimizer.
@@ -111,29 +111,26 @@ def get_optimizer(
         model=GA(
             orders,
             size=size_value,
-            out_range=out_range,
             num_generations=num_generations,
             showOutput=show_output,
-            selector=get_selected_order(request),
             set_progress=set_progress,
-            blade=blade
-
+            blade=blade,
+            common=common,
+            selector=selector
         ),
     )
     optimizer_instance.run()
     return optimizer_instance
 
 
-
-
-
-def get_outputs(optimizer_instance: ModelContainer) -> Tuple[float, List[Dict]]:
+def get_outputs(optimizer_instance:
+                ModelContainer) -> Tuple[float, List[Dict]]:
     """
     Extract values from optimizer instance.
     """
     fitness_values = optimizer_instance.fitness_values
-    # output_data = optimizer_instance.output.drop_duplicates().to_dict("records")
-    output_data = optimizer_instance.output.to_dict("records")
+    output_df = optimizer_instance.output.reset_index()
+    output_data = output_df.to_dict("records")
 
     return fitness_values, output_data
 
@@ -144,20 +141,18 @@ def get_common(
     file_id: str,
     item: Dict[str, Any],
     results: Dict[str, Any],
-    single: bool = False,
 ):
     size_value = (item["cut_width"] * item["out"]) + results["trim"]
     orders = get_orders(
-        request=request,
-        file_id=file_id,
-        size_value=size_value,
-        deadline_scope=-1,
-        filter_diff=False,
-        common=True,
-        selector={"order_id": item["id"]} if single else None,
-        common_init_order=item
+        file_id=file_id, common=True, common_init_order=item
     )
     optimizer_instance = get_optimizer(
-        request=request, orders=orders, size_value=size_value, show_output=False, blade=blade
+        request=request,
+        orders=orders,
+        size_value=size_value,
+        show_output=False,
+        blade=blade,
+        common=True,
+        selector=item
     )
     return optimizer_instance
