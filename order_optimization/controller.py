@@ -4,18 +4,21 @@ from ordplan_project.settings import (
     CACHE_TIMEOUT,
 )
 
-from rich.progress import Progress
 import numpy as np
+
+from rich.progress import Progress, TimeElapsedColumn
+
+columns = [*Progress.get_default_columns(), TimeElapsedColumn()]
 
 
 def optimizer_controller(request) -> None:
-    LENGTH = 100
+    LENGTH = 1000
     REPEAT_ERROR = round(LENGTH * 10 / 100)
     cache.delete("api_progress")
     e_count = 0
     success_rates = []
 
-    with Progress() as progress:
+    with Progress(*columns) as progress:
         task1 = progress.add_task("[red]Optimizing...", total=LENGTH)
         while not progress.finished:
             current_progress = cache.get("api_progress", 0)
@@ -23,11 +26,11 @@ def optimizer_controller(request) -> None:
                 handle_auto_config(request)
                 try:
                     handle_saving(request)
-                    success_rate = round(1/(e_count+1)*100)
+                    success_rate = round(1 / (e_count + 1) * 100)
                     success_rates.append(success_rate)
-                    progress.console.print('Success Rate:', success_rate)
-                    progress.console.print('Totle Rate:',
-                                           round(np.mean(success_rates)))
+                    progress.console.print("Success Rate:", success_rate)
+                    progress.console.print(
+                        "Totle Rate:", round(np.mean(success_rates)))
                     e_count = 0
                     progress.update(task1, advance=1)
                 except ValueError:
@@ -37,8 +40,7 @@ def optimizer_controller(request) -> None:
                 result = cache.get("optimization_results", 0)
                 log = cache.get("log", 0)
                 if result:
-                    if result['fitness'] > 97:
-                        progress.console.print(result)
+                    progress.console.print(result)
                 progress.console.print(e, log)
                 e_count += 1
             except RecursionError as e:
