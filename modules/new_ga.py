@@ -59,6 +59,7 @@ class GA(ModelInterface):
             mutation_percent_genes=self.mutation_percent_genes,
             crossover_probability=self.crossover_probability,
             on_generation=self.on_gen,
+            on_stop=self.on_stop,
             save_solutions=self.save_solutions,
             stop_criteria="saturate_7",
             suppress_warnings=True,
@@ -209,14 +210,14 @@ class GA(ModelInterface):
             progress = (self.current_generation / self.num_generations) * 100
             self.set_progress(progress)
 
+    def on_stop(self, ga_instance, solution):
+
         orders = self.orders
 
-        solution = ga_instance.best_solution()[0]
-
+        best_solution = ga_instance.best_solution()[0]
         _output = pd.DataFrame(
             {
                 "id": orders["id"].unique(),
-
                 "order_number": orders["order_number"],
                 "num_orders": orders["quantity"],
                 "component_type": orders["component_type"],
@@ -233,7 +234,7 @@ class GA(ModelInterface):
                 "left_line": orders["left_edge_cut"],
                 "center_line": orders["middle_edge_cut"],
                 "right_line": orders["right_edge_cut"],
-                "out": solution,
+                "out": best_solution,
             }
         )
 
