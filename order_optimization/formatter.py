@@ -95,7 +95,6 @@ def timezone_formatter(df: pd.DataFrame):
 
 
 def plan_orders_formatter() -> pd.DataFrame:
-def plan_orders_formatter() -> pd.DataFrame:
     """
     Request data from model and format it.
     """
