@@ -3,7 +3,6 @@ from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
-import random
 from typing import Callable, Dict, Any, List, Optional
 
 from order_optimization.container import ModelInterface
@@ -156,15 +155,11 @@ class GA(ModelInterface):
                 _output - self._paper_size
             )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
 
-    def paper_trim_logic(self, _fitness_values):
-        trim = abs(_fitness_values)
+    def paper_trim_logic(self, trim):
         if trim <= MIN_TRIM:
-            self._penalty += self._penalty_value * trim
+            self._penalty += self._penalty_value * abs(trim)
         if trim >= MAX_TRIM:
             self._penalty += self._penalty_value * trim
-            self._paper_size = random.sample(ROLL_PAPER, 1)[0]
-        # if _fitness_values >= 0:
-        #     self._paper_size = random.sample(ROLL_PAPER, 1)[0]
 
     def selector_logic(self, solution: List[int]) -> List[int]:
         if self.selector is None:
@@ -197,11 +192,9 @@ class GA(ModelInterface):
         _output = numpy.sum(solution * self.orders["width"])
         self.paper_size_logic(_output)
 
-        _fitness_values = (
-            -self._paper_size + _output
-        )  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
-        self.paper_trim_logic(_fitness_values)
-        return _fitness_values - self._penalty  # ลบด้วย _penalty
+        trim = self._paper_size - _output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
+        self.paper_trim_logic(trim)
+        return trim - self._penalty  # ลบด้วย _penalty
 
     def on_gen(self, ga_instance):
 
