@@ -110,19 +110,29 @@ class GA(ModelInterface):
             orders = self.orders
             init = 0
 
+            # if there is common init
             if self.selector:
-                if self.selector["type"] == "X":
-                    init = 1
-                else:
+                # if common init is not X return false
+                if self.selector["type"] != "X":
                     return False
+                init = 1
 
             for index, out in enumerate(solution):
                 if out >= 1:
-                    if orders["edge_type"][index] == "X" and init == 0:
+                    order_edge = orders["edge_type"][index]
+                    # if no first order and not x return false
+                    if order_edge != "X" and init == 0 and index == 0:
+                        return False
+                    # if no first order and is x set as first order
+                    if order_edge == "X" and init == 0:
                         init = 1
                         continue
-                    if orders["edge_type"][index] == "Y" and init == 1:
-                        return True
+                    # if there was first order and is not y return false
+                    if order_edge != "Y" and init == 1:
+                        return False
+            # if order <= 6 and is X and Y return true
+            return True
+        # if order > 6 return false
         return False
 
     def paper_len_logic(self, solution):
