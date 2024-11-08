@@ -243,6 +243,9 @@ class GA(ModelInterface):
 
         _output = self.blade_logic(_output)
 
+        out_array = numpy.array(_output["out"])
+        width_array = numpy.array(_output["cut_width"])
+        self._total = numpy.sum(out_array * width_array)
         self._fitness_values = ga_instance.best_solution()[1]
         self._output = _output
 
@@ -288,6 +291,10 @@ class GA(ModelInterface):
     @property
     def fitness_values(self) -> float:
         return self._fitness_values
+
+    @property
+    def total(self) -> float:
+        return self._total
 
     @property
     def penalty(self) -> int:
