@@ -130,6 +130,10 @@ def get_outputs(optimizer_instance:
     """
     output_df = optimizer_instance.output.reset_index()
     output_data = output_df.to_dict("records")
+    if len(output_data) <= 0:
+        raise ValueError("Solution Not Found")
+    if len(output_data) > 2:
+        raise ValueError("Solution Not Satisfied")
 
     return output_data
 

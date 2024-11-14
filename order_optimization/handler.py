@@ -56,10 +56,13 @@ def handle_optimization(func):
         log = ""
         if is_trim_fit(results["trim"]):
             if is_foll_ok(results["output"], results["foll_order_number"]):
-                cache.delete("try_again")
-                cache.set("optimization_results", results, CACHE_TIMEOUT)
-                return
-            log = "stock not ok"
+                if is_out_ok(results["output"]):
+                    cache.delete("try_again")
+                    cache.set("optimization_results", results, CACHE_TIMEOUT)
+                    return
+                log = "out not ok"
+            else:
+                log = "stock not ok"
         else:
             log = f'trim not ok roll:{results["roll"]} trim:{
                 round(results["total"])}'
@@ -70,6 +73,34 @@ def handle_optimization(func):
         raise ValueError("No Satisfiable Solution Found")
 
     return wrapper
+
+
+def is_out_ok(output: List[Dict[str, Any]]):
+    acc_out = sum(item["out"] for item in output)
+    return acc_out < 7
+
+
+def is_foll_ok(output: List[Dict[str, Any]], foll_order_number: int):
+    """
+    Check if second order's cut exceed the second order's stock or not.
+    """
+    foll_stock = 0
+    if len(output) <= 1:
+        return True
+    for index, order in enumerate(output):
+        if index == 0:
+            continue
+        foll_stock += order["num_orders"]
+    if foll_stock < foll_order_number:
+        return False
+    return True
+
+
+def is_trim_fit(trim: float):
+    """
+    Check if trim exceed min/max tirm.
+    """
+    return trim <= MAX_TRIM and trim >= MIN_TRIM
 
 
 def handle_results(request, kwargs) -> Dict[str, Any]:
@@ -105,29 +136,6 @@ def handle_switcher(results: Dict[str, Any]) -> Dict[str, Any]:
         results["trim"] = switcher["new_trim"]
         results["roll"] = switcher["new_roll"]
     return results
-
-
-def is_foll_ok(output: List[Dict[str, Any]], foll_order_number: int):
-    """
-    Check if second order's cut exceed the second order's stock or not.
-    """
-    foll_stock = 0
-    if len(output) <= 1:
-        return True
-    for index, order in enumerate(output):
-        if index == 0:
-            continue
-        foll_stock += order["num_orders"]
-    if foll_stock < foll_order_number:
-        return False
-    return True
-
-
-def is_trim_fit(trim: float):
-    """
-    Check if trim exceed min/max tirm.
-    """
-    return trim <= MAX_TRIM and trim >= MIN_TRIM
 
 
 def handle_auto_retry(request):
@@ -318,6 +326,8 @@ def handle_database(data: Dict[str, Any]) -> None:
                 }
 
                 blade2_params_list.append(blade2_params)
+            case _:
+                raise ValueError("What")
 
     if left_over_quantity:
         raise ValueError("order are out of stock!")

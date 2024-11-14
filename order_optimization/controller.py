@@ -37,11 +37,13 @@ def optimizer_controller(request) -> None:
                     raise
 
             except ValueError as e:
-                result = cache.get("optimization_results", 0)
-                log = cache.get("log", 0)
+                result = cache.get("optimization_results", None)
+                log = cache.get("log", None)
                 if result:
                     progress.console.print(result)
                 progress.console.print(e, log)
+                cache.delete("log")
+                cache.delete("optimization_results")
                 e_count += 1
             except RecursionError as e:
                 progress.console.print(e)
