@@ -319,7 +319,7 @@ def handle_database(data: Dict[str, Any]) -> None:
                 blade2_params = {
                     "order": current_order,
                     "plan_quantity": plan_quantity,
-                    "out": item["out"],
+                    "out": foll_out,
                     "paper_roll": data["roll"],
                     "blade_type": "Blade 2",
                     "order_leftover": new_quantity,
