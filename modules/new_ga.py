@@ -39,7 +39,7 @@ class GA(ModelInterface):
         if self.orders is None:
             raise ValueError("Orders is empty!")
         self.orders = self.orders[self.orders["quantity"] > 0].reset_index(drop=True)
-        self._paper_size = self.size
+        self._paper_size = int(self.size)
         self.model = pygad.GA(
             num_generations=self.num_generations,
             num_parents_mating=60,
@@ -192,7 +192,8 @@ class GA(ModelInterface):
         self._penalty = 0
         if not self.size or not self._paper_size:
             # self._paper_size = random.sample(ROLL_PAPER, 1)[0]
-            self._paper_size = numpy.min(ROLL_PAPER)
+            # self._paper_size = numpy.min(ROLL_PAPER)
+            self._paper_size = 75
 
         # solution = self.selector_logic(solution)
         self.paper_type_logic(solution)
