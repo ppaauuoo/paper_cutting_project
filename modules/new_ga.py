@@ -31,16 +31,14 @@ class GA(ModelInterface):
     mutation_probability: Optional[List[float]] = field(
         default_factory=lambda: [0.25, 0.05]
     )
-    mutation_percent_genes: Optional[List[int]] = field(
-        default_factory=lambda: [25, 5])
+    mutation_percent_genes: Optional[List[int]] = field(default_factory=lambda: [25, 5])
     crossover_probability: Optional[float] = None
     common: Optional[bool] = False
 
     def __post_init__(self):
         if self.orders is None:
             raise ValueError("Orders is empty!")
-        self.orders = self.orders[self.orders["quantity"] > 0].reset_index(
-            drop=True)
+        self.orders = self.orders[self.orders["quantity"] > 0].reset_index(drop=True)
         self._paper_size = self.size
         self.model = pygad.GA(
             num_generations=self.num_generations,
@@ -79,13 +77,10 @@ class GA(ModelInterface):
         for index, out in enumerate(solution):
             if out >= 1:
                 edge_type = self.orders["edge_type"][index]
-                if init_type == 1 and edge_type not in [
-                    "X",
-                    "Y",
-                ]:
-                    self._penalty += self._penalty_value
+                if init_type == 1 and edge_type not in ["X", "Y"]:
+                    self._penalty += self._penalty_value * 5
                 if init_type == 2 and edge_type == "X":
-                    self._penalty += self._penalty_value
+                    self._penalty += self._penalty_value * 5
 
     def least_order_logic(self, solution):
         orders = self.orders
@@ -141,8 +136,7 @@ class GA(ModelInterface):
             if out >= 1:
                 order_length += 1
         if order_length > 2:
-            self._penalty += self._penalty_value * \
-                order_length  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
+            self._penalty += self._penalty_value * order_length
 
     def paper_out_logic(self, solution):
         current_out = sum(solution)
@@ -185,6 +179,15 @@ class GA(ModelInterface):
 
         return solution
 
+    def common_out_logic(self, solution: List[int]):
+        if not self.common:
+            return
+        temp = 0
+        for i in solution:
+            temp += i
+        if temp % 2 != 0:
+            self._penalty += self._penalty_value * temp
+
     def fitness_function(self, ga_instance, solution, solution_idx):
         self._penalty = 0
         if not self.size or not self._paper_size:
@@ -192,17 +195,16 @@ class GA(ModelInterface):
             self._paper_size = numpy.min(ROLL_PAPER)
 
         # solution = self.selector_logic(solution)
-
         self.paper_type_logic(solution)
         self.paper_out_logic(solution)
         self.paper_len_logic(solution)
-
         self.least_order_logic(solution)
+        self.common_out_logic(solution)
         # ผลรวมของตัดกว้างทั้งหมด
         _output = numpy.sum(solution * self.orders["width"])
         self.paper_size_logic(_output)
 
-        trim = self._paper_size - _output  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
+        trim = self._paper_size - _output
         self.paper_trim_logic(trim)
         return trim - self._penalty  # ลบด้วย _penalty
 
