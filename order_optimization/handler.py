@@ -165,7 +165,7 @@ def handle_auto_config(request, **kwargs):
     start_date = request.POST.get("start_date")
     stop_date = request.POST.get("stop_date")
 
-    orders = get_orders(file_id, start_date, stop_date)
+    orders = get_orders(file_id=file_id, start_date=start_date, stop_date=stop_date)
     if again > MAX_RETRY:
         raise ValueError("Logic error!")
     if orders is None:
@@ -197,7 +197,7 @@ def handle_common(
     file_id = FILE_ID
 
     for index, item in enumerate(results["output"]):
-        optimizer_instance = get_common(file_id, item, results)
+        optimizer_instance = get_common(file_id=file_id, item=item, results=results)
         if abs(optimizer_instance.fitness_values) <= best_trim:
             best_output = get_outputs(optimizer_instance)
             best_trim = optimizer_instance.fitness_values
