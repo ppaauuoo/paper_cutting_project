@@ -18,7 +18,6 @@ from ordplan_project.settings import (
     MAX_RETRY,
     MAX_TRIM,
     MIN_TRIM,
-    PENALTY_VALUE,
 )
 from order_optimization.formatter import (
     database_formatter,
@@ -48,10 +47,9 @@ def handle_optimization(func):
 
         results = handle_switcher(results)
         try:
-            results = handle_common_component(request, results=results)
+            results = handle_common(request, results=results)
         except ValueError as e:
             raise e
-            pass
 
         log = ""
         if is_trim_fit(results["trim"]):
@@ -110,7 +108,6 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
         raise ValueError("Orders is empty!")
 
     optimizer_instance = get_optimizer(
-        request=request,
         orders=orders,
         num_generations=kwargs.get("num_generations", 50),
         show_output=False,
@@ -168,8 +165,7 @@ def handle_auto_config(request, **kwargs):
     start_date = request.POST.get("start_date")
     stop_date = request.POST.get("stop_date")
 
-    orders = get_orders(
-        file_id=file_id, start_date=start_date, stop_date=stop_date)
+    orders = get_orders(file_id, start_date, stop_date)
     if again > MAX_RETRY:
         raise ValueError("Logic error!")
     if orders is None:
@@ -183,16 +179,8 @@ def handle_auto_config(request, **kwargs):
     return kwargs
 
 
-def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
-    common = handle_common(request, results=results, as_component=True)
-
-    if common is not None:
-        results = common
-    return results
-
-
 def handle_common(
-    request, results: Optional[Dict[str, Any]], as_component: Optional[bool]
+    request, results: Optional[Dict[str, Any]]
 ) -> Optional[Dict[str, Any]]:
     """
     Request orders base from the past results
@@ -205,16 +193,11 @@ def handle_common(
     best_trim = results["trim"]
     best_index: Optional[int] = None
 
-    if as_component:
-        # file_id = request.POST.get("file_id")
-        file_id = FILE_ID
-    else:
-        file_id = request.POST.get("selected_file_id")
+    # file_id = request.POST.get("file_id")
+    file_id = FILE_ID
 
     for index, item in enumerate(results["output"]):
-        optimizer_instance = get_common(
-            request=request, blade=2, file_id=file_id, item=item, results=results
-        )
+        optimizer_instance = get_common(file_id, item, results)
         if abs(optimizer_instance.fitness_values) <= best_trim:
             best_output = get_outputs(optimizer_instance)
             best_trim = optimizer_instance.fitness_values
@@ -224,10 +207,7 @@ def handle_common(
     if best_index is not None:
         results = set_common(results, best_index, best_output, best_trim)
 
-    if as_component:
-        return handle_switcher(results)
-
-    return cache.set("optimization_results", results, CACHE_TIMEOUT)
+    return handle_switcher(results)
 
 
 def handle_saving(request):

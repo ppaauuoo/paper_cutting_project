@@ -12,7 +12,7 @@ columns = [*Progress.get_default_columns(), TimeElapsedColumn()]
 
 
 def optimizer_controller(request) -> None:
-    LENGTH = 1000
+    LENGTH = 100
     REPEAT_ERROR = round(LENGTH * 10 / 100)
     cache.delete("api_progress")
     e_count = 0

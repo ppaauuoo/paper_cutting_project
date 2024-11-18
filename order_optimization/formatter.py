@@ -64,7 +64,6 @@ def database_formatter(blade1_params, blade2_params_list) -> None:
         blade_2_orders.append(blade2_order)
         update_list.append(blade2_params['order'])
 
-
     for order in update_list:
         OrderList.objects.filter(id=order.id).update(quantity=order.quantity)
 

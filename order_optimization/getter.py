@@ -94,7 +94,6 @@ def get_selected_order(request) -> Dict[str, Any] | None:
 
 
 def get_optimizer(
-    request,
     orders: DataFrame,
     size_value: Optional[float] = None,
     num_generations: int = 50,
@@ -140,8 +139,6 @@ def get_outputs(optimizer_instance:
 
 
 def get_common(
-    request,
-    blade: int,
     file_id: str,
     item: Dict[str, Any],
     results: Dict[str, Any],
@@ -151,11 +148,10 @@ def get_common(
         file_id=file_id, common=True, common_init_order=item
     )
     optimizer_instance = get_optimizer(
-        request=request,
         orders=orders,
         size_value=size_value,
         show_output=False,
-        blade=blade,
+        blade=2,
         common=True,
         selector=item
     )
