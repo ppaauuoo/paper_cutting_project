@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from pandas import DataFrame
 
+
 class ModelInterface(ABC):
 
     @abstractmethod
@@ -19,21 +20,32 @@ class ModelInterface(ABC):
 
     @property
     @abstractmethod
+    def total(self) -> float:
+        pass
+
+    @property
+    @abstractmethod
     def PAPER_SIZE(self) -> float:
         pass
+
 
 class ModelContainer:
     def __init__(
         self,
-        model: ModelInterface ,
+        model: ModelInterface,
     ):
         self.model = model
-    
-    def run (self) -> None:
+
+    def run(self) -> None:
         self.model.run()
+
     @property
     def fitness_values(self) -> float:
         return self.model.fitness_values
+
+    @property
+    def total(self) -> float:
+        return self.model.total
 
     @property
     def output(self) -> DataFrame:
@@ -44,7 +56,6 @@ class ModelContainer:
         return self.model.PAPER_SIZE
 
 
-
 class ProviderInterface(ABC):
     @abstractmethod
     def get(self) -> DataFrame:
@@ -52,11 +63,8 @@ class ProviderInterface(ABC):
 
 
 class OrderContainer:
-    def __init__(
-        self,
-        provider: ProviderInterface
-    ):
+    def __init__(self, provider: ProviderInterface):
         self.provider = provider
-    
+
     def get(self) -> DataFrame:
         return self.provider.get()

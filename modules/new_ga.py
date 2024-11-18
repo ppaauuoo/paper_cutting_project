@@ -3,7 +3,6 @@ from pandas import DataFrame
 import pygad
 import numpy
 import pandas as pd
-import random
 from typing import Callable, Dict, Any, List, Optional
 
 from order_optimization.container import ModelInterface
@@ -32,17 +31,15 @@ class GA(ModelInterface):
     mutation_probability: Optional[List[float]] = field(
         default_factory=lambda: [0.25, 0.05]
     )
-    mutation_percent_genes: Optional[List[int]] = field(
-        default_factory=lambda: [25, 5])
+    mutation_percent_genes: Optional[List[int]] = field(default_factory=lambda: [25, 5])
     crossover_probability: Optional[float] = None
     common: Optional[bool] = False
 
     def __post_init__(self):
         if self.orders is None:
             raise ValueError("Orders is empty!")
-        self.orders = self.orders[self.orders["quantity"] > 0].reset_index(
-            drop=True)
-        self._paper_size = self.size
+        self.orders = self.orders[self.orders["quantity"] > 0].reset_index(drop=True)
+        self._paper_size = int(self.size)
         self.model = pygad.GA(
             num_generations=self.num_generations,
             num_parents_mating=60,
@@ -59,6 +56,7 @@ class GA(ModelInterface):
             mutation_percent_genes=self.mutation_percent_genes,
             crossover_probability=self.crossover_probability,
             on_generation=self.on_gen,
+            on_stop=self.on_stop,
             save_solutions=self.save_solutions,
             stop_criteria="saturate_7",
             suppress_warnings=True,
@@ -79,13 +77,10 @@ class GA(ModelInterface):
         for index, out in enumerate(solution):
             if out >= 1:
                 edge_type = self.orders["edge_type"][index]
-                if init_type == 1 and edge_type not in [
-                    "X",
-                    "Y",
-                ]:
-                    self._penalty += self._penalty_value
+                if init_type == 1 and edge_type not in ["X", "Y"]:
+                    self._penalty += self._penalty_value * 5
                 if init_type == 2 and edge_type == "X":
-                    self._penalty += self._penalty_value
+                    self._penalty += self._penalty_value * 5
 
     def least_order_logic(self, solution):
         orders = self.orders
@@ -110,19 +105,29 @@ class GA(ModelInterface):
             orders = self.orders
             init = 0
 
+            # if there is common init
             if self.selector:
-                if self.selector["type"] == "X":
-                    init = 1
-                else:
+                # if common init is not X return false
+                if self.selector["type"] != "X":
                     return False
+                init = 1
 
             for index, out in enumerate(solution):
                 if out >= 1:
-                    if orders["edge_type"][index] == "X" and init == 0:
+                    order_edge = orders["edge_type"][index]
+                    # if no first order and not x return false
+                    if order_edge != "X" and init == 0 and index == 0:
+                        return False
+                    # if no first order and is x set as first order
+                    if order_edge == "X" and init == 0:
                         init = 1
                         continue
-                    if orders["edge_type"][index] == "Y" and init == 1:
-                        return True
+                    # if there was first order and is not y return false
+                    if order_edge != "Y" and init == 1:
+                        return False
+            # if order <= 6 and is X and Y return true
+            return True
+        # if order > 6 return false
         return False
 
     def paper_len_logic(self, solution):
@@ -131,8 +136,7 @@ class GA(ModelInterface):
             if out >= 1:
                 order_length += 1
         if order_length > 2:
-            self._penalty += self._penalty_value * \
-                order_length  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
+            self._penalty += self._penalty_value * order_length
 
     def paper_out_logic(self, solution):
         current_out = sum(solution)
@@ -155,15 +159,11 @@ class GA(ModelInterface):
                 _output - self._paper_size
             )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
 
-    def paper_trim_logic(self, _fitness_values):
-        trim = abs(_fitness_values)
+    def paper_trim_logic(self, trim):
         if trim <= MIN_TRIM:
-            self._penalty += self._penalty_value * trim
+            self._penalty += self._penalty_value * abs(trim)
         if trim >= MAX_TRIM:
             self._penalty += self._penalty_value * trim
-            self._paper_size = random.sample(ROLL_PAPER, 1)[0]
-        # if _fitness_values >= 0:
-        #     self._paper_size = random.sample(ROLL_PAPER, 1)[0]
 
     def selector_logic(self, solution: List[int]) -> List[int]:
         if self.selector is None:
@@ -179,28 +179,35 @@ class GA(ModelInterface):
 
         return solution
 
+    def common_out_logic(self, solution: List[int]):
+        if not self.common:
+            return
+        temp = 0
+        for i in solution:
+            temp += i
+        if temp % 2 != 0:
+            self._penalty += self._penalty_value * temp
+
     def fitness_function(self, ga_instance, solution, solution_idx):
         self._penalty = 0
         if not self.size or not self._paper_size:
             # self._paper_size = random.sample(ROLL_PAPER, 1)[0]
-            self._paper_size = numpy.min(ROLL_PAPER)
+            # self._paper_size = numpy.min(ROLL_PAPER)
+            self._paper_size = 75
 
         # solution = self.selector_logic(solution)
-
         self.paper_type_logic(solution)
         self.paper_out_logic(solution)
         self.paper_len_logic(solution)
-
         self.least_order_logic(solution)
+        self.common_out_logic(solution)
         # ผลรวมของตัดกว้างทั้งหมด
         _output = numpy.sum(solution * self.orders["width"])
         self.paper_size_logic(_output)
 
-        _fitness_values = (
-            -self._paper_size + _output
-        )  # ผลต่างของกระดาษที่มีกับออเดอร์ ยิ่งเยอะยิ่งดี
-        self.paper_trim_logic(_fitness_values)
-        return _fitness_values - self._penalty  # ลบด้วย _penalty
+        trim = self._paper_size - _output
+        self.paper_trim_logic(trim)
+        return trim - self._penalty  # ลบด้วย _penalty
 
     def on_gen(self, ga_instance):
 
@@ -209,14 +216,14 @@ class GA(ModelInterface):
             progress = (self.current_generation / self.num_generations) * 100
             self.set_progress(progress)
 
+    def on_stop(self, ga_instance, solution):
+
         orders = self.orders
 
-        solution = ga_instance.best_solution()[0]
-
+        best_solution = ga_instance.best_solution()[0]
         _output = pd.DataFrame(
             {
                 "id": orders["id"].unique(),
-
                 "order_number": orders["order_number"],
                 "num_orders": orders["quantity"],
                 "component_type": orders["component_type"],
@@ -233,7 +240,7 @@ class GA(ModelInterface):
                 "left_line": orders["left_edge_cut"],
                 "center_line": orders["middle_edge_cut"],
                 "right_line": orders["right_edge_cut"],
-                "out": solution,
+                "out": best_solution,
             }
         )
 
@@ -243,6 +250,9 @@ class GA(ModelInterface):
 
         _output = self.blade_logic(_output)
 
+        out_array = numpy.array(_output["out"])
+        width_array = numpy.array(_output["cut_width"])
+        self._total = numpy.sum(out_array * width_array)
         self._fitness_values = ga_instance.best_solution()[1]
         self._output = _output
 
@@ -288,6 +298,10 @@ class GA(ModelInterface):
     @property
     def fitness_values(self) -> float:
         return self._fitness_values
+
+    @property
+    def total(self) -> float:
+        return self._total
 
     @property
     def penalty(self) -> int:

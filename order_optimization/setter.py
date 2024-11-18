@@ -15,7 +15,7 @@ def set_common(
     results: Dict[str, Any],
     best_index: int,
     best_output: List[Dict],
-    best_fitness: float,
+    best_trim: float,
 ) -> Dict:
     """
     Remove the order that got chosen to be swapped by common orders, then
@@ -29,15 +29,13 @@ def set_common(
 
     results["output"].extend(best_output)  # add the new one
 
-    new_fitness = 0
-    for index, item in enumerate(results["output"]):  # calculate new fitness
-        new_fitness += item["cut_width"] * item["out"]
-
+    new_total = 0
     init_len = 0
     init_out = 0
     foll_len = 0
     foll_out = 0
     for index, item in enumerate(results["output"]):  # calculate new fitness
+        new_total += item["cut_width"] * item["out"]
         if index == 0:
             init_len = item["cut_len"]
             init_out = item["out"]
@@ -52,8 +50,8 @@ def set_common(
     except ZeroDivisionError:
         raise ValueError(foll_len, init_out)
 
-    results["fitness"] = new_fitness
-    results["trim"] = abs(best_fitness)  # set new trim
+    results["total"] = new_total
+    results["trim"] = best_trim
     results["foll_order_number"] = new_foll_number
     return results
 

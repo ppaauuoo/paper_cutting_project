@@ -94,7 +94,6 @@ def get_selected_order(request) -> Dict[str, Any] | None:
 
 
 def get_optimizer(
-    request,
     orders: DataFrame,
     size_value: Optional[float] = None,
     num_generations: int = 50,
@@ -124,20 +123,22 @@ def get_optimizer(
 
 
 def get_outputs(optimizer_instance:
-                ModelContainer) -> Tuple[float, List[Dict]]:
+                ModelContainer) -> List[Dict]:
     """
     Extract values from optimizer instance.
     """
-    fitness_values = optimizer_instance.fitness_values
     output_df = optimizer_instance.output.reset_index()
     output_data = output_df.to_dict("records")
+    total = optimizer_instance.total
+    if len(output_data) <= 0:
+        raise ValueError("Solution Not Found")
+    if len(output_data) > 2 or total <= 0:
+        raise ValueError("Solution Not Satisfied")
 
-    return fitness_values, output_data
+    return output_data
 
 
 def get_common(
-    request,
-    blade: int,
     file_id: str,
     item: Dict[str, Any],
     results: Dict[str, Any],
@@ -147,11 +148,10 @@ def get_common(
         file_id=file_id, common=True, common_init_order=item
     )
     optimizer_instance = get_optimizer(
-        request=request,
         orders=orders,
         size_value=size_value,
         show_output=False,
-        blade=blade,
+        blade=2,
         common=True,
         selector=item
     )

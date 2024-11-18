@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import Dict, List, Optional, Any
-from icecream import ic
 
 from django.core.cache import cache
 
@@ -18,7 +17,7 @@ from ordplan_project.settings import (
     MAX_RETRY,
     MAX_TRIM,
     MIN_TRIM,
-    PENALTY_VALUE,
+    ROLL_PAPER,
 )
 from order_optimization.formatter import (
     database_formatter,
@@ -48,21 +47,23 @@ def handle_optimization(func):
 
         results = handle_switcher(results)
         try:
-            results = handle_common_component(request, results=results)
+            results = handle_common(request, results=results)
         except ValueError as e:
             raise e
-            pass
 
         log = ""
         if is_trim_fit(results["trim"]):
             if is_foll_ok(results["output"], results["foll_order_number"]):
-                cache.delete("try_again")
-                cache.set("optimization_results", results, CACHE_TIMEOUT)
-                return
-            log = "stock not ok"
+                if is_out_ok(results["output"]):
+                    cache.delete("try_again")
+                    cache.set("optimization_results", results, CACHE_TIMEOUT)
+                    return
+                log = "out not ok"
+            else:
+                log = "stock not ok"
         else:
             log = f'trim not ok roll:{results["roll"]} trim:{
-                round(results["fitness"])}'
+                round(results["total"])}'
 
         cache.set("log", log, CACHE_TIMEOUT)
         cache.delete("try_again")
@@ -72,42 +73,9 @@ def handle_optimization(func):
     return wrapper
 
 
-def handle_results(request, kwargs) -> Dict[str, Any]:
-    orders = kwargs.get("orders", None)
-
-    if orders is None:
-        raise ValueError("Orders is empty!")
-
-    optimizer_instance = get_optimizer(
-        request=request,
-        orders=orders,
-        num_generations=kwargs.get("num_generations", 50),
-        show_output=False,
-    )
-    fitness_values, output_data = get_outputs(optimizer_instance)
-    if fitness_values >= PENALTY_VALUE:
-        raise ValueError("Fitness Error!")
-    init_order_number, foll_order_number = get_production_quantity(output_data)
-
-    results = results_formatter(
-        optimizer_instance=optimizer_instance,
-        output_data=output_data,
-        size_value=kwargs.get("size_value", 66),
-        fitness_values=fitness_values,
-        init_order_number=init_order_number,
-        foll_order_number=foll_order_number,
-    )
-    return results
-
-
-def handle_switcher(results: Dict[str, Any]) -> Dict[str, Any]:
-    if is_trim_fit(results["trim"]):
-        return results
-    switcher = LP(results).run().get()
-    if switcher is not None:
-        results["trim"] = switcher["new_trim"]
-        results["roll"] = switcher["new_roll"]
-    return results
+def is_out_ok(output: List[Dict[str, Any]]):
+    acc_out = sum(item["out"] for item in output)
+    return acc_out < 7
 
 
 def is_foll_ok(output: List[Dict[str, Any]], foll_order_number: int):
@@ -131,6 +99,42 @@ def is_trim_fit(trim: float):
     Check if trim exceed min/max tirm.
     """
     return trim <= MAX_TRIM and trim >= MIN_TRIM
+
+
+def handle_results(request, kwargs) -> Dict[str, Any]:
+    orders = kwargs.get("orders")
+    size = kwargs.get("size")
+
+    if orders is None:
+        raise ValueError("Orders is empty!")
+
+    optimizer_instance = get_optimizer(
+        orders=orders,
+        num_generations=kwargs.get("num_generations", 50),
+        show_output=False,
+        size_value=size,
+    )
+    output_data = get_outputs(optimizer_instance)
+    init_order_number, foll_order_number = get_production_quantity(output_data)
+
+    results = results_formatter(
+        optimizer_instance=optimizer_instance,
+        output_data=output_data,
+        size_value=size,
+        init_order_number=init_order_number,
+        foll_order_number=foll_order_number,
+    )
+    return results
+
+
+def handle_switcher(results: Dict[str, Any]) -> Dict[str, Any]:
+    if is_trim_fit(results["trim"]):
+        return results
+    switcher = LP(results).run().get()
+    if switcher is not None:
+        results["trim"] = switcher["new_trim"]
+        results["roll"] = switcher["new_roll"]
+    return results
 
 
 def handle_auto_retry(request):
@@ -162,9 +166,11 @@ def handle_auto_config(request, **kwargs):
 
     start_date = request.POST.get("start_date")
     stop_date = request.POST.get("stop_date")
+    size = request.POST.get("roll_pref", min(ROLL_PAPER))
 
     orders = get_orders(
         file_id=file_id, start_date=start_date, stop_date=stop_date)
+
     if again > MAX_RETRY:
         raise ValueError("Logic error!")
     if orders is None:
@@ -173,21 +179,14 @@ def handle_auto_config(request, **kwargs):
     kwargs.update(
         {
             "orders": orders,
+            "size": size,
         }
     )
     return kwargs
 
 
-def handle_common_component(request, results: Dict[str, Any]) -> Dict[str, Any]:
-    common = handle_common(request, results=results, as_component=True)
-
-    if common is not None:
-        results = common
-    return results
-
-
 def handle_common(
-    request, results: Optional[Dict[str, Any]], as_component: Optional[bool]
+    request, results: Optional[Dict[str, Any]]
 ) -> Optional[Dict[str, Any]]:
     """
     Request orders base from the past results
@@ -200,29 +199,22 @@ def handle_common(
     best_trim = results["trim"]
     best_index: Optional[int] = None
 
-    if as_component:
-        # file_id = request.POST.get("file_id")
-        file_id = FILE_ID
-    else:
-        file_id = request.POST.get("selected_file_id")
+    # file_id = request.POST.get("file_id")
+    file_id = FILE_ID
 
     for index, item in enumerate(results["output"]):
         optimizer_instance = get_common(
-            request=request, blade=2, file_id=file_id, item=item, results=results
-        )
+            file_id=file_id, item=item, results=results)
         if abs(optimizer_instance.fitness_values) <= best_trim:
-            best_fitness, best_output = get_outputs(optimizer_instance)
-            best_trim = abs(best_fitness)
+            best_output = get_outputs(optimizer_instance)
+            best_trim = optimizer_instance.fitness_values
             best_index = index
             break
 
     if best_index is not None:
         results = set_common(results, best_index, best_output, best_trim)
 
-    if as_component:
-        return handle_switcher(results)
-
-    return cache.set("optimization_results", results, CACHE_TIMEOUT)
+    return handle_switcher(results)
 
 
 def handle_saving(request):
@@ -314,13 +306,15 @@ def handle_database(data: Dict[str, Any]) -> None:
                 blade2_params = {
                     "order": current_order,
                     "plan_quantity": plan_quantity,
-                    "out": item["out"],
+                    "out": foll_out,
                     "paper_roll": data["roll"],
                     "blade_type": "Blade 2",
                     "order_leftover": new_quantity,
                 }
 
                 blade2_params_list.append(blade2_params)
+            case _:
+                raise ValueError("What")
 
     if left_over_quantity:
         raise ValueError("order are out of stock!")
