@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import Dict, List, Optional, Any
-from icecream import ic
 
 from django.core.cache import cache
 
@@ -18,6 +17,7 @@ from ordplan_project.settings import (
     MAX_RETRY,
     MAX_TRIM,
     MIN_TRIM,
+    ROLL_PAPER,
 )
 from order_optimization.formatter import (
     database_formatter,
@@ -102,7 +102,8 @@ def is_trim_fit(trim: float):
 
 
 def handle_results(request, kwargs) -> Dict[str, Any]:
-    orders = kwargs.get("orders", None)
+    orders = kwargs.get("orders")
+    size = kwargs.get("size")
 
     if orders is None:
         raise ValueError("Orders is empty!")
@@ -111,6 +112,7 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
         orders=orders,
         num_generations=kwargs.get("num_generations", 50),
         show_output=False,
+        size_value=size,
     )
     output_data = get_outputs(optimizer_instance)
     init_order_number, foll_order_number = get_production_quantity(output_data)
@@ -118,7 +120,7 @@ def handle_results(request, kwargs) -> Dict[str, Any]:
     results = results_formatter(
         optimizer_instance=optimizer_instance,
         output_data=output_data,
-        size_value=kwargs.get("size_value", 66),
+        size_value=size,
         init_order_number=init_order_number,
         foll_order_number=foll_order_number,
     )
@@ -164,8 +166,11 @@ def handle_auto_config(request, **kwargs):
 
     start_date = request.POST.get("start_date")
     stop_date = request.POST.get("stop_date")
+    size = request.POST.get("roll_pref", min(ROLL_PAPER))
 
-    orders = get_orders(file_id, start_date, stop_date)
+    orders = get_orders(
+        file_id=file_id, start_date=start_date, stop_date=stop_date)
+
     if again > MAX_RETRY:
         raise ValueError("Logic error!")
     if orders is None:
@@ -174,6 +179,7 @@ def handle_auto_config(request, **kwargs):
     kwargs.update(
         {
             "orders": orders,
+            "size": size,
         }
     )
     return kwargs
@@ -197,7 +203,8 @@ def handle_common(
     file_id = FILE_ID
 
     for index, item in enumerate(results["output"]):
-        optimizer_instance = get_common(file_id, item, results)
+        optimizer_instance = get_common(
+            file_id=file_id, item=item, results=results)
         if abs(optimizer_instance.fitness_values) <= best_trim:
             best_output = get_outputs(optimizer_instance)
             best_trim = optimizer_instance.fitness_values
