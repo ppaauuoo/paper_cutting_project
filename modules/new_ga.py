@@ -79,7 +79,7 @@ class GA(ModelInterface):
                 edge_type = self.orders["edge_type"][index]
                 if init_type == 1 and edge_type not in ["X", "Y"]:
                     self._penalty += self._penalty_value * 5
-                if init_type == 2 and edge_type == "X":
+                if init_type == 2 and edge_type in ["X"]:
                     self._penalty += self._penalty_value * 5
 
     def least_order_logic(self, solution):
@@ -136,7 +136,7 @@ class GA(ModelInterface):
             if out >= 1:
                 order_length += 1
         if order_length > 2:
-            self._penalty += self._penalty_value * order_length
+            self._penalty += self._penalty_value * order_length * 2
 
     def paper_out_logic(self, solution):
         current_out = sum(solution)
@@ -161,7 +161,7 @@ class GA(ModelInterface):
 
     def paper_trim_logic(self, trim):
         if trim <= MIN_TRIM:
-            self._penalty += self._penalty_value * abs(trim)
+            self._penalty += self._penalty_value * 5
         if trim >= MAX_TRIM:
             self._penalty += self._penalty_value * trim
 
