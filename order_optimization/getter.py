@@ -130,11 +130,17 @@ def get_outputs(optimizer_instance:
     output_df = optimizer_instance.output.reset_index()
     output_data = output_df.to_dict("records")
     total = optimizer_instance.total
+    log = ""
+    # if optimizer_instance.fitness_values <= -5000:
+    #     log = "Too Wrong"
     if len(output_data) <= 0:
-        raise ValueError("Solution Not Found")
+        log = "Empty"
     if len(output_data) > 2 or total <= 0:
-        raise ValueError("Solution Not Satisfied")
+        log = f"Too Much/Less {len(output_data)}"
 
+    if log:
+        cache.set("log", log, CACHE_TIMEOUT)
+        raise ValueError("Solution Not Satisfied :")
     return output_data
 
 

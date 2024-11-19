@@ -12,7 +12,7 @@ columns = [*Progress.get_default_columns(), TimeElapsedColumn()]
 
 
 def optimizer_controller(request) -> None:
-    LENGTH = 100
+    LENGTH = 1000
     REPEAT_ERROR = round(LENGTH * 10 / 100)
     cache.delete("api_progress")
     e_count = 0
@@ -30,7 +30,7 @@ def optimizer_controller(request) -> None:
                     success_rates.append(success_rate)
                     progress.console.print("Success Rate:", success_rate)
                     progress.console.print(
-                        "Totle Rate:", round(np.mean(success_rates)))
+                        "Total Rate:", round(np.mean(success_rates)))
                     e_count = 0
                     progress.update(task1, advance=1)
                 except ValueError:
@@ -39,8 +39,8 @@ def optimizer_controller(request) -> None:
             except ValueError as e:
                 result = cache.get("optimization_results", None)
                 log = cache.get("log", None)
-                if result:
-                    progress.console.print(result)
+                # if result:
+                #     progress.console.print(result)
                 progress.console.print(e, log)
                 cache.delete("log")
                 cache.delete("optimization_results")

@@ -58,17 +58,17 @@ def handle_optimization(func):
                     cache.delete("try_again")
                     cache.set("optimization_results", results, CACHE_TIMEOUT)
                     return
-                log = "out not ok"
+                log = "Out Not OK"
             else:
-                log = "stock not ok"
+                log = "Stock Not OK"
         else:
-            log = f'trim not ok roll:{results["roll"]} trim:{
+            log = f'Trim Not OK roll:{results["roll"]} total:{
                 round(results["total"])}'
 
         cache.set("log", log, CACHE_TIMEOUT)
         cache.delete("try_again")
         cache.set("optimization_results", results, CACHE_TIMEOUT)
-        raise ValueError("No Satisfiable Solution Found")
+        raise ValueError("Solution Not Satisfied :")
 
     return wrapper
 
@@ -98,7 +98,7 @@ def is_trim_fit(trim: float):
     """
     Check if trim exceed min/max tirm.
     """
-    return trim <= MAX_TRIM and trim >= MIN_TRIM
+    return MIN_TRIM <= trim <= MAX_TRIM
 
 
 def handle_results(request, kwargs) -> Dict[str, Any]:
@@ -196,7 +196,6 @@ def handle_common(
         results = cache.get("optimization_results")
     if len(results["output"]) <= 1:
         return results
-    best_trim = results["trim"]
     best_index: Optional[int] = None
 
     # file_id = request.POST.get("file_id")
@@ -205,7 +204,7 @@ def handle_common(
     for index, item in enumerate(results["output"]):
         optimizer_instance = get_common(
             file_id=file_id, item=item, results=results)
-        if abs(optimizer_instance.fitness_values) <= best_trim:
+        if MIN_TRIM <= optimizer_instance.fitness_values <= MAX_TRIM:
             best_output = get_outputs(optimizer_instance)
             best_trim = optimizer_instance.fitness_values
             best_index = index
@@ -317,7 +316,8 @@ def handle_database(data: Dict[str, Any]) -> None:
                 raise ValueError("What")
 
     if left_over_quantity:
-        raise ValueError("order are out of stock!")
+        cache.set("log", "Orders Out of Stock", CACHE_TIMEOUT)
+        raise ValueError("Solution Not Satisfied :")
         return
 
     database_formatter(blade1_params, blade2_params_list)

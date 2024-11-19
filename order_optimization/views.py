@@ -73,8 +73,8 @@ def order_optimizer_api(request: HttpRequest):
             if action in request.POST:
                 ic(action, handler)  # Debug print
                 handler(request)
-                return Response({'message': f"Start {action}!"})
-    return Response({'message': "Please Try again"})
+                return Response({'message': f"Finished {action}!"})
+    return Response({'message': f"Please Try again {request.POST}"})
 
 
 def login_view(request):
