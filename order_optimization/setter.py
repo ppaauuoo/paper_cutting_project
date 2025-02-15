@@ -80,8 +80,7 @@ def set_model(file_id: str) -> None:
         due_date = timezone.make_aware(
             pd.to_datetime(row["กำหนดส่ง"], format="%m/%d/%y")
         )
-        order_id = f"{row['เลขที่ใบสั่งขาย']
-                      }-{row['ชนิดส่วนประกอบ']}-{uuid.uuid4()}"
+        order_id = f"{row['เลขที่ใบสั่งขาย'] }-{row['ชนิดส่วนประกอบ']}-{uuid.uuid4()}"
 
         # if OrderList.objects.filter(id=order_id).exists():
         #     continue

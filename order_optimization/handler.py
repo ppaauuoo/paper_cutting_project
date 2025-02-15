@@ -62,8 +62,7 @@ def handle_optimization(func):
             else:
                 log = "stock not ok"
         else:
-            log = f'trim not ok roll:{results["roll"]} trim:{
-                round(results["total"])}'
+            log = f'trim not ok roll:{results["roll"]} trim:{ round(results["total"])}'
 
         cache.set("log", log, CACHE_TIMEOUT)
         cache.delete("try_again")
@@ -250,8 +249,7 @@ def handle_export(request):
     df = plan_orders_formatter()
     # Save the DataFrame to a file
     df.to_excel(
-        f'media/exports/orders_export_{
-            datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx',
+        f'media/exports/orders_export_{ datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx',
         index=False,
     )
 

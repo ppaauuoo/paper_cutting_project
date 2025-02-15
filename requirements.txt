@@ -1,4 +1,7 @@
+python==3.11
 Django==4.2.13
+django-rest_framework
+rich
 pandas
 pygad
 ortools
