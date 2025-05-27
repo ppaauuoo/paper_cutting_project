@@ -1,19 +1,17 @@
 from dataclasses import dataclass, field
-from pandas import DataFrame
-import pygad
-import numpy
+from rules import Logic
+
+import pygad as pg
+import numpy as np
 import pandas as pd
 from typing import Callable, Dict, Any, List, Optional
 
-from order_optimization.container import ModelInterface
-
-from ordplan_project.settings import MAX_TRIM, MIN_TRIM, PENALTY_VALUE, ROLL_PAPER
-
+PENALTY_VALUE = 1000
 
 @dataclass
-class GA(ModelInterface):
-    orders: DataFrame
-    size: Optional[float]
+class GA:
+    orders: pd.DataFrame
+    size: float = 66
     num_generations: int = 100
     out_range: int = 6
     showOutput: bool = False
@@ -34,13 +32,14 @@ class GA(ModelInterface):
     mutation_percent_genes: Optional[List[int]] = field(default_factory=lambda: [25, 5])
     crossover_probability: Optional[float] = None
     common: Optional[bool] = False
+    _total: float = 0
 
     def __post_init__(self):
         if self.orders is None:
             raise ValueError("Orders is empty!")
-        self.orders = self.orders[self.orders["quantity"] > 0].reset_index(drop=True)
+        self.orders = pd.DataFrame(self.orders[self.orders["quantity"] > 0].reset_index(drop=True))
         self._paper_size = int(self.size)
-        self.model = pygad.GA(
+        self.model = pg.GA(
             num_generations=self.num_generations,
             num_parents_mating=60,
             fitness_func=self.fitness_function,
@@ -49,175 +48,50 @@ class GA(ModelInterface):
             gene_type=int,
             init_range_low=0,
             init_range_high=self.out_range,
-            parent_selection_type=self.parent_selection_type,
-            crossover_type=self.crossover_type,
+            parent_selection_type="tournament",
+            crossover_type="uniform",
             mutation_type="adaptive",
-            mutation_probability=self.mutation_probability,
-            mutation_percent_genes=self.mutation_percent_genes,
-            crossover_probability=self.crossover_probability,
+            mutation_probability=[0.25, 0.05],
+            mutation_percent_genes=[25, 5],
+            crossover_probability=None,
             on_generation=self.on_gen,
             on_stop=self.on_stop,
-            save_solutions=self.save_solutions,
+            save_solutions=False,
             stop_criteria="saturate_7",
             suppress_warnings=True,
             random_seed=self.seed,
         )
 
-    def paper_type_logic(self, solution):
-        EDGE_TYPE = {"X": 1, "N": 2, "W": 2}
-
-        first_index = self.get_first_solution(solution)
-        init_type = EDGE_TYPE.get(self.orders["edge_type"][first_index], 0)
-        if self.selector:
-            init_type = EDGE_TYPE.get(self.selector["type"], 0)
-
-        if not init_type:
-            return
-
-        for index, out in enumerate(solution):
-            if out >= 1:
-                edge_type = self.orders["edge_type"][index]
-                if init_type == 1 and edge_type not in ["X", "Y"]:
-                    self._penalty += self._penalty_value * 5
-                if init_type == 2 and edge_type == "X":
-                    self._penalty += self._penalty_value * 5
-
-    def least_order_logic(self, solution):
-        orders = self.orders
-
-        init_quantity = orders["quantity"][self.get_first_solution(solution)]
-        if self.selector:
-            init_quantity = self.selector["num_orders"] / 2
-
-        for index, out in enumerate(solution):
-            if out >= 1 and orders["quantity"][index] < init_quantity:
-                self._penalty += self._penalty_value
-
-    @staticmethod
-    def get_first_solution(solution) -> int:
-        for index, out in enumerate(solution):
-            if out >= 1:
-                return index
-        return 0
-
-    def x_y_out_logic(self, solution, current_out):
-        if current_out <= 6:
-            orders = self.orders
-            init = 0
-
-            # if there is common init
-            if self.selector:
-                # if common init is not X return false
-                if self.selector["type"] != "X":
-                    return False
-                init = 1
-
-            for index, out in enumerate(solution):
-                if out >= 1:
-                    order_edge = orders["edge_type"][index]
-                    # if no first order and not x return false
-                    if order_edge != "X" and init == 0 and index == 0:
-                        return False
-                    # if no first order and is x set as first order
-                    if order_edge == "X" and init == 0:
-                        init = 1
-                        continue
-                    # if there was first order and is not y return false
-                    if order_edge != "Y" and init == 1:
-                        return False
-            # if order <= 6 and is X and Y return true
-            return True
-        # if order > 6 return false
-        return False
-
-    def paper_len_logic(self, solution):
-        order_length = 0
-        for index, out in enumerate(solution):
-            if out >= 1:
-                order_length += 1
-        if order_length > 2:
-            self._penalty += self._penalty_value * order_length
-
-    def paper_out_logic(self, solution):
-        current_out = sum(solution)
-        if self.selector:
-            current_out += self.selector["out"]
-        if current_out > 5:
-
-            if self.x_y_out_logic(solution, current_out):
-                return
-
-            self._penalty += self._penalty_value * sum(
-                solution
-            )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
-
-    def paper_size_logic(self, _output):
-        if not self.common:
-            return
-        if _output > self._paper_size:
-            self._penalty += self._penalty_value * (
-                _output - self._paper_size
-            )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
-
-    def paper_trim_logic(self, trim):
-        if trim <= MIN_TRIM:
-            self._penalty += self._penalty_value * abs(trim)
-        if trim >= MAX_TRIM:
-            self._penalty += self._penalty_value * trim
-
-    def selector_logic(self, solution: List[int]) -> List[int]:
-        if self.selector is None:
-            return solution
-
-        try:
-            solution[0] = self.selector["out"]
-        except KeyError:
-            pass
-
-        if solution[0] == 0:
-            solution[0] += 1
-
-        return solution
-
-    def common_out_logic(self, solution: List[int]):
-        if not self.common:
-            return
-        temp = 0
-        for i in solution:
-            temp += i
-        if temp % 2 != 0:
-            self._penalty += self._penalty_value * temp
-
-    def fitness_function(self, ga_instance, solution, solution_idx):
+    def fitness_function(self, _, solution):
         self._penalty = 0
+        self.Logic = Logic(self.orders, self.selector, self.common, self._paper_size, self.blade)
+        
         if not self.size or not self._paper_size:
             # self._paper_size = random.sample(ROLL_PAPER, 1)[0]
             # self._paper_size = numpy.min(ROLL_PAPER)
             self._paper_size = 75
 
-        # solution = self.selector_logic(solution)
-        self.paper_type_logic(solution)
-        self.paper_out_logic(solution)
-        self.paper_len_logic(solution)
-        self.least_order_logic(solution)
-        self.common_out_logic(solution)
-        # ผลรวมของตัดกว้างทั้งหมด
-        _output = numpy.sum(solution * self.orders["width"])
-        self.paper_size_logic(_output)
+        self.Logic.paper_type_logic(solution)
+        self.Logic.paper_out_logic(solution)
+        self.Logic.paper_len_logic(solution)
+        self.Logic.least_order_logic(solution)
+        self.Logic.common_out_logic(solution)
+
+        _output = np.sum(solution * self.orders["width"])
+        self.Logic.paper_size_logic(_output)
 
         trim = self._paper_size - _output
-        self.paper_trim_logic(trim)
+        self.Logic.paper_trim_logic(trim)
+
         return trim - self._penalty  # ลบด้วย _penalty
 
-    def on_gen(self, ga_instance):
-
+    def on_gen(self, _):
         self.current_generation += 1
         if self.set_progress:
             progress = (self.current_generation / self.num_generations) * 100
             self.set_progress(progress)
 
-    def on_stop(self, ga_instance, solution):
-
+    def on_stop(self, ga_instance, _):
         orders = self.orders
 
         best_solution = ga_instance.best_solution()[0]
@@ -226,6 +100,7 @@ class GA(ModelInterface):
                 "id": orders["id"].unique(),
                 "order_number": orders["order_number"],
                 "num_orders": orders["quantity"],
+                "out": best_solution,
                 "component_type": orders["component_type"],
                 "cut_width": orders["width"],
                 "cut_len": orders["length"],
@@ -240,36 +115,23 @@ class GA(ModelInterface):
                 "left_line": orders["left_edge_cut"],
                 "center_line": orders["middle_edge_cut"],
                 "right_line": orders["right_edge_cut"],
-                "out": best_solution,
             }
         )
 
         if not self.showZero:
             _output = _output[_output["out"] >= 1]
-        _output = _output.reset_index(drop=True)
+        _output = pd.DataFrame(_output.reset_index(drop=True))
 
-        _output = self.blade_logic(_output)
+        _output = self.Logic.blade_logic(_output)
 
-        out_array = numpy.array(_output["out"])
-        width_array = numpy.array(_output["cut_width"])
-        self._total = numpy.sum(out_array * width_array)
+        out_array = np.array(_output["out"])
+        width_array = np.array(_output["cut_width"])
+        self._total = float(np.sum(out_array * width_array))
         self._fitness_values = ga_instance.best_solution()[1]
         self._output = _output
 
         if self.showOutput:
             self.show(ga_instance, _output)
-
-    def blade_logic(self, output: DataFrame) -> DataFrame:
-        blade_list: List[Dict[str, int]] = []
-        for idx in output.index:
-            blade_val = idx + 1
-            if self.blade is not None:
-                blade_val = self.blade
-            blade_list.append({"blade": blade_val})
-
-        blade_df = pd.DataFrame(blade_list)
-        output = pd.concat([output, blade_df], axis=1)
-        return output
 
     def show(self, ga_instance, _output):
         _paper_size = self._paper_size
@@ -292,7 +154,7 @@ class GA(ModelInterface):
         print("\n")
 
     @property
-    def output(self) -> DataFrame:
+    def output(self) -> pd.DataFrame:
         return self._output
 
     @property
