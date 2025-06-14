@@ -5,13 +5,15 @@ import numpy
 import pandas as pd
 from typing import Callable, Dict, Any, List, Optional
 
-from order_optimization.container import ModelInterface
 
-from ordplan_project.settings import MAX_TRIM, MIN_TRIM, PENALTY_VALUE, ROLL_PAPER
+MAX_TRIM = 3
+MIN_TRIM = 1
+PENALTY_VALUE = 1000
+ROLL_PAPER = 66
 
 
 @dataclass
-class GA(ModelInterface):
+class GA():
     orders: DataFrame
     size: Optional[float]
     num_generations: int = 100
@@ -221,28 +223,43 @@ class GA(ModelInterface):
         orders = self.orders
 
         best_solution = ga_instance.best_solution()[0]
-        _output = pd.DataFrame(
-            {
-                "id": orders["id"].unique(),
-                "order_number": orders["order_number"],
-                "num_orders": orders["quantity"],
-                "component_type": orders["component_type"],
-                "cut_width": orders["width"],
-                "cut_len": orders["length"],
-                "type": orders["edge_type"],
-                "deadline": orders["due_date"],
-                "front_sheet": orders["front_sheet"],
-                "c_wave": orders["c_wave"],
-                "middle_sheet": orders["middle_sheet"],
-                "b_wave": orders["b_wave"],
-                "back_sheet": orders["back_sheet"],
-                "num_layers": orders["level"],
-                "left_line": orders["left_edge_cut"],
-                "center_line": orders["middle_edge_cut"],
-                "right_line": orders["right_edge_cut"],
-                "out": best_solution,
-            }
-        )
+        
+        # Create output DataFrame with consistent row counts
+        output_data = {
+            "id": orders["id"].values,
+            "num_orders": orders["quantity"].values,
+            "cut_width": orders["width"].values,
+            "cut_len": orders["length"].values,
+            "type": orders["edge_type"].values,
+            "out": best_solution
+        }
+        
+        # Add optional columns if they exist in orders
+        optional_cols = [
+            "component_type", "due_date", "front_sheet", "c_wave",
+            "middle_sheet", "b_wave", "back_sheet", "level",
+            "left_edge_cut", "middle_edge_cut", "right_edge_cut"
+        ]
+        
+        for col in optional_cols:
+            if col in orders.columns:
+                output_data[col] = orders[col].values
+        
+        _output = pd.DataFrame(output_data)
+        
+        # Handle order_number separately if it exists
+        if 'order_number' in orders.columns:
+            _output["order_number"] = orders["order_number"].values
+            
+        # Rename columns to match expected output format
+        _output = _output.rename(columns={
+            "due_date": "deadline",
+            "level": "num_layers",
+            "left_edge_cut": "left_line",
+            "middle_edge_cut": "center_line",
+            "right_edge_cut": "right_line"
+        })
+            
 
         if not self.showZero:
             _output = _output[_output["out"] >= 1]
@@ -322,3 +339,43 @@ class GA(ModelInterface):
     @property
     def run(self) -> Callable:
         return self.model.run
+
+
+def main():
+    """Test the GA module with sampledata.xlsx"""
+    import pandas as pd
+    from pathlib import Path
+    
+    # Load sample data
+    data_path = Path(__file__).parent.parent / 'data' / 'sampledata.xlsx'
+    orders = pd.read_excel(data_path)
+    
+    # Initialize GA with default parameters
+    ga = GA(
+        orders=orders,
+        size=66,
+        showOutput=True,
+    )
+    
+    # Run the genetic algorithm
+    ga.run()
+    
+    # Print results
+    print("\nFinal Results:")
+    print(f"Best fitness value: {ga.fitness_values}")
+    print(f"Total width used: {ga.total}")
+    print(f"Paper size: {ga.PAPER_SIZE}")
+    print(f"Penalty: {ga.penalty}")
+    
+    # Show output DataFrame
+    with pd.option_context(
+        'display.max_columns', None,
+        'display.width', None,
+        'display.colheader_justify', 'left'
+    ):
+        print("\nOutput DataFrame:")
+        print(ga.output.to_string(index=False))
+
+
+if __name__ == "__main__":
+    main()
