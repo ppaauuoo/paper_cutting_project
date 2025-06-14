@@ -10,9 +10,20 @@ class Logic:
         self.orders = orders
         self.selector = selector
         self._penalty_value = 1000
+        self._penalty = 0
         self.common = common
         self._paper_size = paper_size
         self.blade = blade
+
+    @staticmethod
+    def get_first_solution(solution) -> int:
+        for index, out in enumerate(solution):
+            if out >= 1:
+                return index
+        return 0
+    
+    def get_penalty(self):
+        return self._penalty
 
     def paper_type_logic(self, solution):
         EDGE_TYPE = {"X": 1, "N": 2, "W": 2}
@@ -44,12 +55,7 @@ class Logic:
             if out >= 1 and orders["quantity"][index] < init_quantity:
                 self._penalty += self._penalty_value
 
-    @staticmethod
-    def get_first_solution(solution) -> int:
-        for index, out in enumerate(solution):
-            if out >= 1:
-                return index
-        return 0
+    
 
     def x_y_out_logic(self, solution, current_out):
         if current_out <= 6:
@@ -104,16 +110,19 @@ class Logic:
     def paper_size_logic(self, _output):
         if not self.common:
             return
+        if _output <= 0:
+            self._penalty += self._penalty_value * 1000
         if _output > self._paper_size:
             self._penalty += self._penalty_value * (
                 _output - self._paper_size
             )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
 
     def paper_trim_logic(self, trim):
-        if trim <= MIN_TRIM:
-            self._penalty += self._penalty_value * abs(trim)
-        if trim >= MAX_TRIM:
-            self._penalty += self._penalty_value * trim
+        # Apply penalty only when outside acceptable range
+        if trim < MIN_TRIM:
+            self._penalty += self._penalty_value * (MIN_TRIM - trim)
+        elif trim > MAX_TRIM:
+            self._penalty += self._penalty_value * (trim - MAX_TRIM)
 
     def selector_logic(self, solution: List[int]) -> List[int]:
         if self.selector is None:
