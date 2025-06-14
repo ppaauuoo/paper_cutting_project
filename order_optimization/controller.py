@@ -29,8 +29,7 @@ def optimizer_controller(request) -> None:
                     success_rate = round(1 / (e_count + 1) * 100)
                     success_rates.append(success_rate)
                     progress.console.print("Success Rate:", success_rate)
-                    progress.console.print(
-                        "Totle Rate:", round(np.mean(success_rates)))
+                    progress.console.print("Total Rate:", round(np.mean(success_rates)))
                     e_count = 0
                     progress.update(task1, advance=1)
                 except ValueError:
