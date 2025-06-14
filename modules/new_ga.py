@@ -4,11 +4,9 @@ import pygad
 import numpy
 import pandas as pd
 from typing import Callable, Dict, Any, List, Optional
+from penalty import PenaltyCalculator
+from trim import TrimCalculator, MAX_TRIM, MIN_TRIM
 
-
-MAX_TRIM = 3
-MIN_TRIM = 1
-PENALTY_VALUE = 1000
 ROLL_PAPER = 66
 
 
@@ -24,8 +22,6 @@ class GA():
     selector: Optional[Dict[str, Any]] = None
     set_progress: Callable | None = None
     current_generation: int = 0
-    _penalty: int = 0
-    _penalty_value: int = PENALTY_VALUE
     blade: Optional[int] = None
     seed: Optional[int] = None
     parent_selection_type: str = "sss"
@@ -42,6 +38,8 @@ class GA():
             raise ValueError("Orders is empty!")
         self.orders = self.orders[self.orders["quantity"] > 0].reset_index(drop=True)
         self._paper_size = int(self.size)
+        self.penalty_calculator = PenaltyCalculator(self.orders, self.selector, self.common)
+        self.trim_calculator = TrimCalculator()
         self.model = pygad.GA(
             num_generations=self.num_generations,
             num_parents_mating=60,
@@ -65,151 +63,29 @@ class GA():
             random_seed=self.seed,
         )
 
-    def paper_type_logic(self, solution):
-        EDGE_TYPE = {"X": 1, "N": 2, "W": 2}
-
-        first_index = self.get_first_solution(solution)
-        init_type = EDGE_TYPE.get(self.orders["edge_type"][first_index], 0)
-        if self.selector:
-            init_type = EDGE_TYPE.get(self.selector["type"], 0)
-
-        if not init_type:
-            return
-
-        for index, out in enumerate(solution):
-            if out >= 1:
-                edge_type = self.orders["edge_type"][index]
-                if init_type == 1 and edge_type not in ["X", "Y"]:
-                    self._penalty += self._penalty_value * 5
-                if init_type == 2 and edge_type == "X":
-                    self._penalty += self._penalty_value * 5
-
-    def least_order_logic(self, solution):
-        orders = self.orders
-
-        init_quantity = orders["quantity"][self.get_first_solution(solution)]
-        if self.selector:
-            init_quantity = self.selector["num_orders"] / 2
-
-        for index, out in enumerate(solution):
-            if out >= 1 and orders["quantity"][index] < init_quantity:
-                self._penalty += self._penalty_value
-
-    @staticmethod
-    def get_first_solution(solution) -> int:
-        for index, out in enumerate(solution):
-            if out >= 1:
-                return index
-        return 0
-
-    def x_y_out_logic(self, solution, current_out):
-        if current_out <= 6:
-            orders = self.orders
-            init = 0
-
-            # if there is common init
-            if self.selector:
-                # if common init is not X return false
-                if self.selector["type"] != "X":
-                    return False
-                init = 1
-
-            for index, out in enumerate(solution):
-                if out >= 1:
-                    order_edge = orders["edge_type"][index]
-                    # if no first order and not x return false
-                    if order_edge != "X" and init == 0 and index == 0:
-                        return False
-                    # if no first order and is x set as first order
-                    if order_edge == "X" and init == 0:
-                        init = 1
-                        continue
-                    # if there was first order and is not y return false
-                    if order_edge != "Y" and init == 1:
-                        return False
-            # if order <= 6 and is X and Y return true
-            return True
-        # if order > 6 return false
-        return False
-
-    def paper_len_logic(self, solution):
-        order_length = 0
-        for index, out in enumerate(solution):
-            if out >= 1:
-                order_length += 1
-        if order_length > 2:
-            self._penalty += self._penalty_value * order_length
-
-    def paper_out_logic(self, solution):
-        current_out = sum(solution)
-        if self.selector:
-            current_out += self.selector["out"]
-        if current_out > 5:
-
-            if self.x_y_out_logic(solution, current_out):
-                return
-
-            self._penalty += self._penalty_value * sum(
-                solution
-            )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
-
-    def paper_size_logic(self, _output):
-        if not self.common:
-            return
-        if _output > self._paper_size:
-            self._penalty += self._penalty_value * (
-                _output - self._paper_size
-            )  # ยิ่งเกิน ยิ่ง _penaltyเยอะ
-
-    def paper_trim_logic(self, trim):
-        if trim <= MIN_TRIM:
-            self._penalty += self._penalty_value * abs(trim)
-        if trim >= MAX_TRIM:
-            self._penalty += self._penalty_value * trim
-
-    def selector_logic(self, solution: List[int]) -> List[int]:
-        if self.selector is None:
-            return solution
-
-        try:
-            solution[0] = self.selector["out"]
-        except KeyError:
-            pass
-
-        if solution[0] == 0:
-            solution[0] += 1
-
-        return solution
-
-    def common_out_logic(self, solution: List[int]):
-        if not self.common:
-            return
-        temp = 0
-        for i in solution:
-            temp += i
-        if temp % 2 != 0:
-            self._penalty += self._penalty_value * temp
 
     def fitness_function(self, ga_instance, solution, solution_idx):
-        self._penalty = 0
+        self.penalty_calculator.reset()
         if not self.size or not self._paper_size:
-            # self._paper_size = random.sample(ROLL_PAPER, 1)[0]
-            # self._paper_size = numpy.min(ROLL_PAPER)
             self._paper_size = 75
 
-        # solution = self.selector_logic(solution)
-        self.paper_type_logic(solution)
-        self.paper_out_logic(solution)
-        self.paper_len_logic(solution)
-        self.least_order_logic(solution)
-        self.common_out_logic(solution)
-        # ผลรวมของตัดกว้างทั้งหมด
         _output = numpy.sum(solution * self.orders["width"])
-        self.paper_size_logic(_output)
-
-        trim = self._paper_size - _output
-        self.paper_trim_logic(trim)
-        return trim - self._penalty  # ลบด้วย _penalty
+       
+        # Calculate all penalties
+        self.penalty_calculator.paper_type_logic(solution)
+        self.penalty_calculator.paper_out_logic(solution)
+        self.penalty_calculator.paper_len_logic(solution)
+        self.penalty_calculator.least_order_logic(solution)
+        self.penalty_calculator.common_out_logic(solution)
+        self.penalty_calculator.paper_size_logic(_output, self._paper_size)
+        
+       # Calculate trim
+        self._trim = self.trim_calculator.calculate_trim(self._paper_size, _output)
+        trim_penalty = self.trim_calculator.apply_trim_penalty(self._trim)
+        
+        # Fitness is the trim value minus penalties
+        fitness = self._trim - (self.penalty_calculator.penalty + trim_penalty)
+        return fitness
 
     def on_gen(self, ga_instance):
 
@@ -304,8 +180,8 @@ class GA():
             print(_output.to_string(index=False))
 
         print("Roll :", _paper_size)
-        print("Used :", _paper_size + self._fitness_values)
-        print("Trim :", abs(self._fitness_values))
+        print("Used :", self._total)
+        print("Trim :", _paper_size - self._total)
         print("\n")
 
     @property
@@ -322,11 +198,15 @@ class GA():
 
     @property
     def penalty(self) -> int:
-        return self._penalty
+        return self.penalty_calculator.penalty
 
     @penalty.setter
     def penalty(self, penalty: int) -> None:
-        self._penalty = penalty
+        self.penalty_calculator.penalty = penalty
+
+    @property
+    def trim(self) -> float:
+        return self._trim
 
     @property
     def PAPER_SIZE(self) -> float:
@@ -365,6 +245,7 @@ def main():
     print(f"Best fitness value: {ga.fitness_values}")
     print(f"Total width used: {ga.total}")
     print(f"Paper size: {ga.PAPER_SIZE}")
+    print("Trim :", ga.PAPER_SIZE - ga.total)
     print(f"Penalty: {ga.penalty}")
     
     # Show output DataFrame
@@ -374,7 +255,7 @@ def main():
         'display.colheader_justify', 'left'
     ):
         print("\nOutput DataFrame:")
-        print(ga.output.to_string(index=False))
+        print(ga.output.drop(columns=['id', 'deadline', 'left_line','right_line','center_line']).to_string(index=False))
 
 
 if __name__ == "__main__":
