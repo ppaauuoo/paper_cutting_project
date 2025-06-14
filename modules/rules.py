@@ -1,8 +1,60 @@
-from typing import List, Dict
+from typing import List, Dict, Tuple, Optional
 import pandas as pd
 
 MIN_TRIM = 1
 MAX_TRIM = 3
+
+
+class PackingNode:
+    """Node representing a packing configuration state"""
+    def __init__(self, node_type: str, constraints: Optional[Dict] = None):
+        self.node_type = node_type  # e.g., 'root', 'edge_type', 'quantity'
+        self.children: List['PackingNode'] = []
+        self.constraints = constraints or {}
+        
+    def add_child(self, node: 'PackingNode') -> None:
+        """Add a child node to this configuration path"""
+        self.children.append(node)
+        
+    def validate(self, order: Dict) -> bool:
+        """Validate order against node constraints"""
+        for key, value in self.constraints.items():
+            if order.get(key) != value:
+                return False
+        return True
+
+
+class PackingTree:
+    """Tree structure for validating packing configurations"""
+    def __init__(self):
+        self.root = PackingNode('root')
+        
+    def build_default_tree(self) -> None:
+        """Build default tree structure based on packing rules"""
+        # Edge type X branch
+        edge_x = PackingNode('edge_type', {'edge_type': 'X'})
+        edge_x.add_child(PackingNode('quantity', {'quantity': (100, 500)}))
+        
+        # Edge type Y branch
+        edge_y = PackingNode('edge_type', {'edge_type': 'Y'})
+        edge_y.add_child(PackingNode('quantity', {'quantity': (50, 300)}))
+        
+        self.root.add_child(edge_x)
+        self.root.add_child(edge_y)
+        
+    def validate_configuration(self, orders: List[Dict]) -> bool:
+        """Validate sequence of orders against packing tree"""
+        current = self.root
+        for order in orders:
+            matched = False
+            for child in current.children:
+                if child.validate(order):
+                    current = child
+                    matched = True
+                    break
+            if not matched:
+                return False
+        return True
 
 
 class Logic:
@@ -89,7 +141,7 @@ class Logic:
 
     def paper_len_logic(self, solution):
         order_length = 0
-        for _, out in enumerate(solution):
+        for out in solution:
             if out >= 1:
                 order_length += 1
         if order_length > 2:

@@ -1,4 +1,18 @@
 import pandas as pd
+from rules import PackingTree
+
+# Initialize packing configuration validator
+packing_tree = PackingTree()
+packing_tree.build_default_tree()
+
+def validate_orders(orders: pd.DataFrame) -> pd.DataFrame:
+    """Validate orders against packing configuration rules"""
+    valid_orders = []
+    for i in range(0, len(orders), 5):  # Process in packing-sized chunks
+        chunk = orders.iloc[i:i+5].to_dict('records')
+        if packing_tree.validate_configuration(chunk):
+            valid_orders.extend(chunk)
+    return pd.DataFrame(valid_orders)
 
 # Read the Excel file
 data = pd.read_excel('../data/order2024.xlsx', engine="openpyxl")
@@ -36,7 +50,10 @@ data.fillna(0, inplace=True)
 # 3. Filter out rows with zero values in critical columns
 data = data[(data['width'] != 0) & (data['length'] != 0)]
 data['width'] = data['width'] * 24.5
-data['length']= data['length'] * 24.5
+data['length'] = data['length'] * 24.5
+
+# Validate orders against packing configuration rules
+data = validate_orders(data)
 
 # 4. Convert data types if necessary
 data['quantity'] = data['quantity'].astype(str).str.replace(',', '').astype(int)
