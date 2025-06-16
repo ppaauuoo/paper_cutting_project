@@ -203,6 +203,14 @@ class GA():
     @penalty.setter
     def penalty(self, penalty: int) -> None:
         self.penalty_calculator.penalty = penalty
+        
+    @property
+    def penalty_list(self) -> List:
+        return self.penalty_calculator.penalty_list
+
+    @penalty_list.setter
+    def penalty_list(self, penalty_list: List) -> None:
+        self.penalty_calculator.penalty_list = penalty_list
 
     @property
     def trim(self) -> float:
@@ -247,7 +255,8 @@ def main():
     print(f"Paper size: {ga.PAPER_SIZE}")
     print("Trim :", ga.PAPER_SIZE - ga.total)
     print(f"Penalty: {ga.penalty}")
-    
+    print(f"Penalty list: {ga.penalty_list}")
+   
     # Show output DataFrame
     with pd.option_context(
         'display.max_columns', None,
