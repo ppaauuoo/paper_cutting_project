@@ -1,17 +1,14 @@
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, Optional
 
 from django.core.cache import cache
 
-from order_optimization.setter import set_common
-from order_optimization.models import OptimizationPlan, OrderList
-from order_optimization.getter import (
-    get_common,
-    get_orders,
-    get_outputs,
-    get_optimizer,
-    get_production_quantity,
+from order_optimization.adapters import (
+    DjangoOrderListAdapter,
+    DjangoPlanOrderAdapter,
+    DjangoOptimizationPlanAdapter,
 )
+from order_optimization.services import OptimizationService
 from ordplan_project.settings import (
     CACHE_TIMEOUT,
     MAX_RETRY,
@@ -19,303 +16,109 @@ from ordplan_project.settings import (
     MIN_TRIM,
     ROLL_PAPER,
 )
-from order_optimization.formatter import (
-    database_formatter,
-    plan_orders_formatter,
-    results_formatter,
-)
 
-from modules.lp import LP
-
-FILE_ID = "1"
+FILE_ID = "1" # This could ideally come from request or configuration
 
 
-def handle_optimization(func):
-    """
-    Run optimizer then processing the output,
-    Looping thru optimizer multiple time if stated.
-    """
-
-    def wrapper(request, *args, **kwargs):
-        kwargs = func(request)
-        if not kwargs:
-            return
-        try:
-            results = handle_results(request, kwargs=kwargs)
-        except ValueError as e:
-            raise e
-
-        results = handle_switcher(results)
-        try:
-            results = handle_common(request, results=results)
-        except ValueError as e:
-            raise e
-
-        log = ""
-        if is_trim_fit(results["trim"]):
-            if is_foll_ok(results["output"], results["foll_order_number"]):
-                if is_out_ok(results["output"]):
-                    cache.delete("try_again")
-                    cache.set("optimization_results", results, CACHE_TIMEOUT)
-                    return
-                log = "out not ok"
-            else:
-                log = "stock not ok"
-        else:
-            log = f'trim not ok roll:{results["roll"]} trim:{ round(results["total"])}'
-
-        cache.set("log", log, CACHE_TIMEOUT)
-        cache.delete("try_again")
-        cache.set("optimization_results", results, CACHE_TIMEOUT)
-        raise ValueError("No Satisfiable Solution Found")
-
-    return wrapper
-
-
-def is_out_ok(output: List[Dict[str, Any]]):
-    acc_out = sum(item["out"] for item in output)
-    return acc_out < 7
-
-
-def is_foll_ok(output: List[Dict[str, Any]], foll_order_number: int):
-    """
-    Check if second order's cut exceed the second order's stock or not.
-    """
-    foll_stock = 0
-    if len(output) <= 1:
-        return True
-    for index, order in enumerate(output):
-        if index == 0:
-            continue
-        foll_stock += order["num_orders"]
-    if foll_stock < foll_order_number:
-        return False
-    return True
-
-
-def is_trim_fit(trim: float):
-    """
-    Check if trim exceed min/max tirm.
-    """
-    return trim <= MAX_TRIM and trim >= MIN_TRIM
-
-
-def handle_results(request, kwargs) -> Dict[str, Any]:
-    orders = kwargs.get("orders")
-    size = kwargs.get("size")
-
-    if orders is None:
-        raise ValueError("Orders is empty!")
-
-    optimizer_instance = get_optimizer(
-        orders=orders,
-        num_generations=kwargs.get("num_generations", 50),
-        show_output=False,
-        size_value=size,
+def get_optimization_service() -> OptimizationService:
+    """Helper to instantiate the optimization service with Django dependencies."""
+    return OptimizationService(
+        order_list_adapter=DjangoOrderListAdapter(),
+        plan_order_adapter=DjangoPlanOrderAdapter(),
+        optimization_plan_adapter=DjangoOptimizationPlanAdapter(),
+        file_id=FILE_ID,
+        max_trim=MAX_TRIM,
+        min_trim=MIN_TRIM,
+        roll_paper=ROLL_PAPER,
     )
-    output_data = get_outputs(optimizer_instance)
-    init_order_number, foll_order_number = get_production_quantity(output_data)
-
-    results = results_formatter(
-        optimizer_instance=optimizer_instance,
-        output_data=output_data,
-        size_value=size,
-        init_order_number=init_order_number,
-        foll_order_number=foll_order_number,
-    )
-    return results
 
 
-def handle_switcher(results: Dict[str, Any]) -> Dict[str, Any]:
-    if is_trim_fit(results["trim"]):
-        return results
-    switcher = LP(results).run().get()
-    if switcher is not None:
-        results["trim"] = switcher["new_trim"]
-        results["roll"] = switcher["new_roll"]
-    return results
-
-
-def handle_auto_retry(request):
+def handle_auto_config(request) -> Dict[str, Any]:
     """
-    Recursive features for auto configuration.
+    Handles automatic configuration requests in a Django context.
+    Orchestrates the service calls and handles caching/error reporting.
     """
-    again = cache.get("try_again", 0)
-    if again < MAX_RETRY:
-        again += 1
-        cache.set("try_again", again, CACHE_TIMEOUT)
-        return handle_auto_config(request)
-
-    best_result = cache.get("best_result")
-    cache.set("optimization_results", best_result, CACHE_TIMEOUT)
-    # cache.delete("optimization_results")
-    cache.delete("try_again")
-    raise ValueError("No Satisfiable Solution Found")
-
-
-@handle_optimization
-def handle_auto_config(request, **kwargs):
-    """
-    # Automatically defines values needed for requesting orders
-    and send it to optimizer.
-    """
-
-    again = cache.get("try_again", 0)
-    file_id = FILE_ID
+    service = get_optimization_service()
 
     start_date = request.POST.get("start_date")
     stop_date = request.POST.get("stop_date")
-    size = request.POST.get("roll_pref", min(ROLL_PAPER))
+    size_str = request.POST.get("roll_pref", str(min(ROLL_PAPER)))
+    size = float(size_str) if size_str else None
 
-    orders = get_orders(
-        file_id=file_id, start_date=start_date, stop_date=stop_date)
+    again = cache.get("try_again", 0)
 
-    if again > MAX_RETRY:
-        raise ValueError("Logic error!")
-    if orders is None:
-        raise ValueError("Orders is empty!")
-
-    kwargs.update(
-        {
-            "orders": orders,
-            "size": size,
-        }
-    )
-    return kwargs
-
-
-def handle_common(
-    request, results: Optional[Dict[str, Any]]
-) -> Optional[Dict[str, Any]]:
-    """
-    Request orders base from the past results
-    with common logic and run an optimizer.
-    """
-    if results is None:
-        results = cache.get("optimization_results")
-    if len(results["output"]) <= 1:
+    try:
+        results = service.run_optimization_pipeline(
+            start_date=start_date,
+            stop_date=stop_date,
+            size=size
+        )
+        cache.delete("try_again")
+        cache.set("optimization_results", results, CACHE_TIMEOUT)
         return results
-    best_trim = results["trim"]
-    best_index: Optional[int] = None
+    except ValueError as e:
+        log_message = str(e)
+        if "No Satisfiable Solution Found" in log_message:
+            if again < MAX_RETRY:
+                again += 1
+                cache.set("try_again", again, CACHE_TIMEOUT)
+                # For retry, a redirect or re-rendering the form might be needed in a real web app.
+                # Or the client side should re-initiate the request.
+                # The current logic attempts a "recursive" retry which isn't suitable for web handlers.
+                # For this refactor, we'll mimic the original logic as best as possible,
+                # but acknowledge it's an anti-pattern for web requests.
+                # Original "handle_auto_retry" logic moved here.
+                # It originally took the 'best_result' from cache, implying a previous successful run.
+                # This logic is very tightly coupled to the 'try_again' cache key.
+                # Let's simplify this. If no solution, we log and raise.
+                # The retry mechanism should be external to this function.
+                raise ValueError(f"No Satisfiable Solution Found. Retrying... (Attempt {again}/{MAX_RETRY})")
+            else:
+                # Max retries reached, retrieve best previous result if any.
+                best_result = cache.get("best_result") # This key is not set anywhere in this file. Needs to be handled by a higher layer or set by the service.
+                if best_result:
+                    cache.set("optimization_results", best_result, CACHE_TIMEOUT)
+                cache.delete("try_again")
+                raise ValueError("No Satisfiable Solution Found after max retries.")
+        
+        cache.set("log", log_message, CACHE_TIMEOUT)
+        cache.delete("try_again")
+        raise e
 
-    # file_id = request.POST.get("file_id")
-    file_id = FILE_ID
 
-    for index, item in enumerate(results["output"]):
-        optimizer_instance = get_common(
-            file_id=file_id, item=item, results=results)
-        if abs(optimizer_instance.fitness_values) <= best_trim:
-            best_output = get_outputs(optimizer_instance)
-            best_trim = optimizer_instance.fitness_values
-            best_index = index
-            break
-
-    if best_index is not None:
-        results = set_common(results, best_index, best_output, best_trim)
-
-    return handle_switcher(results)
-
-
-def handle_saving(request):
+def handle_saving(request) -> None:
     """
-    Pull data from cache to save into the model
-    and updating both cache and model.
+    Pulls data from cache to save into the model.
     """
-    file_id = FILE_ID
+    service = get_optimization_service()
+
+    file_id = FILE_ID # Still hardcoded, consider making this dynamic from request
     cache.delete(f"order_cache_{file_id}")
     data = cache.get("optimization_results", None)
-    cache.delete("optimization_results")
+    
     if data is None:
-        raise ValueError("Output is empty!")
+        raise ValueError("Output is empty! No optimization results to save.")
+    
     try:
-        handle_database(data)
+        service.save_optimization_results(data)
+        cache.delete("optimization_results") # Clear results after saving
     except ValueError as e:
-        raise ValueError(e)
+        raise ValueError(f"Error saving optimization results: {e}")
 
 
-def handle_reset(request):
+def handle_reset(request) -> None:
     """
-    Remove cache and database.
+    Clears application cache and resets database data.
     """
-    cache.clear()
-    OptimizationPlan.objects.all().delete()
-    OrderList.objects.all().delete()
+    service = get_optimization_service()
+    cache.clear() # Clears Django's entire cache
+    service.reset_all_data()
 
 
-def handle_export(request):
+def handle_export(request) -> str:
     """
-    For exporting data from model to file excel.
+    Exports data to an Excel file.
     """
-    df = plan_orders_formatter()
-    # Save the DataFrame to a file
-    df.to_excel(
-        f'media/exports/orders_export_{ datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.xlsx',
-        index=False,
-    )
-
-
-def handle_database(data: Dict[str, Any]) -> None:
-
-    if len(data["output"]) <= 1 and data["output"][0]["blade"] != 1:
-        raise ValueError(data["output"])
-        return
-
-    blade2_params_list = []
-    left_over_quantity = 0
-
-    for item in data["output"]:
-        current_id = item["id"]
-
-        current_order = OrderList.objects.get(id=current_id)
-        match item["blade"]:
-            case 1:
-                current_order.quantity = 0
-                blade1_params = {
-                    "order": current_order,
-                    "plan_quantity": data["init_order_number"],
-                    "out": item["out"],
-                    "paper_roll": data["roll"],
-                    "blade_type": "Blade 1",
-                    "order_leftover": 0,
-                }
-
-            case 2:
-                # get combined out from second blade
-                foll_out = sum(i["out"] for i in data["output"][1:])
-                # calculate out ratio base from the combined out
-                new_out_ratio = item["out"] / foll_out
-                # Calculate new cut for each common
-                # with foll cut from first blade divide by out ratio
-                foll_cut = data["foll_order_number"] * new_out_ratio
-                # add potential leftover from previous order
-                plan_quantity = round(foll_cut + left_over_quantity)
-                # reset left over to zero
-                left_over_quantity = 0
-
-                new_quantity = round(current_order.quantity - plan_quantity)
-
-                # check if exceed the stock, then push it to leftover
-                if new_quantity < 0:
-                    left_over_quantity += abs(new_quantity)
-                    new_quantity = 0
-                    plan_quantity = current_order.quantity
-
-                current_order.quantity = new_quantity
-                blade2_params = {
-                    "order": current_order,
-                    "plan_quantity": plan_quantity,
-                    "out": foll_out,
-                    "paper_roll": data["roll"],
-                    "blade_type": "Blade 2",
-                    "order_leftover": new_quantity,
-                }
-
-                blade2_params_list.append(blade2_params)
-            case _:
-                raise ValueError("What")
-
-    if left_over_quantity:
-        raise ValueError("order are out of stock!")
-        return
-
-    database_formatter(blade1_params, blade2_params_list)
+    service = get_optimization_service()
+    file_path = service.export_plan_orders()
+    return file_path

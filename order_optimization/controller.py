@@ -5,49 +5,39 @@ from ordplan_project.settings import (
 )
 
 import numpy as np
-import time
-
-from rich.progress import Progress, TimeElapsedColumn
-
-columns = [*Progress.get_default_columns(), TimeElapsedColumn()]
+from typing import Any
 
 
-def optimizer_controller(request) -> None:
+def optimizer_controller(request: Any) -> None:
+    """
+    Orchestrates the optimization process for a web request,
+    handling retries and updating progress in cache.
+    Note: This synchronous loop is an anti-pattern for typical web requests.
+    Consider background tasks for long-running operations.
+    """
     LENGTH = 100
     REPEAT_ERROR = round(LENGTH * 10 / 100)
     cache.delete("api_progress")
     e_count = 0
-    success_rates = []
+    total_success_rates = []
 
-    with Progress(*columns) as progress:
-        task1 = progress.add_task("[red]Optimizing...", total=LENGTH)
-        start_time = time.time() # บันทึกเวลาเริ่มต้น
-        while not progress.finished:
-            current_progress = cache.get("api_progress", 0)
+    for i in range(LENGTH):
+        current_progress_ratio = (i + 1) / LENGTH
+        cache.set("api_progress", current_progress_ratio, CACHE_TIMEOUT)
+
+        try:
+            handle_auto_config(request)
+            
             try:
-                handle_auto_config(request)
-                try:
-                    handle_saving(request)
-                    success_rate = round(1 / (e_count + 1) * 100)
-                    success_rates.append(success_rate)
-                    progress.console.print("Success Rate:", success_rate)
-                    progress.console.print("Total Rate:", round(np.mean(success_rates)))
-                    e_count = 0
-                    progress.update(task1, advance=1)
-                except ValueError:
-                    raise
-
-            except ValueError as e:
-                result = cache.get("optimization_results", None)
-                log = cache.get("log", None)
-                if result:
-                    progress.console.print(result)
-                progress.console.print(e, log)
-                cache.delete("log")
-                cache.delete("optimization_results")
-                e_count += 1
-            except RecursionError as e:
-                progress.console.print(e)
+                handle_saving(request)
+                success_rate_for_this_block = round(1 / (e_count + 1) * 100)
+                total_success_rates.append(success_rate_for_this_block)
+                print(f"Success Rate (current block): {success_rate_for_this_block}%")
+                print(f"Total Average Success Rate: {round(np.mean(total_success_rates))}%")
+                e_count = 0
+                
+            except ValueError as e_save:
+                print(f"Error saving results: {e_save}")
                 e_count += 1
 
             # if e_count > REPEAT_ERROR:
@@ -56,5 +46,3 @@ def optimizer_controller(request) -> None:
             #     break
             current_progress = progress.tasks[task1].completed / LENGTH
             cache.set("api_progress", current_progress, CACHE_TIMEOUT)
-            elapsed_time = time.time() - start_time # คำนวณเวลาที่ผ่านไป
-            progress.console.print(f"Elapsed Time: {elapsed_time:.2f} seconds") # แสดงเวลาที่ผ่านไป
