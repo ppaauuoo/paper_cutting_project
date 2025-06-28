@@ -5,6 +5,7 @@ from ordplan_project.settings import (
 )
 
 import numpy as np
+import time
 
 from rich.progress import Progress, TimeElapsedColumn
 
@@ -20,6 +21,7 @@ def optimizer_controller(request) -> None:
 
     with Progress(*columns) as progress:
         task1 = progress.add_task("[red]Optimizing...", total=LENGTH)
+        start_time = time.time() # บันทึกเวลาเริ่มต้น
         while not progress.finished:
             current_progress = cache.get("api_progress", 0)
             try:
@@ -54,3 +56,5 @@ def optimizer_controller(request) -> None:
             #     break
             current_progress = progress.tasks[task1].completed / LENGTH
             cache.set("api_progress", current_progress, CACHE_TIMEOUT)
+            elapsed_time = time.time() - start_time # คำนวณเวลาที่ผ่านไป
+            progress.console.print(f"Elapsed Time: {elapsed_time:.2f} seconds") # แสดงเวลาที่ผ่านไป
