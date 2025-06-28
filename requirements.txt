@@ -20,4 +20,8 @@ pytest-mock
 ydf
 enlighten
 tqdm
-
+polars
+stable-baselines3
+gymnasium
+copier
+fastexcel

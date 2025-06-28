@@ -5,3 +5,4 @@ exports
 .vscode
 .ipynb_checkpoints
 
+.aider*
