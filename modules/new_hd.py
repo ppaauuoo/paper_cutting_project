@@ -66,7 +66,26 @@ class HD:
         post_data = filter_func(data.collect())
         
         temp_size = min(ROLL_PAPER)
-        data_df = self._run_packing_algorithm(post_data, temp_size)
+        
+        if self.h_type == "ff":
+            data_df = self._first_fit_packing(post_data, temp_size, self.x)
+        elif self.h_type == "ffa":
+            # FFA logic
+            sorted_data_asc = post_data.sort("width")
+            ffa_data_df = self._first_fit_packing(sorted_data_asc, temp_size, self.x)
+
+            # FFD logic, implicitly part of "ffa" based on hd.py's implementation
+            sorted_data_desc = post_data.sort("width", descending=True)
+            ffd_num_bins = round(self.x * 20 / 100)
+            # Ensure at least 1 bin if calculation results in 0
+            if ffd_num_bins == 0:
+                ffd_num_bins = 1
+            ffd_data_df = self._first_fit_packing(sorted_data_desc, temp_size, ffd_num_bins)
+
+            # Concatenate results
+            data_df = pl.concat([ffa_data_df, ffd_data_df], how="vertical")
+        else:
+            raise ValueError(f"Unsupported heuristic type: {self.h_type}")
         
         heuristic_ids = data_df.get_column("id").unique()
         self.heuristic_data = post_data.filter(
@@ -111,19 +130,6 @@ class HD:
             raise ValueError("Insufficient orders in date range")
         return data
 
-    def _run_packing_algorithm(
-        self,
-        data: plDataFrame,
-        bin_size: float
-    ) -> plDataFrame:
-        """Execute selected packing heuristic with Polars optimizations."""
-        if self.h_type == "ff":
-            return self._first_fit_packing(data, bin_size, self.x)
-        elif self.h_type == "ffa":
-            sorted_data = data.sort("width")
-            return self._first_fit_packing(sorted_data, bin_size, self.x)
-        else:
-            raise ValueError(f"Unsupported heuristic type: {self.h_type}")
 
     def _first_fit_packing(
         self,

@@ -1,21 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
+from core.interfaces import OrderListAdapter, PlanOrderAdapter, OptimizationPlanAdapter
 
-
-class OrderListAdapter(ABC):
-    @abstractmethod
-    def get_order(self, order_id: str) -> OrderList:
-        pass
-
-    @abstractmethod
-    def update_order_quantity(self, order_id: str, new_quantity: int) -> None:
-        pass
-
-    @abstractmethod
-    def delete_all_orders(self) -> None:
-        pass
 
 class DjangoOrderListAdapter(OrderListAdapter):
     def get_order(self, order_id: str) -> OrderList:
@@ -27,10 +15,6 @@ class DjangoOrderListAdapter(OrderListAdapter):
     def delete_all_orders(self) -> None:
         OrderList.objects.all().delete()
 
-class PlanOrderAdapter(ABC):
-    @abstractmethod
-    def create_plan_orders(self, blade1_params: Dict[str, Any], blade2_params_list: List[Dict[str, Any]]) -> None:
-        pass
 
 class DjangoPlanOrderAdapter(PlanOrderAdapter):
     def create_plan_orders(self, blade1_params: Dict[str, Any], blade2_params_list: List[Dict[str, Any]]) -> None:
@@ -38,14 +22,10 @@ class DjangoPlanOrderAdapter(PlanOrderAdapter):
         for params in blade2_params_list:
             PlanOrder.objects.create(**params)
 
-class OptimizationPlanAdapter(ABC):
-    @abstractmethod
-    def create_optimization_plan(self, blade1_orders: List[PlanOrder], blade2_orders: List[PlanOrder]) -> OptimizationPlan:
-        pass
+    def create_plan_order_instance(self, **kwargs: Any) -> PlanOrder:
+        """Creates and returns a single PlanOrder instance."""
+        return PlanOrder.objects.create(**kwargs)
 
-    @abstractmethod
-    def delete_all_plans(self) -> None:
-        pass
 
 class DjangoOptimizationPlanAdapter(OptimizationPlanAdapter):
     def create_optimization_plan(self, blade1_orders: List[PlanOrder], blade2_orders: List[PlanOrder]) -> OptimizationPlan:

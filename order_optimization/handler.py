@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 from django.core.cache import cache
@@ -8,7 +7,11 @@ from order_optimization.adapters import (
     DjangoPlanOrderAdapter,
     DjangoOptimizationPlanAdapter,
 )
-from order_optimization.services import OptimizationService
+from order_optimization.data_loaders import get_processed_orders
+from order_optimization.formatter import plan_orders_formatter
+from order_optimization.setter import set_progress
+
+from core.optimization_service import OptimizationService
 from ordplan_project.settings import (
     CACHE_TIMEOUT,
     MAX_RETRY,
@@ -17,7 +20,7 @@ from ordplan_project.settings import (
     ROLL_PAPER,
 )
 
-FILE_ID = "1" # This could ideally come from request or configuration
+FILE_ID = "1"
 
 
 def get_optimization_service() -> OptimizationService:
@@ -30,10 +33,12 @@ def get_optimization_service() -> OptimizationService:
         max_trim=MAX_TRIM,
         min_trim=MIN_TRIM,
         roll_paper=ROLL_PAPER,
+        progress_callback=set_progress,
+        order_data_provider=get_processed_orders,
     )
 
 
-def handle_auto_config(request) -> Dict[str, Any]:
+def handle_auto_config(request: Any) -> Dict[str, Any]:
     """
     Handles automatic configuration requests in a Django context.
     Orchestrates the service calls and handles caching/error reporting.
@@ -62,20 +67,9 @@ def handle_auto_config(request) -> Dict[str, Any]:
             if again < MAX_RETRY:
                 again += 1
                 cache.set("try_again", again, CACHE_TIMEOUT)
-                # For retry, a redirect or re-rendering the form might be needed in a real web app.
-                # Or the client side should re-initiate the request.
-                # The current logic attempts a "recursive" retry which isn't suitable for web handlers.
-                # For this refactor, we'll mimic the original logic as best as possible,
-                # but acknowledge it's an anti-pattern for web requests.
-                # Original "handle_auto_retry" logic moved here.
-                # It originally took the 'best_result' from cache, implying a previous successful run.
-                # This logic is very tightly coupled to the 'try_again' cache key.
-                # Let's simplify this. If no solution, we log and raise.
-                # The retry mechanism should be external to this function.
                 raise ValueError(f"No Satisfiable Solution Found. Retrying... (Attempt {again}/{MAX_RETRY})")
             else:
-                # Max retries reached, retrieve best previous result if any.
-                best_result = cache.get("best_result") # This key is not set anywhere in this file. Needs to be handled by a higher layer or set by the service.
+                best_result = cache.get("best_result")
                 if best_result:
                     cache.set("optimization_results", best_result, CACHE_TIMEOUT)
                 cache.delete("try_again")
@@ -86,14 +80,13 @@ def handle_auto_config(request) -> Dict[str, Any]:
         raise e
 
 
-def handle_saving(request) -> None:
+def handle_saving(request: Any) -> None:
     """
     Pulls data from cache to save into the model.
     """
     service = get_optimization_service()
 
-    file_id = FILE_ID # Still hardcoded, consider making this dynamic from request
-    cache.delete(f"order_cache_{file_id}")
+    cache.delete(f"order_cache_{FILE_ID}")
     data = cache.get("optimization_results", None)
     
     if data is None:
@@ -101,24 +94,24 @@ def handle_saving(request) -> None:
     
     try:
         service.save_optimization_results(data)
-        cache.delete("optimization_results") # Clear results after saving
+        cache.delete("optimization_results")
     except ValueError as e:
         raise ValueError(f"Error saving optimization results: {e}")
 
 
-def handle_reset(request) -> None:
+def handle_reset(request: Any) -> None:
     """
     Clears application cache and resets database data.
     """
     service = get_optimization_service()
-    cache.clear() # Clears Django's entire cache
+    cache.clear()
     service.reset_all_data()
 
 
-def handle_export(request) -> str:
+def handle_export(request: Any) -> str:
     """
     Exports data to an Excel file.
     """
     service = get_optimization_service()
-    file_path = service.export_plan_orders()
+    file_path = service.export_plan_orders(plan_orders_data_formatter_func=plan_orders_formatter)
     return file_path

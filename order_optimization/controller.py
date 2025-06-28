@@ -1,8 +1,6 @@
 from order_optimization.handler import handle_auto_config, handle_saving
 from django.core.cache import cache
-from ordplan_project.settings import (
-    CACHE_TIMEOUT,
-)
+from ordplan_project.settings import CACHE_TIMEOUT
 
 import numpy as np
 from typing import Any
@@ -16,7 +14,8 @@ def optimizer_controller(request: Any) -> None:
     Consider background tasks for long-running operations.
     """
     LENGTH = 100
-    REPEAT_ERROR = round(LENGTH * 10 / 100)
+    MAX_RETRY_COUNT = round(LENGTH * 10 / 100)
+
     cache.delete("api_progress")
     e_count = 0
     total_success_rates = []
@@ -40,9 +39,22 @@ def optimizer_controller(request: Any) -> None:
                 print(f"Error saving results: {e_save}")
                 e_count += 1
 
-            # if e_count > REPEAT_ERROR:
-            #     progress.console.print("[red]Error Exceed.")
-            #     progress.stop
-            #     break
-            current_progress = progress.tasks[task1].completed / LENGTH
-            cache.set("api_progress", current_progress, CACHE_TIMEOUT)
+        except ValueError as e_optimize:
+            result = cache.get("optimization_results", None)
+            log = cache.get("log", None)
+            if result:
+                print(f"Optimization results (partial/failed): {result}")
+            print(f"Optimization error: {e_optimize}, Log: {log}")
+            cache.delete("log")
+            cache.delete("optimization_results")
+            e_count += 1
+
+        except RecursionError as e_recursion:
+            print(f"Recursion Error: {e_recursion}")
+            e_count += 1
+
+        if e_count > MAX_RETRY_COUNT:
+            print("[red]Error Exceed. Stopping optimization loop.")
+            break
+
+    cache.set("api_progress", 1.0, CACHE_TIMEOUT)

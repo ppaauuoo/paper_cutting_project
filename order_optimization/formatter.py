@@ -1,108 +1,22 @@
 from typing import Any, Dict, List
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
-from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
-from order_optimization.container import ModelContainer
 from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
-
-
-
-def output_formatter(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
-    """
-    For formatting output by renaming and add an out column.
-    """
-    return pd.DataFrame(
-        {
-            "order_number": [orders["order_number"]],
-            "num_orders": [orders["quantity"]],
-            "cut_width": [orders["width"]],
-            "cut_len": [orders["length"]],
-            "type": [orders["edge_type"]],
-            "deadline": [orders["due_date"]],
-            "out": [init_out],
-        }
-    )
-
-
-def results_formatter(
-    optimizer_instance: ModelContainer,
-    output_data: List[Dict[str, Any]],
-    size_value: int,
-    init_order_number: int,
-    foll_order_number: int,
-) -> Dict[str, Any]:
-    """
-    For formatting results obtain from optimizer to be one dict.
-    """
-    return {
-        "output": output_data,
-        "roll": optimizer_instance.PAPER_SIZE,
-        "total": optimizer_instance.total,
-        "trim": optimizer_instance.fitness_values,
-        "init_order_number": init_order_number,
-        "foll_order_number": foll_order_number,
-    }
-
-
-def database_formatter(blade1_params, blade2_params_list) -> None:
-    """
-    For defining which order belong to which blade, and turn it into a model.
-
-    return: Model
-    """
-    format_data = OptimizationPlan.objects.create()
-    blade_2_orders = []
-    update_list = []
-    blade1_order = None
-
-    blade1_order = PlanOrder.objects.create(**blade1_params)
-    update_list.append(blade1_params['order'])
-
-    for blade2_params in blade2_params_list:
-        blade2_order = PlanOrder.objects.create(
-            **blade2_params
-        )
-        blade_2_orders.append(blade2_order)
-        update_list.append(blade2_params['order'])
-
-    for order in update_list:
-        OrderList.objects.filter(id=order.id).update(quantity=order.quantity)
-
-    format_data.blade_1.add(blade1_order)
-    for order in blade_2_orders:
-        format_data.blade_2.add(order)
-
-    format_data.save()
-
-
-def timezone_formatter(df: pd.DataFrame):
-    """
-    Format any timezone column in dataframe to be timezone unaware.
-    Format any timezone column in dataframe to be timezone unaware.
-    """
-
-    datetime_cols = df.select_dtypes(include=["datetime64[ns, UTC]"]).columns
-
-    for col in datetime_cols:
-        if is_datetime(df[col]):
-            df[col] = df[col].dt.tz_localize(None)
-        if is_datetime(df[col]):
-            df[col] = df[col].dt.tz_localize(None)
-    return df
+from core.utils import timezone_formatter
 
 
 def plan_orders_formatter() -> pd.DataFrame:
     """
     Request data from model and format it.
+    This function remains Django-specific due to direct ORM queries.
     """
 
     # Get all PlanOrder objects as a list of dictionaries
     optimized_output = list(
         PlanOrder.objects.all().values(
-            "order_id",
-            "blade_1_orders__id",
-            "blade_2_orders__id",
+            "order__id",
+            "order__order_number",
             "blade_type",
             "paper_roll",
             "out",
@@ -111,12 +25,13 @@ def plan_orders_formatter() -> pd.DataFrame:
         )
     )
 
-    # Extract order IDs
-    optimized_output_ids = [order["order_id"] for order in optimized_output]
+    # Extract original order IDs (from the related OrderList)
+    optimized_output_ids = [item["order__id"] for item in optimized_output]
 
     # Get corresponding OrderList objects
     optimized_order_list = list(
         OrderList.objects.filter(id__in=optimized_output_ids).values(
+            "id",
             "quantity",
             "width",
             "length",
@@ -132,8 +47,7 @@ def plan_orders_formatter() -> pd.DataFrame:
             "middle_edge_cut",
             "right_edge_cut",
             "component_type",
-            "id",
-            )
+        )
     )
 
     # Create a dictionary with order_id as the key
@@ -141,11 +55,16 @@ def plan_orders_formatter() -> pd.DataFrame:
                             for order in optimized_order_list}
 
     # Combine results
-    for order in optimized_output:
-        order_id = order["order_id"]
+    combined_results = []
+    for plan_order_data in optimized_output:
+        order_id = plan_order_data["order__id"]
         if order_id in optimized_order_dict:
-            order.update(optimized_order_dict[order_id])
-    df = pd.DataFrame(optimized_output)
+            combined_entry = {**plan_order_data, **optimized_order_dict[order_id]}
+            combined_entry['order_id'] = combined_entry.pop('order__id')
+            combined_entry['order_number'] = combined_entry.pop('order__order_number')
+            combined_results.append(combined_entry)
+
+    df = pd.DataFrame(combined_results)
     df = timezone_formatter(df)
     df = df.fillna(0)
 
