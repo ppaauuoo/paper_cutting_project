@@ -81,8 +81,8 @@ def set_common(
     best_trim: float,
 ) -> Dict:
     """
-    Remove the order that got chosen to be swapped by common orders, then
-    injecting the common orders and new fitness into results.
+    Remove the order chosen to be swapped by common orders, 
+    then inject common orders and new fitness into results.
     """
     if results["output"]: # Ensure there's an element to pop
         results["output"].pop(best_index)  # remove the old order

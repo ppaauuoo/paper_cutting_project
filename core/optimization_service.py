@@ -41,7 +41,7 @@ class OptimizationService:
 
     def _is_foll_ok(self, output: List[Dict[str, Any]], foll_order_number: int) -> bool:
         """
-        Check if second order's cut exceed the second order's stock or not.
+        Check if second order's cut quantity exceeds the second order's stock.
         """
         foll_stock = 0
         if len(output) <= 1:
@@ -56,7 +56,7 @@ class OptimizationService:
 
     def _is_trim_fit(self, trim: float) -> bool:
         """
-        Check if trim exceed min/max trim.
+        Check if trim value is within min/max trim limits.
         """
         return trim <= self._max_trim and trim >= self._min_trim
 
@@ -137,17 +137,17 @@ class OptimizationService:
 
     def run_optimization_pipeline(
         self,
-        start_date: Optional[str] = None,
-        stop_date: Optional[str] = None,
-        size: Optional[float] = None,
+        **kwargs  # Changed for flexibility
     ) -> Dict[str, Any]:
-        """
-        Runs the full optimization process, including initial configuration,
-        results handling, switching, and common order handling.
-        Returns the final optimization results or raises ValueError.
-        """
+        """Run the entire optimization process"""
+        # Get parameters from keyword arguments
+        start_date = kwargs.get('start_date')
+        stop_date = kwargs.get('stop_date')
+        size = kwargs.get('size')  # Accept size parameter
+
+        # Confirm order_data_provider exists
         if self._order_data_provider is None:
-            raise RuntimeError("Order data provider is not set.")
+            raise RuntimeError("No order data provider")
         
         orders = self._order_data_provider(
             file_id=self._file_id,
@@ -167,11 +167,11 @@ class OptimizationService:
             if self._is_foll_ok(results["output"], results["foll_order_number"]):
                 if self._is_out_ok(results["output"]):
                     return results
-                log = "out not ok"
+                log = "Output not acceptable"
             else:
-                log = "stock not ok"
+                log = "Stock not sufficient"
         else:
-            log = f'trim not ok roll:{results["roll"]} trim:{ round(results["total"])}'
+            log = f'Trim not acceptable roll:{results["roll"]} trim:{ round(results["total"])}'
 
         raise ValueError(f"No Satisfiable Solution Found: {log}")
 
