@@ -25,3 +25,4 @@ stable-baselines3
 gymnasium
 copier
 fastexcel
+pyqt6

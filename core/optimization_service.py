@@ -1,6 +1,9 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable
 import pandas as pd # For export_plan_orders, if it remains in core
+
+# New type for progress callback
+UpdateProgressCallback = Callable[[int], None]
 
 from core.interfaces import OrderListAdapter, PlanOrderAdapter, OptimizationPlanAdapter
 from core.utils import results_formatter, get_production_quantity # Import from new utils
