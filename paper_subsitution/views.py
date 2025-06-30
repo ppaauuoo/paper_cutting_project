@@ -3,7 +3,7 @@ from modules.yggdrasil import YDF
 from modules.cnb import CNB
 from icecream import ic
 from order_optimization.models import CSVFile
-from order_optimization.getter import get_orders_cache
+# from order_optimization.getter import get_orders_cache
 from typing import Dict, Callable
 
 def paper_subsitution_view(request):
@@ -20,7 +20,7 @@ def paper_subsitution_view(request):
 
     if request.method == 'POST':
         file_id = request.POST.get('file_id')
-        df_data = get_orders_cache(file_id)
+        # df_data = get_orders_cache(file_id)
         model = models.get(request.POST.get('models'))
         if model is None:
             raise ValueError("Model not found")

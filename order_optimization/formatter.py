@@ -1,9 +1,10 @@
 from typing import Any, Dict, List
+
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
-from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
 from core.utils import timezone_formatter
+from order_optimization.models import OptimizationPlan, OrderList, PlanOrder
 
 
 def plan_orders_formatter() -> pd.DataFrame:
@@ -22,6 +23,8 @@ def plan_orders_formatter() -> pd.DataFrame:
             "out",
             "plan_quantity",
             "order_leftover",
+            "blade_1_orders__id",  # Correct reverse relation to OptimizationPlan
+            "blade_2_orders__id",  # Correct reverse relation to OptimizationPlan
         )
     )
 
@@ -67,6 +70,5 @@ def plan_orders_formatter() -> pd.DataFrame:
     df = pd.DataFrame(combined_results)
     df = timezone_formatter(df)
     df = df.fillna(0)
-
     return df
 

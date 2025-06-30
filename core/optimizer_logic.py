@@ -46,8 +46,8 @@ def get_outputs(optimizer_instance: ModelContainer) -> List[Dict]:
     total = optimizer_instance.total
     if len(output_data) <= 0:
         raise ValueError("Solution Not Found")
-    if len(output_data) > 2 or total <= 0:
-        raise ValueError("Solution Not Satisfied")
+    # if len(output_data) > 2 or total <= 0:
+    #     raise ValueError("Solution Not Satisfied")
 
     return output_data
 
@@ -111,7 +111,7 @@ def set_common(
 
 
     init_len = init_order["cut_len"] if init_order else 0
-    init_out = init_order["out"] if init_out else 0 # Corrected typo init_out -> init_order["out"] if init_order else 0
+    init_out = init_order["out"] if init_order["out"] else 0 
 
     results["init_order_number"] = init_order["num_orders"] if init_order else 0
 

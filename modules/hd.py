@@ -2,7 +2,7 @@ from icecream import ic
 from typing import Any, Optional, Dict
 from dataclasses import dataclass
 import pandas as pd
-from order_optimization.container import ProviderInterface
+# from order_optimization.container import ProviderInterface
 from ordplan_project.settings import (
     PLAN_RANGE,
     LEGACY_FILTER,
@@ -14,7 +14,7 @@ import random
 
 
 @dataclass
-class HD(ProviderInterface):
+class HD():
     orders: pd.DataFrame
     x: int = 10
     h_type: str = "ffa"
@@ -123,8 +123,8 @@ class HD(ProviderInterface):
                 (data["due_date"] >= self.start_date)
                 & (data["due_date"] <= self.stop_date)
             ].reset_index(drop=True)
-        if len(data) < PLAN_RANGE:
-            raise ValueError("No Orders in Date Range.")
+            if len(data) < PLAN_RANGE:
+                raise ValueError("No Orders in Date Range.")
         return data
 
     def legacy_filter_order(

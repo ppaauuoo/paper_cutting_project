@@ -6,6 +6,7 @@ from core.interfaces import OrderListAdapter, PlanOrderAdapter, OptimizationPlan
 from core.utils import results_formatter, get_production_quantity # Import from new utils
 from core.optimizer_logic import get_optimizer, get_outputs, get_common_optimizer_instance, set_common # Import from new optimizer_logic
 from modules.lp import LP
+from modules.hd import HD
 
 
 class OptimizationService:
