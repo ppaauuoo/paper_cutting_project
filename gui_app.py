@@ -1,30 +1,53 @@
 import sys
-import time
 import threading
-from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QFormLayout, QLabel, QDateEdit, QComboBox, QLineEdit, QPushButton,
-    QFileDialog, QProgressDialog, QTableWidget, QTableWidgetItem, QHeaderView, QDialog
-)
-from PyQt6.QtCore import QDate, QTimer, Qt, QLocale, QDateTime, pyqtSignal, QObject
+import time
+
+from PyQt6.QtCore import QDate, QDateTime, QLocale, QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QDateEdit,
+    QDialog,
+    QFileDialog,
+    QFormLayout,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QProgressDialog,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 # Try importing optimization service (as fallback if core not available)
 try:
-    from core.optimization_service import OptimizationService
     from core.container import ModelContainer
+    from core.optimization_service import OptimizationService
 except ImportError:
     OptimizationService = None
     ModelContainer = None
 
-# รายการตัวอย่างสำหรับ ROLL_PAPER
-ROLL_PAPER = ["Paper Type A", "Paper Type B", "Paper Type C", "Custom"]
+# Example list for ROLL_PAPER
+ROLL_PAPER = [66, 68, 70, 73, 74, 75, 79, 82, 85, 88, 91, 93, 95, 97]
+
 
 # Mock optimization service if core not available
 class MockOptimizationService:
-    def run_optimization_pipeline(self, start_date, stop_date, roll_size):
+    def run_optimization_pipeline(self, **kwargs):  # Changed to accept any keyword arguments
+        """Accept required parameters (size, start_date, stop_date)"""
+        # Simulate 3 seconds loading time
         time.sleep(3)
-        return {}
+        return {
+            'roll': '66',
+            'init_order_number': 28,  # sample data
+            'total': 65.8,  # sample data
+            'trim': 0.2     # sample data
+        }
 
 class MockModelContainer:
     fitness_values = 0
@@ -40,7 +63,7 @@ class WorkerSignals(QObject):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"PyQt6 GUI Application - {QLocale().toString(QDateTime.currentDateTime(), QLocale.FormatType.LongFormat)}")
+        self.setWindowTitle(f"Paper Cutting Optimization - {QLocale().toString(QDateTime.currentDateTime(), QLocale.FormatType.LongFormat)}")
         self.setGeometry(100, 100, 600, 400)
 
         self._create_widgets()
@@ -48,25 +71,26 @@ class MainWindow(QMainWindow):
         self._connect_signals()
 
     def _create_widgets(self):
-        # วันที่เริ่มต้น
+        # Start date
         self.start_date_edit = QDateEdit(self)
         self.start_date_edit.setCalendarPopup(True)
         self.start_date_edit.setDate(QDate.currentDate())
 
-        # วันที่สิ้นสุด
+        # End date
         self.stop_date_edit = QDateEdit(self)
         self.stop_date_edit.setCalendarPopup(True)
         self.stop_date_edit.setDate(QDate.currentDate().addDays(7))
 
-        # ดรอปดาวน์ ROLL_PAPER
+        # ROLL_PAPER dropdown
         self.roll_paper_combo = QComboBox(self)
-        self.roll_paper_combo.addItems(ROLL_PAPER)
+        # Convert integers in ROLL_PAPER to strings before adding to ComboBox
+        self.roll_paper_combo.addItems([str(paper) for paper in ROLL_PAPER])
 
-        # การเลือกไฟล์
+        # File selection
         self.file_path_line_edit = QLineEdit(self)
         self.file_browse_button = QPushButton("Browse...", self)
 
-        # ปุ่มต่างๆ
+        # Buttons
         self.start_button = QPushButton("Start", self)
         self.view_button = QPushButton("View", self)
         self.reset_button = QPushButton("Reset", self)
@@ -90,13 +114,13 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(form_layout)
 
         button_layout = QHBoxLayout()
-        button_layout.addStretch(1) # เพื่อให้ปุ่มอยู่ทางขวา
+        button_layout.addStretch(1) # To align buttons to the right
         button_layout.addWidget(self.start_button)
         button_layout.addWidget(self.view_button)
         button_layout.addWidget(self.reset_button)
 
         main_layout.addLayout(button_layout)
-        main_layout.addStretch(1) # เพื่อให้เนื้อหาอยู่ด้านบน
+        main_layout.addStretch(1) # To push content to the top
 
     def _connect_signals(self):
         self.file_browse_button.clicked.connect(self._browse_file)
@@ -153,8 +177,8 @@ class MainWindow(QMainWindow):
         self.worker_thread.daemon = True
 
         # Setup progress dialog
-        self.progress_dialog = QProgressDialog("กำลังประมวลผล...", "ยกเลิก", 0, 100, self)
-        self.progress_dialog.setWindowTitle("กำหนดการผลิต")
+        self.progress_dialog = QProgressDialog("Processing...", "Cancel", 0, 100, self)
+        self.progress_dialog.setWindowTitle("Production Scheduling")
         self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
         self.progress_dialog.setMinimumDuration(0)
         
@@ -190,7 +214,7 @@ class MainWindow(QMainWindow):
         seconds = elapsed_time % 60
         time_str = f"{minutes:02d}:{seconds:02d}"
         
-        self.progress_dialog.setLabelText(f"กำลังดำเนินการ... ({time_str})")
+        self.progress_dialog.setLabelText(f"Processing... ({time_str})")
         
         if not self.worker_thread.is_alive() or self.progress_value >= 100:
             self.progress_timer.stop()
@@ -198,42 +222,46 @@ class MainWindow(QMainWindow):
             self._on_optimization_complete()
 
     def _run_optimization(self, start_date, stop_date, roll_size):
-        """Thread function to run optimization service"""
+        """Thread for calling the optimization service"""
         try:
+            # Convert roll_size from string to float
+            size_value = float(roll_size) if roll_size is not None else None
             # This would call the real optimization service in production
             self.results = self.optimization_service.run_optimization_pipeline(
                 start_date=start_date,
                 stop_date=stop_date,
-                size=roll_size,
+                size=size_value,  # Pass roll_size as size parameter
             )
+        except ValueError as ve:
+            self.results = {"error": f"Invalid Roll Size: {ve}"}
         except Exception as e:
             self.results = {"error": str(e)}
     
     def _on_progress_canceled(self):
         self.aborted = True
         self.progress_timer.stop()
-        print("ยกเลิกการประมวลผลโดยผู้ใช้!")
+        print("Processing canceled by user!")
         
     def _on_optimization_complete(self):
         """Handle results after optimization finishes"""
         results = getattr(self, "results", {})
         if "error" in results:
-            print(f"เกิดข้อผิดพลาด: {results['error']}")
+            print(f"An error occurred: {results['error']}")
         else:
-            print("การกำหนดการผลิตเสร็จสมบูรณ์!")
+            print("Production scheduling completed!")
             self._show_optimization_results(results)
 
     def _show_optimization_results(self, results):
         """Show optimization results in a dialog"""
         dialog = QDialog(self)
-        dialog.setWindowTitle("ผลลัพธ์การกำหนดการผลิต")
+        dialog.setWindowTitle("Production Scheduling Results")
         dialog.setGeometry(200, 200, 700, 400)
         dialog.setWindowModality(Qt.WindowModality.WindowModal)
 
         layout = QVBoxLayout(dialog)
         
         # Add results display here in real implementation
-        results_label = QLabel("<h3>ปรับใช้โมเดลกำหนดการผลิตสำเร็จ!</h3>")
+        results_label = QLabel("<h3>Production scheduling model applied successfully!</h3>")
         layout.addWidget(results_label)
         
         # Add a simple table (mock)
@@ -241,13 +269,13 @@ class MainWindow(QMainWindow):
         layout.addWidget(table_widget)
         table_widget.setRowCount(5)
         table_widget.setColumnCount(3)
-        table_widget.setHorizontalHeaderLabels(["พารามิเตอร์", "ค่า", "หน่วย"])
+        table_widget.setHorizontalHeaderLabels(["Parameter", "Value", "Unit"])
         
         results_data = [
-            ["กระดาษที่ใช้", results.get('roll', 'Custom'), "ชนิด"],
-            ["ม้วนขั้นต่ำ", results.get('init_order_number', ''), "ม้วน"],
-            ["ปริมาณรวม", results.get('total', ''), "ตัน"],
-            ["เศษกระดาษ", abs(results.get('trim', 0)), "ซม"],
+            ["Paper Used", results.get('roll', 'Custom'), "Type"],
+            ["Min Rolls", results.get('init_order_number', ''), "Rolls"],
+            ["Total Volume", results.get('total', ''), "Tons"],
+            ["Trim Waste", abs(results.get('trim', 0)), "cm"],
         ]
         
         for row_idx, row_data in enumerate(results_data):
@@ -257,7 +285,7 @@ class MainWindow(QMainWindow):
         table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         
         # Additional buttons
-        btn_close = QPushButton("ปิด", dialog)
+        btn_close = QPushButton("Close", dialog)
         btn_close.clicked.connect(dialog.close)
         layout.addWidget(btn_close)
         
@@ -265,59 +293,184 @@ class MainWindow(QMainWindow):
     
     def _on_view_clicked(self):
         print("View Clicked!")
-        # If we have results show them, otherwise mock
-        if hasattr(self, 'results'):
-            self._show_optimization_results(self.results)
-        else:
-            self._show_data_table_dialog()
+        # Show progress dialog while loading data
+        self.progress_dialog = QProgressDialog("Loading data...", "Cancel", 0, 100, self)
+        self.progress_dialog.setWindowTitle("Load Planning Data")
+        self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.progress_dialog.setMinimumDuration(0) # Show immediately
+        self.progress_dialog.show()
+        
+        # Create thread for fetching data
+        self.worker_thread = threading.Thread(target=self._load_optimization_data)
+        self.worker_thread.daemon = True
+        self.worker_thread.start()
+        
+        # Set timer for progress update
+        self.progress_value = 0
+        self.progress_timer = QTimer(self)
+        self.progress_timer.timeout.connect(self._update_load_progress)
+        self.progress_timer.start(100) # Update every 100ms
 
-    def _show_data_table_dialog(self):
+    def _load_optimization_data(self):
+        try:
+            # Fetch data from database (mock data example)
+            self.saved_data = [
+                {
+                    "paper_roll": "A",
+                    "plan_id": "P001", # Use plan_id instead of blade_1_orders__id/blade_2_orders__id
+                    "blade_type": "blade_1",
+                    "due_date": "2023-10-15",
+                    "order_number": "SO001",
+                    "component_type": "Front",
+                    "plan_quantity": 150,
+                    "order_leftover": 0,
+                    "width": 45.5,
+                    "length": 120.0,
+                    "edge_type": "Straight",
+                    "out": 2,
+                },
+                {
+                    "paper_roll": "B",
+                    "plan_id": "P002",
+                    "blade_type": "blade_2",
+                    "due_date": "2023-10-16",
+                    "order_number": "SO002",
+                    "component_type": "Back",
+                    "plan_quantity": 200,
+                    "order_leftover": 10,
+                    "width": 60.0,
+                    "length": 150.0,
+                    "edge_type": "Curved",
+                    "out": 3,
+                },
+                {
+                    "paper_roll": "A",
+                    "plan_id": "P001", # Same plan_id as SO001, assuming it's part of the same plan
+                    "blade_type": "blade_2",
+                    "due_date": "2023-10-15",
+                    "order_number": "SO003",
+                    "component_type": "Side",
+                    "plan_quantity": 75,
+                    "order_leftover": 5,
+                    "width": 30.0,
+                    "length": 80.0,
+                    "edge_type": "Straight",
+                    "out": 1,
+                },
+            ]
+            time.sleep(2)  # Simulate data loading time
+            self.saved_data_error = None
+        except Exception as e:
+            self.saved_data = []
+            self.saved_data_error = f"Data loading failed: {str(e)}"
+
+    def _update_load_progress(self):
+        # Simulate progress until worker completes
+        if self.worker_thread.is_alive():
+            self.progress_value = min(self.progress_value + 1, 99)
+        else:
+            self.progress_value = 100
+            
+        self.progress_dialog.setValue(self.progress_value)
+        
+        if not self.worker_thread.is_alive() or self.progress_value >= 100:
+            self.progress_timer.stop()
+            self.progress_dialog.close()
+            self._show_saved_orders_table()
+
+    def _show_saved_orders_table(self):
         dialog = QDialog(self)
-        dialog.setWindowTitle("Mock Data Table")
-        dialog.setGeometry(200, 200, 700, 400)
-        dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        dialog.setWindowTitle("Production Planning Results")
+        dialog.setGeometry(200, 200, 1200, 600)
+        dialog.setWindowModality(Qt.WindowModality.WindowModal) # Make it modal
 
         layout = QVBoxLayout(dialog)
+        
+        # Create table to display results
         table_widget = QTableWidget()
         layout.addWidget(table_widget)
-
-        # Mock Data
-        headers = ["ID", "Name", "Value", "Status"]
-        data = [
-            ["001", "Item A", "123.45", "Completed"],
-            ["002", "Item B", "67.89", "Pending"],
-            ["003", "Item C", "987.65", "Failed"],
-            ["004", "Item D", "432.10", "Completed"],
-            ["005", "Item E", "55.55", "Pending"],
+        
+        # Define column headers based on HTML template
+        headers = [
+            "Paper", "Plan ID", "Blade", "Due Date", 
+            "Sales Order No.", "Component Type", "Planned Quantity", 
+            "Remaining Quantity", "Cut Width", "Cut Length", 
+            "Edge Type", "Out"
         ]
+        
+        # Check if data is available
+        if not hasattr(self, 'saved_data') or not self.saved_data:
+            table_widget.setRowCount(1)
+            table_widget.setColumnCount(len(headers)) # Set correct column count for headers
+            no_data_item = QTableWidgetItem("No planning data found")
+            no_data_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            table_widget.setSpan(0, 0, 1, len(headers)) # Span across all columns
+            table_widget.setItem(0, 0, no_data_item)
+            # Set headers even if no data
+            table_widget.setHorizontalHeaderLabels(headers)
+            
+            # Add export button even if no data
+            export_button = QPushButton("Export Data", dialog)
+            export_button.clicked.connect(self._on_export_clicked)
+            layout.addWidget(export_button)
+            
+            dialog.exec()
+            return
 
-        table_widget.setRowCount(len(data))
+        # Set up table
+        table_widget.setRowCount(len(self.saved_data))
         table_widget.setColumnCount(len(headers))
         table_widget.setHorizontalHeaderLabels(headers)
-
-        for row_idx, row_data in enumerate(data):
-            for col_idx, item in enumerate(row_data):
-                table_widget.setItem(row_idx, col_idx, QTableWidgetItem(str(item)))
-
-        # Auto-resize columns to fit content
+        
+        # Add data to table
+        for row_idx, item in enumerate(self.saved_data):
+            table_widget.setItem(row_idx, 0, QTableWidgetItem(str(item.get("paper_roll", ""))))
+            table_widget.setItem(row_idx, 1, QTableWidgetItem(str(item.get("plan_id", "")))) # Use plan_id
+            table_widget.setItem(row_idx, 2, QTableWidgetItem(str(item.get("blade_type", ""))))
+            table_widget.setItem(row_idx, 3, QTableWidgetItem(str(item.get("due_date", ""))))
+            table_widget.setItem(row_idx, 4, QTableWidgetItem(str(item.get("order_number", ""))))
+            table_widget.setItem(row_idx, 5, QTableWidgetItem(str(item.get("component_type", ""))))
+            table_widget.setItem(row_idx, 6, QTableWidgetItem(str(item.get("plan_quantity", ""))))
+            table_widget.setItem(row_idx, 7, QTableWidgetItem(str(item.get("order_leftover", ""))))
+            table_widget.setItem(row_idx, 8, QTableWidgetItem(str(item.get("width", ""))))
+            table_widget.setItem(row_idx, 9, QTableWidgetItem(str(item.get("length", ""))))
+            table_widget.setItem(row_idx, 10, QTableWidgetItem(str(item.get("edge_type", ""))))
+            table_widget.setItem(row_idx, 11, QTableWidgetItem(str(item.get("out", ""))))
+        
+        # Adjust columns to fit content
         table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-
-        # ปุ่ม Export
+        
+        # Export data button
         export_button = QPushButton("Export Data", dialog)
         export_button.clicked.connect(self._on_export_clicked)
-
-        # เลย์เอาต์สำหรับปุ่มในไดอะล็อก
-        dialog_button_layout = QHBoxLayout()
-        dialog_button_layout.addStretch(1) # ดันปุ่มไปทางขวา
-        dialog_button_layout.addWidget(export_button)
-        layout.addLayout(dialog_button_layout) # เพิ่มเลย์เอาต์ปุ่มเข้าสู่เลย์เอาต์หลักของไดอะล็อก
-
-        dialog.exec() # แสดงไดอะล็อกแบบโมดอล
+        layout.addWidget(export_button)
+        
+        dialog.exec()
 
     def _on_export_clicked(self):
-        print("Export button clicked!")
-        # เพิ่ม logic สำหรับการส่งออกข้อมูลที่นี่
-        # ตัวอย่าง: QFileDialog.getSaveFileName(self, "Save Data", "", "CSV Files (*.csv);;Excel Files (*.xlsx)")
+        options = QFileDialog.Option.DontUseNativeDialog # Use Qt's dialog instead of native one for consistency
+        file_name, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Data File",
+            "",
+            "Excel Files (*.xlsx);;CSV Files (*.csv)",
+            options=options
+        )
+        
+        if file_name:
+            print(f"Exporting data to: {file_name}")
+            # In a real application, add code here to export actual data
+            # Example:
+            # if hasattr(self, 'saved_data') and self.saved_data:
+            #     import pandas as pd
+            #     df = pd.DataFrame(self.saved_data)
+            #     if file_name.endswith('.xlsx'):
+            #         df.to_excel(file_name, index=False)
+            #     elif file_name.endswith('.csv'):
+            #         df.to_csv(file_name, index=False)
+            #     print("Data exported successfully!")
+            # else:
+            #     print("No data to export")
 
     def _on_reset_clicked(self):
         self.start_date_edit.setDate(QDate.currentDate())
@@ -329,13 +482,13 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    # ตั้งค่า Locale ของแอปพลิเคชันเป็นภาษาไทย
-    # เพื่อให้ QDateEdit และส่วนอื่นๆ แสดงผลเป็นภาษาไทย
+    # Set application locale to Thai
+    # This makes QDateEdit and other parts display in Thai
     QLocale.setDefault(QLocale(QLocale.Language.Thai))
 
-    # ตั้งค่าฟอนต์ Roboto
-    # หมายเหตุ: ฟอนต์ Roboto ต้องถูกติดตั้งบนระบบปฏิบัติการของคุณเพื่อให้ทำงานได้
-    # หากไม่ได้ติดตั้ง PyQt จะใช้ฟอนต์เริ่มต้นของระบบแทน
+    # Set Roboto font
+    # Note: Roboto font must be installed on your operating system to work.
+    # If not installed, PyQt will use the system's default font instead.
     font = QFont("Roboto")
     app.setFont(font)
 
