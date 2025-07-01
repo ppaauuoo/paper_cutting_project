@@ -4,8 +4,8 @@ import pygad
 import numpy
 import pandas as pd
 from typing import Callable, Dict, Any, List, Optional
-from penalty import PenaltyCalculator
-from trim import TrimCalculator, MAX_TRIM, MIN_TRIM
+from .penalty import PenaltyCalculator
+from .trim import TrimCalculator
 
 ROLL_PAPER = 66
 
@@ -230,13 +230,13 @@ class GA():
 
 
 def main():
-    """Test the GA module with sampledata.xlsx"""
+    """Test the GA module with sampledata.csv"""
     import pandas as pd
     from pathlib import Path
     
     # Load sample data
-    data_path = Path(__file__).parent.parent / 'data' / 'sampledata.xlsx'
-    orders = pd.read_excel(data_path)
+    data_path = Path(__file__).parent.parent / 'data' / 'sampledata.csv'
+    orders = pd.read_csv(data_path)
     
     # Initialize GA with default parameters
     ga = GA(
