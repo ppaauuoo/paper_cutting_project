@@ -12,9 +12,10 @@ from ordplan_project.settings import (
 )
 import random
 
+from core.container import ProviderInterface # เพิ่ม import ProviderInterface
 
 @dataclass
-class HD():
+class HD(ProviderInterface): # เพิ่มการสืบทอดจาก ProviderInterface
     orders: pd.DataFrame
     x: int = 10
     h_type: str = "ffa"
@@ -118,13 +119,22 @@ class HD():
         return self.heuristic_data
 
     def date_range_limit(self, data):
-        if self.stop_date and self.start_date:
-            data = data[
-                (data["due_date"] >= self.start_date)
-                & (data["due_date"] <= self.stop_date)
-            ].reset_index(drop=True)
-            if len(data) < PLAN_RANGE:
-                raise ValueError("No Orders in Date Range.")
+        # แก้ไขให้จัดการกับค่าว่างและแปลงประเภทข้อมูล
+        if not data.empty and self.stop_date and self.start_date:
+            # ตรวจสอบและแปลงวันที่ให้เป็น pd.Timestamp หากยังไม่ได้แปลง
+            if isinstance(self.start_date, str):
+                self.start_date = pd.Timestamp(self.start_date)
+            if isinstance(self.stop_date, str):
+                self.stop_date = pd.Timestamp(self.stop_date)
+                
+            # กรองข้อมูลเฉพาะเมื่อมีค่าวันที่ที่ถูกต้อง
+            if pd.api.types.is_datetime64_any_dtype(data['due_date']):
+                data = data[
+                    (data["due_date"] >= self.start_date)
+                    & (data["due_date"] <= self.stop_date)
+                ].reset_index(drop=True)
+                if len(data) < PLAN_RANGE:
+                    raise ValueError("No Orders in Date Range.")
         return data
 
     def legacy_filter_order(

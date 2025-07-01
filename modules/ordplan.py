@@ -1,17 +1,23 @@
 import random
-from django.conf import settings
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 import pandas as pd
-from typing import Dict, Any, Optional
+from django.conf import settings
 from icecream import ic
 from pandas import DataFrame
-from dataclasses import dataclass
 
-from order_optimization.container import ProviderInterface
-from ordplan_project.settings import PLAN_RANGE, LEGACY_FILTER,COMMON_FILTER,UNIT_CONVERTER,DEADLINE_RANGE
+from ordplan_project.settings import (
+    COMMON_FILTER,
+    DEADLINE_RANGE,
+    LEGACY_FILTER,
+    PLAN_RANGE,
+    UNIT_CONVERTER,
+)
+
 
 @dataclass
-class ORD(ProviderInterface):
+class ORD():
     """Raw orders processor.
 
     Args:

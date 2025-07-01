@@ -1,15 +1,24 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Callable
-import pandas as pd # For export_plan_orders, if it remains in core
+from typing import Any, Callable, Dict, List, Optional
+
+import pandas as pd  # For export_plan_orders, if it remains in core
 
 # New type for progress callback
 UpdateProgressCallback = Callable[[int], None]
 
-from core.interfaces import OrderListAdapter, PlanOrderAdapter, OptimizationPlanAdapter
-from core.utils import results_formatter, get_production_quantity # Import from new utils
-from core.optimizer_logic import get_optimizer, get_outputs, get_common_optimizer_instance, set_common # Import from new optimizer_logic
-from modules.lp import LP
+from core.interfaces import OptimizationPlanAdapter, OrderListAdapter, PlanOrderAdapter
+from core.optimizer_logic import (  # Import from new optimizer_logic
+    get_common_optimizer_instance,
+    get_optimizer,
+    get_outputs,
+    set_common,
+)
+from core.utils import (  # Import from new utils
+    get_production_quantity,
+    results_formatter,
+)
 from modules.hd import HD
+from modules.lp import LP
 
 
 class OptimizationService:
@@ -154,7 +163,7 @@ class OptimizationService:
             start_date=start_date,
             stop_date=stop_date,
         )
-
+        print(f"Orders data received: {orders}")  # Debugging output
         if orders is None or orders.empty:
             raise ValueError("Orders data is empty after filtering!")
 

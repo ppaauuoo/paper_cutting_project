@@ -1,6 +1,5 @@
 from typing import Any, Dict, List
 import pandas as pd
-from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
 
 def output_formatter(orders: pd.Series, init_out: int = 0) -> pd.DataFrame:
@@ -44,11 +43,12 @@ def timezone_formatter(df: pd.DataFrame):
     """
     Format any timezone column in dataframe to be timezone unaware.
     """
+    # Removed: from pandas.api.types import is_datetime64_any_dtype as is_datetime
     datetime_cols = df.select_dtypes(include=["datetime64[ns, UTC]"]).columns
 
     for col in datetime_cols:
-        if is_datetime(df[col]):
-            df[col] = df[col].dt.tz_localize(None)
+        # Removed: if is_datetime(df[col]):
+        df[col] = df[col].dt.tz_localize(None)
     return df
 
 def get_production_quantity(output_data: List[Dict[str, Any]]) -> tuple[int, int]:
