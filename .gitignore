@@ -4,4 +4,6 @@ alpha
 exports
 .vscode
 .ipynb_checkpoints
+node_modules
+build
 
